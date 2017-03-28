@@ -1,0 +1,37 @@
+{
+  "name": "mfa-client-js",
+  "version": "1.0.0",
+  "description": "Headless MFA client library",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha",
+    "cover": "istanbul cover _mocha",
+    "lcov": "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miracl/mfa-client-js.git"
+  },
+  "keywords": [
+    "JS",
+    "MFA",
+    "Headless",
+    "Library"
+  ],
+  "author": "Miracl",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/miracl/mfa-client-js/issues"
+  },
+  "homepage": "https://github.com/miracl/mfa-client-js#readme",
+  "dependencies": {
+    "bower": "^1.8.0"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "coveralls": "^2.12.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.2.0",
+    "sinon": "^2.1.0"
+  }
+}

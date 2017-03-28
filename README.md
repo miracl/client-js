@@ -1,5 +1,9 @@
 # Headless MFA Client Library
 
+[![Master Build Status](https://travis-ci.org/miracl/mfa-client-js.svg?branch=master)](https://travis-ci.org/miracl/mfa-client-js)
+[![Master Coverage Status](https://coveralls.io/repos/github/miracl/mfa-client-js/badge.svg?branch=master)](https://coveralls.io/github/miracl/mfa-client-js?branch=master)
+
+
 ## Requirement for build & testing
 
 1. Nodejs
