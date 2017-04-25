@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>MFA example</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="../dist/mfa.js" type="text/javascript"></script>
+</head>
+
+<body>
+    <div>MFA example:</div>
+    <span>Setup flow</span>
+    <script type="text/javascript">
+    function step1() {
+        var usrId = "test@example.com";
+
+        console.log(".:example: init - put user :");
+        mfa.startRegistration(usrId, function successCb(err, data) {
+            console.log(".:example: start registration :");
+        }, function errCb(argument) {
+                // body...
+        });
+    }
+
+    console.log(".:example: initialize :");
+    var mfa = new Mfa({
+        server: "http://localhost/rps/",
+        distributor: "mcl",
+        debug: "1"
+    });
+
+    console.log(".:example: init - get settings :");
+    mfa.init(function successCb(data) {
+        step1();
+    }, function errCb() {
+        console.log("error");
+    });
+    </script>
+</body>
+
+</html>

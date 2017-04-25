@@ -7,9 +7,8 @@
 ## Requirement for build & testing
 
 1. Nodejs
-2. Grunt
-3. Mocha
-4. Bower
+2. Mocha
+3. Bower
 
 ## Installation
 
@@ -17,7 +16,7 @@
 $ git clone
 $ cd project_folder
 $ npm install
-$ grunt build
+$ npm run build
 ```
 
 ## Running Tests
@@ -33,3 +32,16 @@ Then:
 ```bash
 $ npm test
 ```
+
+## Available options
+
+```bash
+var mfaOptions = {
+	server: "serverUrl",
+	distributor: "distributorShortCode"
+}
+var mfa = new Mfa(mfaOptions);
+```
+ 1. Server - required
+ 2. Distributor - required
+ 

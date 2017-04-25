@@ -3,10 +3,25 @@
   "version": "1.0.0",
   "description": "Headless MFA client library",
   "main": "index.js",
+  "config": {
+    "bowerSrc": "bower_components/milagro-crypto-js/src/",
+    "cryptoSrc": "DBIG.js BIG.js FP.js ROM.js UInt64.js HASH256.js HASH384.js HASH512.js RAND.js AES.js GCM.js ECP.js FP4.js FP12.js PAIR.js MPIN.js MPINAuth.js",
+    "cryptoTmp": "../../../.tmp/crypto.js",
+    "cryptoTmpFile": ".tmp/crypto.js",
+    "libMfa": "lib/mfa.js",
+    "buildOut": "dist/mfa.js"
+  },
   "scripts": {
+    "step0": "rm -rf bower_components dist .tmp",
+    "step1": "bower install https://github.com/miracl/milagro-crypto-js.git#bower",
+    "step2": "mkdir .tmp dist",
+    "step3": "cd $npm_package_config_bowerSrc && cat $npm_package_config_cryptoSrc > $npm_package_config_cryptoTmp",
+    "step4": "cat $npm_package_config_cryptoTmpFile $npm_package_config_libMfa > $npm_package_config_buildOut",
+    "build": "npm run step0 && npm run step1 && npm run step2 && npm run step3 && npm run step4",
     "test": "mocha",
     "cover": "istanbul cover _mocha",
-    "lcov": "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+    "lcov": "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -30,6 +45,7 @@
   "devDependencies": {
     "chai": "^3.5.0",
     "coveralls": "^2.12.0",
+    "eslint": "^3.19.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.2.0",
     "sinon": "^2.1.0"
