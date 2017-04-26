@@ -1,42 +1,59 @@
-var inits = function () {
-	var testData = {};
+if (typeof require !== 'undefined') {
+    // Mock local storage
+    var LocalStorage = require('node-localstorage').LocalStorage;
+    global.localStorage = new LocalStorage('./.tmp/localStorageTemp');
+}
 
-	testData.userId = "test@user.de";
-	
-	testData.init = {};
-	testData.init.server = "http://server.com";
-	testData.init.distributor = "mlg";
+var inits = function() {
+    var testData = {};
 
-	testData.settings = {
-		certivoxURL: "https://miracl.com",
-		dtaUrl: "https://api.miracl.net",
-		registerURL: "https://api.miracl.net/register/user",
-		signatureURL: "https://api.miracl.net/signature"
-	};
+    testData.userId = "test@example.com";
 
-	testData.users = {
-		data: {
-			"test@user.de": {
-				mpinId: "exampleMpinId",
-				csHex: "testCsHex"
-			}
-		}
-	}
+    testData.init = {};
+    testData.init.server = "http://server.com";
+    testData.init.distributor = "mcl";
+    testData.init.customerId = "customerId";
 
-	testData.cs1 = {
-		clientSecret: "clientSecretValue"
-	};
+    testData.settings = {
+        certivoxURL: "https://miracl.com",
+        dtaUrl: "https://api.miracl.net",
+        registerURL: "https://api.miracl.net/register/user",
+        signatureURL: "https://api.miracl.net/signature",
+        mpinAuthServerURL: "https://api.miracl.net/rps"
+    };
 
-	testData.cs2 = {
-		clientSecretShare: "clientSecretValue"
-	};
+    testData.users = {
+        "test@example.com": {
+            mpinId: "exampleMpinId",
+            csHex: "testCsHex",
+            state: "ACTIVATED"
+        },
+        "invalid@example.com": {
+            mpinId: "exampleMpinId",
+            csHex: "testCsHex",
+            state: "INVALID"
+        },
+        "started@example.com": {
+            mpinId: "exampleMpinId",
+            csHex: "testCsHex",
+            state: "STARTED"
+        }
+    };
 
-	return {
-		testData: testData
-	}
+    testData.cs1 = {
+        clientSecret: "clientSecretValue"
+    };
+
+    testData.cs2 = {
+        clientSecretShare: "clientSecretValue"
+    };
+
+    return {
+        testData: testData
+    }
 }();
 
 if (typeof module !== "undefined" && typeof module.exports !== "undefined")
-  module.exports = inits;
+    module.exports = inits;
 else
-  window.inits = inits;
+    window.inits = inits;

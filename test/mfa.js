@@ -24,7 +24,7 @@ describe("Mfa Client", function() {
     });
 });
 
-describe("Mfa Client logger", function () {
+describe("Mfa Client logger", function() {
     var mfa, spy;
     before(() => {
         inits.testData.init.debug = 1;
@@ -41,11 +41,11 @@ describe("Mfa Client logger", function () {
 
     after(() => {
         mfa.restore();
-        delete (inits.testData.init.debug);
+        delete(inits.testData.init.debug);
     });
 });
 
-describe("Mfa Client init method", function () {
+describe("Mfa Client init method", function() {
     var mfa;
 
     before(() => {
@@ -53,7 +53,7 @@ describe("Mfa Client init method", function () {
     });
 
     it("should fire errorCb, when have problem with _getSettings", (done) => {
-        sinon.stub(mfa, '_getSettings').yields({error: true}, null);
+        sinon.stub(mfa, '_getSettings').yields({ error: true }, null);
         mfa.init(function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
             done();
@@ -65,7 +65,7 @@ describe("Mfa Client init method", function () {
         mfa.init(function successCb(successData) {
             expect(successData).to.exist;
             done();
-        }, function errorCb(err) { });
+        }, function errorCb(err) {});
     });
 
     afterEach(function() {
@@ -83,7 +83,7 @@ describe("Mfa Client _getSettings", function() {
     it("should store server settings", function(done) {
         sinon.stub(mfa, 'request').yields({}, null);
 
-        mfa._getSettings(function (err) {
+        mfa._getSettings(function(err) {
             expect(err).to.exist;
             done();
         });
@@ -92,7 +92,7 @@ describe("Mfa Client _getSettings", function() {
     it("should store server settings", function(done) {
         sinon.stub(mfa, 'request').yields(null, inits.testData.settings);
 
-        mfa._getSettings(function (successData) {
+        mfa._getSettings(function(successData) {
             expect(mfa.options.settings).to.deep.equal(inits.testData.settings);
             done();
         });
@@ -107,12 +107,13 @@ describe("Mfa Client startRegistration", function() {
     var mfa;
 
     before(() => {
+        localStorage.clear();
         mfa = new Mfa(inits.testData.init);
     });
 
     it("should fire errorCb, when have problem with _registration", (done) => {
         sinon.stub(mfa, '_registration').yields({}, null);
-        mfa.startRegistration(inits.testData.userId, function successCb(data) { }, function errorCb(err) {
+        mfa.startRegistration(inits.testData.userId, function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
             done();
         });
@@ -120,7 +121,7 @@ describe("Mfa Client startRegistration", function() {
 
     it("should fire successCb, when _registration passed successful", (done) => {
         sinon.stub(mfa, '_registration').yields(null, {});
-        mfa.startRegistration(inits.testData.userId, function successCb(data) { 
+        mfa.startRegistration(inits.testData.userId, function successCb(data) {
             expect(data).to.exist;
             done();
         }, function errorCb(err) {});
@@ -142,7 +143,7 @@ describe("Mfa Client _registration", function() {
     it("should return error, when register request fail", function(done) {
         sinon.stub(mfa, 'request').yields({}, null);
 
-        mfa._registration(inits.testData.userId, function (err) {
+        mfa._registration(inits.testData.userId, function(err) {
             expect(err).to.exist;
             done();
         });
@@ -151,9 +152,9 @@ describe("Mfa Client _registration", function() {
     it("should store userId, when register successful", function(done) {
         sinon.stub(mfa, 'request').yields(null, {});
 
-        mfa._registration(inits.testData.userId, function (err, data) {
+        mfa._registration(inits.testData.userId, function(err, data) {
             let userExist;
-            userExist = mfa.checkUserExists(inits.testData.userId);
+            userExist = mfa.users.exists(inits.testData.userId);
             expect(userExist).to.be.true;
             done();
         });
@@ -171,11 +172,12 @@ describe("Mfa Client confirmRegistration", function() {
         mfa = new Mfa(inits.testData.init);
     });
 
-
-
     it("should fire errorCb, when _getSecret1 return 401 & error should be IDENTITY_NOT_VERIFIED", (done) => {
-        sinon.stub(mfa, '_getSecret1').yields({status: 401}, null);
-        mfa.confirmRegistration(inits.testData.userId, function successCb(data) { }, function errorCb(err) {
+        sinon.stub(mfa, 'startRegistration').yields({ status: 401 }, null);
+        sinon.stub(mfa, '_getSecret1').yields({ status: 401 }, null);
+        sinon.stub(mfa.users, "suitableFor").returns(true);
+
+        mfa.confirmRegistration(inits.testData.userId, function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
             expect(err.code).to.equal('IDENTITY_NOT_VERIFIED');
             done();
@@ -184,7 +186,7 @@ describe("Mfa Client confirmRegistration", function() {
 
     it("should fire errorCb, when _getSecret1 return other error", (done) => {
         sinon.stub(mfa, '_getSecret1').yields({}, null);
-        mfa.confirmRegistration(inits.testData.userId, function successCb(data) { }, function errorCb(err) {
+        mfa.confirmRegistration(inits.testData.userId, function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
             done();
         });
@@ -193,15 +195,18 @@ describe("Mfa Client confirmRegistration", function() {
 
     it("should fire successCb, when _getSecret1 return Ok", (done) => {
         sinon.stub(mfa, '_getSecret').yields(null, {});
+        sinon.stub(mfa.users, "suitableFor").returns(true);
+
         mfa.confirmRegistration(inits.testData.userId, function successCb(data) {
             expect(data).to.exist;
             done();
-        }, function errorCb(err) { });
+        }, function errorCb(err) {});
     });
 
     afterEach(function() {
         mfa._getSecret.restore && mfa._getSecret.restore();
         mfa._getSecret1.restore && mfa._getSecret1.restore();
+        mfa.users.suitableFor.restore && mfa.users.suitableFor.restore();
     });
 });
 
@@ -217,7 +222,7 @@ describe("Mfa Client _getSecret", function() {
     it("should return error, when signature request fail", function(done) {
         sinon.stub(mfa, 'request').yields({}, null);
 
-        mfa._getSecret(inits.testData.userId, function (err) {
+        mfa._getSecret(inits.testData.userId, function(err) {
             expect(err).to.exist;
             done();
         });
@@ -228,7 +233,7 @@ describe("Mfa Client _getSecret", function() {
         stub.onCall(0).yields(null, {});
         stub.onCall(1).yields({}, null);
 
-        mfa._getSecret(inits.testData.userId, function (err) {
+        mfa._getSecret(inits.testData.userId, function(err) {
             expect(err).to.exist;
             done();
         });
@@ -240,10 +245,10 @@ describe("Mfa Client _getSecret", function() {
         stub.onCall(1).yields(null, inits.testData.cs2);
         MPINAuth = {};
         MPINAuth.addShares = spy;
-        mfa._getSecret(inits.testData.userId, function (err) {
+        mfa._getSecret(inits.testData.userId, function(err) {
             expect(spy.calledOnce).to.be.true;
-            expect(spy.getCalls()[0].args[0]).to.equal(inits.testData.cs1.clientSecret);
-            expect(spy.getCalls()[0].args[1]).to.equal(inits.testData.cs2.clientSecretShare);
+            expect(spy.getCalls()[0].args[0]).to.equal(inits.testData.cs1.clientSecretShare);
+            expect(spy.getCalls()[0].args[1]).to.equal(inits.testData.cs2.clientSecret);
             done();
         });
     });
@@ -262,7 +267,9 @@ describe("Mfa Client restartRegistration", function() {
 
     it("should fire errorCb, when have problem with _registration", (done) => {
         sinon.stub(mfa, '_registration').yields({}, null);
-        mfa.restartRegistration(inits.testData.userId, function successCb(data) { }, function errorCb(err) {
+        sinon.stub(mfa.users, "suitableFor").returns(true);
+
+        mfa.restartRegistration(inits.testData.userId, function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
             done();
         });
@@ -270,7 +277,9 @@ describe("Mfa Client restartRegistration", function() {
 
     it("should fire successCb, when _registration passed successful", (done) => {
         sinon.stub(mfa, '_registration').yields(null, {});
-        mfa.restartRegistration(inits.testData.userId, function successCb(data) { 
+        sinon.stub(mfa.users, "suitableFor").returns(true);
+
+        mfa.restartRegistration(inits.testData.userId, function successCb(data) {
             expect(data).to.exist;
             done();
         }, function errorCb(err) {});
@@ -278,34 +287,32 @@ describe("Mfa Client restartRegistration", function() {
 
     afterEach(function() {
         mfa._registration.restore && mfa._registration.restore();
+        mfa.users.suitableFor.restore && mfa.users.suitableFor.restore();
     });
 });
 
 describe("Mfa Client finishRegistration", function() {
     var mfa, userData;
 
-    before(() => {
+    beforeEach(() => {
         mfa = new Mfa(inits.testData.init);
-        userData = inits.testData.users.data[inits.testData.userId];
-        
-        mfa.addUser(inits.testData.userId, userData);
+        userData = inits.testData.users[inits.testData.userId];
+        mfa.users.add(inits.testData.userId, userData);
     });
 
-    it("should hash userPin if it is not a number", function () {
+    it("should hash userPin if it is not a number", function() {
         var spy = sinon.spy(mfa, "toHash");
         MPINAuth = {};
-        MPINAuth.calculateMPinToken = function () {};
+        MPINAuth.calculateMPinToken = function() {};
         mfa.finishRegistration(inits.testData.userId, "testPin");
         expect(spy.calledOnce).to.be.true;
     });
 
-    it("should call calculateMpinToken with mpinId, Pin & csHex", function () { 
+    it("should call calculateMpinToken with mpinId, Pin & csHex", function() {
         var spy = sinon.spy();
         MPINAuth = {};
         MPINAuth.calculateMPinToken = spy;
-        mfa.finishRegistration(inits.testData.userId, "1234");
-
-
+        var mfaRes = mfa.finishRegistration(inits.testData.userId, "1234");
         expect(spy.calledOnce).to.be.true;
         expect(spy.getCalls()[0].args[0]).to.equal(userData.mpinId);
         expect(spy.getCalls()[0].args[1]).to.equal("1234");
@@ -314,5 +321,62 @@ describe("Mfa Client finishRegistration", function() {
 
     afterEach(function() {
         mfa._registration.restore && mfa._registration.restore();
+        mfa.users.delete(inits.testData.userId);
     });
+});
+
+describe("Mfa Client MISSING_USERID w/o userId", function() {
+    var mfa;
+
+    before(() => {
+        mfa = new Mfa(inits.testData.init);
+    });
+
+    it("should return MISSING_USERID when try to call startRegistration w/o userId", (done) => {
+        mfa.startRegistration("", () => {}, (err) => {
+            expect(err).to.exist;
+            expect(err.code).to.equal('MISSING_USERID');
+            done();
+        })
+    });
+
+    it("should return MISSING_USERID when try to call confirmRegistration w/o userId", (done) => {
+        mfa.confirmRegistration("", () => {}, (err) => {
+            expect(err).to.exist;
+            expect(err.code).to.equal('MISSING_USERID');
+            done();
+        })
+    });
+
+    it("should return MISSING_USERID when try to call restartRegistration w/o userId", (done) => {
+        mfa.restartRegistration("", () => {}, (err) => {
+            expect(err).to.exist;
+            expect(err.code).to.equal('MISSING_USERID');
+            done();
+        })
+    });
+
+    it("should return MISSING_USERID when try to call finishRegistration w/o userId", () => {
+        expectRes = mfa.finishRegistration("");
+        expect(expectRes).to.exist;
+        expect(expectRes.code).to.equal('MISSING_USERID');
+    });
+});
+
+describe("Mfa Client REQUEST", function() {
+    var mfa, spy;
+
+    before(() => {
+        mfa = new Mfa(inits.testData.init);
+        spy = sinon.spy();
+    });
+
+    it("should return error missing CB", () => {
+        XMLHttpRequest = spy;
+        var res = mfa.request({ url: "reqUrl" });
+
+        expect(res).to.exist;
+        expect(res.code).to.equal('MISSING_CALLBACK');
+    });
+
 });

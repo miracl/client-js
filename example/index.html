@@ -12,24 +12,37 @@
     <div>MFA example:</div>
     <span>Setup flow</span>
     <script type="text/javascript">
-    function step1() {
-        var usrId = "test@example.com";
+    var userId = "test@example.com";
 
+    function step1() {
         console.log(".:example: init - put user :");
-        mfa.startRegistration(usrId, function successCb(err, data) {
+        mfa.startRegistration(userId, function successCb(err, data) {
             console.log(".:example: start registration :");
-        }, function errCb(argument) {
-                // body...
+            step2();
+        }, function errorCb(argument) {
+            console.log("error startRegistration");
         });
     }
 
+    function step2() {
+        mfa.confirmRegistration(userId, function successCb(data) {
+            //activate Identity error
+            console.log("SUCCESS confirmRegistration: ", data);
+            step3(userId);
+        }, function errorCb() {
+            console.log("error confirmRegistration");
+        });
+    }
+
+    function step3(userId) {
+        var final = mfa.finishRegistration(userId, 1234);
+    }
     console.log(".:example: initialize :");
     var mfa = new Mfa({
         server: "http://localhost/rps/",
         distributor: "mcl",
         debug: "1"
     });
-
     console.log(".:example: init - get settings :");
     mfa.init(function successCb(data) {
         step1();
