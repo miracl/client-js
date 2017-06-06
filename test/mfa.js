@@ -474,6 +474,230 @@ describe("Mfa Client register", function () {
     });
 });
 
+describe("Mfa Client authenticate", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(inits.testData.init);
+    });
+
+    it("should return MISSING_USERID w/o userId", function (done) {
+        mfa.authenticate("", "", function () {}, function (err) {
+            expect(err).to.exist;
+            expect(err.code).to.equal('MISSING_USERID');
+            done();
+        });
+    });
+
+    it("should go through the authentication flow", function (done) {
+        var initStub = sinon.stub(mfa, "init").yields(true);
+        var startAuthenticationStub = sinon.stub(mfa, "startAuthentication").yields(true);
+        var finishAuthenticationStub = sinon.stub(mfa, "finishAuthentication").yields(true);
+
+        mfa.authenticate(inits.testData.userId, "1234", function (data) {
+            expect(initStub.calledOnce).to.be.true;
+            expect(startAuthenticationStub.calledOnce).to.be.true;
+            expect(finishAuthenticationStub.calledOnce).to.be.true;
+            done();
+        }, function (err) {
+            throw Error(err);
+        });
+
+        mfa.init.restore && mfa.init.restore();
+        mfa.startAuthentication.restore && mfa.startAuthentication.restore();
+        mfa.finishAuthentication.restore && mfa.finishAuthentication.restore();
+    });
+});
+
+describe("Mfa Client _getPass1", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(inits.testData.init);
+        mfa.options.settings = inits.testData.settings;
+
+        MPINAuth = { pass1Request: function () {} };
+        sinon.stub(MPINAuth, 'pass1Request').returns({ success: true }, null);
+    });
+
+    it("shoud make a request for first pass", function (done) {
+        var stub = sinon.stub(mfa, "request").yields(null, { success: true });
+
+        mfa._getPass1(inits.testData.userId, "1234", function () {
+            expect(stub.calledOnce).to.be.true;
+            expect(stub.getCalls()[0].args[0]).to.be.an.object;
+            expect(stub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass1");
+            expect(stub.getCalls()[0].args[0].type).to.equal("POST");
+            done();
+        });
+    });
+
+    it("should pass response to callback", function (done) {
+        sinon.stub(mfa, "request").yields(null, { success: true });
+
+        mfa._getPass1(inits.testData.userId, "1234", function (err, data) {
+            expect(data).to.exist;
+            expect(data.success).to.be.true;
+            done();
+        });
+    });
+
+    afterEach(function () {
+        mfa.request.restore && mfa.request.restore();
+    });
+});
+
+describe("Mfa Client _getPass2", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(inits.testData.init);
+        mfa.options.settings = inits.testData.settings;
+
+        MPINAuth = { pass2Request: function () {} };
+        sinon.stub(MPINAuth, 'pass2Request').returns({ error: true }, null);
+    });
+
+    it("shoud make a request for second pass", function (done) {
+        var stub = sinon.stub(mfa, "request").yields(null, { success: true });
+
+        mfa._getPass2(inits.testData.userId, "yHex", function () {
+            expect(stub.calledOnce).to.be.true;
+            expect(stub.getCalls()[0].args[0]).to.be.an.object;
+            expect(stub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass2");
+            expect(stub.getCalls()[0].args[0].type).to.equal("POST");
+            done();
+        });
+    });
+
+    it("should pass response to callback", function (done) {
+        sinon.stub(mfa, "request").yields(null, { success: true });
+
+        mfa._getPass2(inits.testData.userId, "1234", function (err, data) {
+            expect(data).to.exist;
+            expect(data.success).to.be.true;
+            done();
+        });
+    });
+
+    afterEach(function () {
+        mfa.request.restore && mfa.request.restore();
+    });
+});
+
+describe("Mfa Client _getPass", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(inits.testData.init);
+        mfa.options.settings = inits.testData.settings;
+    });
+
+    it("shoud call _getPass1 and _getPass2", function (done) {
+        var getPass1Stub = sinon.stub(mfa, '_getPass1').yields(null, { success: true });
+        var getPass2Stub = sinon.stub(mfa, '_getPass2').yields(null, { success: true });
+
+        mfa._getPass(inits.testData.userId, "1234", function () {
+            expect(getPass1Stub.calledOnce).to.be.true;
+            expect(getPass2Stub.calledOnce).to.be.true;
+            done();
+        });
+    });
+
+    it("should call callback with error when _getPass1 fails", function (done) {
+        sinon.stub(mfa, '_getPass1').yields({ error: true }, null);
+
+        mfa._getPass(inits.testData.userId, "1234", function (err, data) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should call callback with error when _getPass2 fails", function (done) {
+        sinon.stub(mfa, '_getPass1').yields(null, { success: true });
+        sinon.stub(mfa, '_getPass2').yields({ error: true }, null);
+
+        mfa._getPass(inits.testData.userId, "1234", function (err, data) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    afterEach(function () {
+        mfa._getPass1.restore && mfa._getPass1.restore();
+        mfa._getPass2.restore && mfa._getPass2.restore();
+    });
+});
+
+describe("Mfa Client startAuthentication", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(inits.testData.init);
+    });
+
+    it("should call the error callback when there is an error", function (done) {
+        sinon.stub(mfa, "_getPass").yields({ error: true }, null);
+
+        mfa.startAuthentication(inits.testData.userId, "1234", function (data) {
+            done();
+        }, function (err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should call the success callback after getting the passes", function (done) {
+        sinon.stub(mfa, "_getPass").yields(null, { success: true });
+
+        mfa.startAuthentication(inits.testData.userId, "1234", function (data) {
+            expect(data).to.exist;
+            done();
+        }, function (err) {
+            throw new Error(err);
+        });
+    });
+
+    afterEach(function () {
+        mfa._getPass.restore && mfa._getPass.restore();
+    });
+});
+
+describe("Mfa Client finishAuthentication", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(inits.testData.init);
+        mfa.options.settings = inits.testData.settings;
+    });
+
+    it("should call error callback when request fails", function (done) {
+        sinon.stub(mfa, "request").yields({ error: true }, null);
+
+        mfa.finishAuthentication("authOTT", function (data) {
+            done();
+        }, function (err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should call the success callback after successful request", function (done) {
+        sinon.stub(mfa, "request").yields(null, { success: true });
+
+        mfa.finishAuthentication("authOTT", function (data) {
+            expect(data).to.exist;
+            done();
+        }, function (err) {
+            throw new Error(err);
+        });
+    });
+
+    afterEach(function () {
+        mfa.request.restore && mfa.request.restore();
+    });
+});
+
 describe("Mfa Client request", function() {
     var mfa, server, requests = [];
 
