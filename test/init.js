@@ -1,7 +1,7 @@
 if (typeof require !== 'undefined') {
     // Mock local storage
     var LocalStorage = require('node-localstorage').LocalStorage;
-    global.localStorage = new LocalStorage('./.tmp/localStorageTemp');
+    global.localStorage = new LocalStorage('./localStorageTemp');
 }
 
 var inits = function() {
