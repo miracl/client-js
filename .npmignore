@@ -1,6 +1,5 @@
-node_modules/
-dist/
 .tmp/
+node_modules/
 npm-debug.log
 nbproject/
 test/coverage.html

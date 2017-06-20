@@ -4,12 +4,6 @@
 [![Master Coverage Status](https://coveralls.io/repos/github/miracl/mfa-client-js/badge.svg?branch=master)](https://coveralls.io/github/miracl/mfa-client-js?branch=master)
 
 
-## Requirement for build & testing
-
-1. Nodejs
-2. Mocha
-3. Bower
-
 ## Installation
 
 ```bash
@@ -35,13 +29,10 @@ $ npm test
 
 ## Available options
 
-```bash
+```
 var mfaOptions = {
-	server: "serverUrl",
-	distributor: "distributorShortCode"
+	server: "serverUrl", // required
+	customerId: "customerId" // required
 }
 var mfa = new Mfa(mfaOptions);
 ```
- 1. Server - required
- 2. Distributor - required
- 
