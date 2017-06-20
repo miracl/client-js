@@ -37,20 +37,12 @@ describe("Mfa Users suitableFor", function() {
         }
     });
 
-    it("should return Error with user.state Activated for startRegistration", function () {
-        expect(mfa.users.suitableFor("test@example.com", "start")).to.be.false;
+    it("should return True with user.state Activated for startRegistration", function () {
+        expect(mfa.users.suitableFor("test@example.com", "start")).to.be.true;
     });
 
     it("should return True with user.state Activated for confirmRegistration", function () {
         expect(mfa.users.suitableFor("test@example.com", "confirm")).to.be.true;
-    });
-
-    it("should return True with user.state Activated for restartRegistration", function () {
-        expect(mfa.users.suitableFor("test@example.com", "restart")).to.be.true;
-    });
-
-    it("should return True with user.state Activated for restartRegistration", function () {
-        expect(mfa.users.suitableFor("test@example.com", "restart")).to.be.true;
     });
 
     it("should return True with user.state Invalid for startRegistration", function () {
@@ -65,10 +57,6 @@ describe("Mfa Users suitableFor", function() {
         expect(mfa.users.suitableFor("invalid@example.com", "finish")).to.be.false;
     });
 
-    it("should return False with user.state Invalid for restartRegistration", function () {
-        expect(mfa.users.suitableFor("invalid@example.com", "restart")).to.be.false;
-    });
-
     it("should return True with user.state Started for confirmRegistration", function () {
         expect(mfa.users.suitableFor("started@example.com", "confirm")).to.be.true;
     });
@@ -79,10 +67,6 @@ describe("Mfa Users suitableFor", function() {
 
     it("should return False with missingUser for confirmRegistration", function () {
         expect(mfa.users.suitableFor("missing@example.com", "confirm")).to.be.false;
-    });
-
-    it("should return False with missingUser for restartRegistration", function () {
-        expect(mfa.users.suitableFor("missing@example.com", "restart")).to.be.false;
     });
 
     it("should return False with invalid operation", function () {

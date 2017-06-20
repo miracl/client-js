@@ -327,61 +327,6 @@ describe("Mfa Client _getSecret", function() {
     });
 });
 
-describe("Mfa Client restartRegistration", function() {
-    var mfa;
-
-    before(function () {
-        mfa = new Mfa(inits.testData.init);
-    });
-
-    it("should return MISSING_USERID when try to call restartRegistration w/o userId", function (done) {
-        mfa.restartRegistration("", function () {}, function (err) {
-            expect(err).to.exist;
-            expect(err.code).to.equal('MISSING_USERID');
-            done();
-        })
-    });
-
-    it("should call errorCb with WRONG_FLOW when user is not suitable", function (done) {
-        sinon.stub(mfa.users, "suitableFor").returns(false);
-
-        mfa.restartRegistration(inits.testData.userId, function () {}, function (err) {
-            expect(err).to.exist;
-            expect(err.code).to.equal("WRONG_FLOW");
-            done()
-        });
-
-        mfa.users.suitableFor.restore && mfa.users.suitableFor.restore();
-    });
-
-    it("should fire errorCb, when have problem with _registration", function (done) {
-        sinon.stub(mfa, '_registration').yields({ error: true }, null);
-        sinon.stub(mfa.users, "suitableFor").returns(true);
-
-        mfa.restartRegistration(inits.testData.userId, function successCb(data) {}, function errorCb(err) {
-            expect(err).to.exist;
-            done();
-        });
-    });
-
-    it("should fire successCb, when _registration passed successful", function (done) {
-        sinon.stub(mfa, '_registration').yields(null, {});
-        sinon.stub(mfa.users, "suitableFor").returns(true);
-
-        mfa.restartRegistration(inits.testData.userId, function successCb(data) {
-            expect(data).to.exist;
-            done();
-        }, function errorCb(err) {
-            throw Error(err);
-        });
-    });
-
-    afterEach(function() {
-        mfa._registration.restore && mfa._registration.restore();
-        mfa.users.suitableFor.restore && mfa.users.suitableFor.restore();
-    });
-});
-
 describe("Mfa Client finishRegistration", function() {
     var mfa, userData;
 
@@ -479,6 +424,8 @@ describe("Mfa Client authenticate", function () {
 
     before(function () {
         mfa = new Mfa(inits.testData.init);
+        userData = inits.testData.users[inits.testData.userId];
+        mfa.users.add(inits.testData.userId, userData);
     });
 
     it("should return MISSING_USERID w/o userId", function (done) {
