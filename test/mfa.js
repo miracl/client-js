@@ -734,7 +734,7 @@ describe("Mfa Client request", function() {
         requests[0].respond(400, { }, "");
 
         expect(callback.callCount).to.equal(1);
-        sinon.assert.calledWith(callback, { status: 400 }, null);
+        sinon.assert.calledWith(callback, { code: "REQUEST_ERROR", description: "Bad Request", status: 400 }, null);
     });
 
     it("should handle aborted request", function () {
@@ -749,6 +749,6 @@ describe("Mfa Client request", function() {
         requests[0].respond(0, { }, "");
 
         expect(callback.callCount).to.equal(1);
-        sinon.assert.calledWith(callback, { status: 0 }, null);
+        sinon.assert.calledWith(callback, { code: "REQUEST_ABORTED", description: "The request was aborted", status: 0 }, null);
     });
 });
