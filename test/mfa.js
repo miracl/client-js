@@ -674,7 +674,7 @@ describe("Mfa Client finishAuthentication", function () {
     it("should call error callback when request fails", function (done) {
         sinon.stub(mfa, "request").yields({ error: true }, null);
 
-        mfa.finishAuthentication("authOTT", function (data) {
+        mfa.finishAuthentication(inits.testData.userId, "authOTT", function (data) {
             done();
         }, function (err) {
             expect(err).to.exist;
@@ -685,11 +685,23 @@ describe("Mfa Client finishAuthentication", function () {
     it("should call the success callback after successful request", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa.finishAuthentication("authOTT", function (data) {
+        mfa.finishAuthentication(inits.testData.userId, "authOTT", function (data) {
             expect(data).to.exist;
             done();
         }, function (err) {
             throw new Error(err);
+        });
+    });
+
+    it("should mark an identity as revoked", function (done) {
+        sinon.stub(mfa, "request").yields({ status: 410 }, null);
+
+        mfa.finishAuthentication(inits.testData.userId, "authOTT", function (data) {
+            throw new Error(data);
+        }, function (err) {
+            expect(err).to.exist;
+            expect(mfa.users.get(inits.testData.userId, "state")).to.equal(mfa.users.states.revoked);
+            done();
         });
     });
 
