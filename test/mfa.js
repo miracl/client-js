@@ -12,12 +12,12 @@ describe("Mfa Client", function() {
         }).to.throw(Object).that.deep.equals({ code: "MISSING_SERVER", description: "Missing server parameter" });
     });
 
-    it("should throw Error w/o distributor", function () {
+    it("should throw Error w/o customer", function () {
         expect(function () {
             var mfa = new Mfa({
                 server: inits.testData.init.server
             });
-        }).to.throw(Object).that.deep.equals({ code: "MISSING_DISTRIBUTOR", description: "Missing Distributor" });
+        }).to.throw(Object).that.deep.equals({ code: "MISSING_CUSTOMER_ID", description: "Missing customer ID" });
     });
 
     it("should return Instance of Mfa", function () {
