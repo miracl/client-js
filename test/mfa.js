@@ -400,7 +400,9 @@ describe("Mfa Client register", function () {
         var confirmRegistrationStub = sinon.stub(mfa, "confirmRegistration").yields(true);
         var finishRegistrationStub = sinon.stub(mfa, "finishRegistration").yields(true);
 
-        mfa.register(inits.testData.userId, "1234", function (confirm) {
+        mfa.register(inits.testData.userId, function (passPin) {
+            passPin("1234");
+        }, function (confirm) {
             confirm();
         }, function (data) {
             expect(initStub.calledOnce).to.be.true;
