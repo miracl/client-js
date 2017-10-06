@@ -32,7 +32,8 @@ $ npm test
 ```
 var mfaOptions = {
 	server: "serverUrl", // required
-	customerId: "customerId" // required
+	customerId: "customerId", // required
+	deviceName: "Name of Device"
 }
 var mfa = new Mfa(mfaOptions);
 ```

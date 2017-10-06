@@ -125,6 +125,27 @@ describe("Mfa Client _getSettings", function() {
     });
 });
 
+describe("Mfa Client _getDeviceName", function () {
+    var mfa;
+
+    it("should return default device name", function () {
+        mfa = new Mfa({
+            server: inits.testData.init.server,
+            customerId: inits.testData.init.customerId
+        });
+        expect(mfa._getDeviceName()).to.equal("Browser");
+    });
+
+    it("should return provided device name", function () {
+        mfa = new Mfa({
+            server: inits.testData.init.server,
+            customerId: inits.testData.init.customerId,
+            deviceName: "test"
+        });
+        expect(mfa._getDeviceName()).to.equal("test");
+    })
+});
+
 describe("Mfa Client startRegistration", function() {
     var mfa;
 
