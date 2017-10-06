@@ -504,13 +504,13 @@ describe("Mfa Client _getPass2", function () {
         mfa.options.settings = inits.testData.settings;
 
         MPINAuth = { pass2Request: function () {} };
-        sinon.stub(MPINAuth, 'pass2Request').returns({ error: true }, null);
     });
 
     it("shoud make a request for second pass", function (done) {
+        sinon.stub(MPINAuth, 'pass2Request').returns({ error: true }, null);
         var stub = sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa._getPass2(inits.testData.userId, "yHex", function () {
+        mfa._getPass2(inits.testData.userId, "yHex", false, function () {
             expect(stub.calledOnce).to.be.true;
             expect(stub.getCalls()[0].args[0]).to.be.an.object;
             expect(stub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass2");
@@ -520,17 +520,33 @@ describe("Mfa Client _getPass2", function () {
     });
 
     it("should pass response to callback", function (done) {
+        sinon.stub(MPINAuth, 'pass2Request').returns({ error: true }, null);
         sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa._getPass2(inits.testData.userId, "1234", function (err, data) {
+        mfa._getPass2(inits.testData.userId, "1234", false, function (err, data) {
             expect(data).to.exist;
             expect(data.success).to.be.true;
             done();
         });
     });
 
+    it("should make a request for OTP", function (done) {
+        var stub = sinon.stub(mfa, "request").yields(null, { success: true });
+
+        var pass2RequestStub = sinon.stub(MPINAuth, "pass2Request").returns({success: true});
+
+        mfa._getPass2(inits.testData.userId, "1234", true, function (err, data) {
+            expect(stub.calledOnce).to.be.true;
+            expect(pass2RequestStub.calledOnce).to.be.true;
+            expect(pass2RequestStub.getCalls()[0].args[1]).to.be.true;
+            done();
+        });
+
+    });
+
     afterEach(function () {
         mfa.request.restore && mfa.request.restore();
+        MPINAuth.pass2Request.restore && MPINAuth.pass2Request.restore();
     });
 });
 
@@ -546,7 +562,7 @@ describe("Mfa Client _getPass", function () {
         var getPass1Stub = sinon.stub(mfa, '_getPass1').yields(null, { success: true });
         var getPass2Stub = sinon.stub(mfa, '_getPass2').yields(null, { success: true });
 
-        mfa._getPass(inits.testData.userId, "1234", function () {
+        mfa._getPass(inits.testData.userId, "1234", false, function () {
             expect(getPass1Stub.calledOnce).to.be.true;
             expect(getPass2Stub.calledOnce).to.be.true;
             done();
@@ -556,7 +572,7 @@ describe("Mfa Client _getPass", function () {
     it("should call callback with error when _getPass1 fails", function (done) {
         sinon.stub(mfa, '_getPass1').yields({ error: true }, null);
 
-        mfa._getPass(inits.testData.userId, "1234", function (err, data) {
+        mfa._getPass(inits.testData.userId, "1234", false, function (err, data) {
             expect(err).to.exist;
             done();
         });
@@ -566,7 +582,7 @@ describe("Mfa Client _getPass", function () {
         sinon.stub(mfa, '_getPass1').yields(null, { success: true });
         sinon.stub(mfa, '_getPass2').yields({ error: true }, null);
 
-        mfa._getPass(inits.testData.userId, "1234", function (err, data) {
+        mfa._getPass(inits.testData.userId, "1234", false, function (err, data) {
             expect(err).to.exist;
             done();
         });
@@ -655,6 +671,69 @@ describe("Mfa Client finishAuthentication", function () {
     });
 
     afterEach(function () {
+        mfa.request.restore && mfa.request.restore();
+    });
+});
+
+describe("Mfa Client fetchOTP", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(inits.testData.init);
+        userData = inits.testData.users[inits.testData.userId];
+        mfa.users.add(inits.testData.userId, userData);
+    });
+
+    it("should return MISSING_USERID w/o userId", function (done) {
+        mfa.fetchOTP("", "", function () {}, function (err) {
+            expect(err).to.exist;
+            expect(err.code).to.equal('MISSING_USERID');
+            done();
+        });
+    });
+
+    it("should call the error callback when there is an error", function (done) {
+        sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa, "_getPass").yields({ error: true }, null);
+
+        mfa.fetchOTP(inits.testData.userId, "1234", function (data) {
+            done();
+        }, function (err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should call the success callback after getting the passes", function (done) {
+        var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa, "_getPass").yields(null, { success: true });
+
+        mfa.fetchOTP(inits.testData.userId, "1234", function (data) {
+            // Called twice for init and authenticate
+            expect(requestStub.callCount).to.equal(2);
+            expect(data).to.exist;
+            done();
+        }, function (err) {
+            throw new Error(err);
+        });
+    });
+
+    it("should call the error callback on authenticate error", function (done) {
+        sinon.stub(mfa, "_getPass").yields(null, { success: true });
+        var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
+        requestStub.onFirstCall().yields(null, { success: true });
+        requestStub.onSecondCall().yields({ error: true, status: 410 }, null);
+
+        mfa.fetchOTP(inits.testData.userId, "1234", function (data) {
+            throw new Error(err);
+        }, function (err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    afterEach(function () {
+        mfa._getPass.restore && mfa._getPass.restore();
         mfa.request.restore && mfa.request.restore();
     });
 });
