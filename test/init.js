@@ -1,7 +1,13 @@
 if (typeof require !== 'undefined') {
+    var fs = require("fs");
+    var vm = require("vm");
+    var paths, code;
+
     // Mock local storage
     var LocalStorage = require('node-localstorage').LocalStorage;
     global.localStorage = new LocalStorage('./localStorageTemp');
+
+    global.CTX = require("milagro-crypto-js");
 }
 
 var inits = function() {
@@ -9,10 +15,11 @@ var inits = function() {
 
     testData.userId = "test@example.com";
 
-    testData.init = {};
-    testData.init.server = "http://server.com";
-    testData.init.distributor = "mcl";
-    testData.init.customerId = "customerId";
+    testData.init = {
+        server: "http://server.com",
+        customerId: "customerId",
+        seed: "hexSeed"
+    };
 
     testData.settings = {
         certivoxURL: "https://miracl.com",
@@ -20,32 +27,6 @@ var inits = function() {
         registerURL: "https://api.miracl.net/register/user",
         signatureURL: "https://api.miracl.net/signature",
         mpinAuthServerURL: "https://api.miracl.net/rps"
-    };
-
-    testData.users = {
-        "test@example.com": {
-            mpinId: "exampleMpinId",
-            csHex: "testCsHex",
-            state: "ACTIVATED"
-        },
-        "invalid@example.com": {
-            mpinId: "exampleMpinId",
-            csHex: "testCsHex",
-            state: "INVALID"
-        },
-        "started@example.com": {
-            mpinId: "exampleMpinId",
-            csHex: "testCsHex",
-            state: "STARTED"
-        }
-    };
-
-    testData.cs1 = {
-        clientSecret: "clientSecretValue"
-    };
-
-    testData.cs2 = {
-        clientSecretShare: "clientSecretValue"
     };
 
     return {

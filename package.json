@@ -1,11 +1,11 @@
 {
   "name": "@miracl/mfa-client-js",
-  "version": "1.2.2",
+  "version": "2.0.0",
   "description": "Headless MFA client library",
   "main": "index.js",
   "config": {
-    "cryptoPath": "node_modules/@miracl/milagro-crypto-js/src/",
-    "cryptoSrc": "DBIG.js BIG.js FP.js ROM.js UInt64.js HASH256.js HASH384.js HASH512.js RAND.js AES.js GCM.js ECP.js FP4.js FP12.js PAIR.js MPIN.js MPINAuth.js",
+    "cryptoPath": "node_modules/milagro-crypto-js/src/browser/",
+    "cryptoSrc": "aes.js big.js ctx.js ecdh.js ecp.js ecp2.js ff.js fp.js fp2.js fp4.js fp12.js gcm.js hash256.js hash384.js hash512.js mpin.js newhope.js nhs.js pair.js rand.js rom_curve.js rom_field.js rsa.js sha3.js uint64.js",
     "cryptoTmp": "../../../../.tmp/crypto.js",
     "cryptoTmpFile": ".tmp/crypto.js",
     "libMfa": "lib/mfa.js",
@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/miracl/mfa-client-js#readme",
   "dependencies": {
-    "@miracl/milagro-crypto-js": "^2.1.1"
+    "milagro-crypto-js": "git+https://github.com/milagro-crypto/milagro-crypto-js.git#3.0.2"
   },
   "devDependencies": {
     "chai": "^3.5.0",

@@ -20,6 +20,15 @@ describe("Mfa Client", function() {
         }).to.throw(Object).that.deep.equals({ code: "MISSING_CUSTOMER_ID", description: "Missing customer ID" });
     });
 
+    it("should throw Error w/o seed", function () {
+        expect(function () {
+            var mfa = new Mfa({
+                server: inits.testData.init.server,
+                customerId: inits.testData.init.customerId
+            });
+        }).to.throw("Missing random number generator seed");
+    });
+
     it("should return Instance of Mfa", function () {
         var mfa = new Mfa(inits.testData.init);
         expect(mfa).to.be.an.instanceof(Mfa);
@@ -131,7 +140,8 @@ describe("Mfa Client _getDeviceName", function () {
     it("should return default device name", function () {
         mfa = new Mfa({
             server: inits.testData.init.server,
-            customerId: inits.testData.init.customerId
+            customerId: inits.testData.init.customerId,
+            seed: inits.testData.init.seed
         });
         expect(mfa._getDeviceName()).to.equal("Browser");
     });
@@ -140,6 +150,7 @@ describe("Mfa Client _getDeviceName", function () {
         mfa = new Mfa({
             server: inits.testData.init.server,
             customerId: inits.testData.init.customerId,
+            seed: inits.testData.init.seed,
             deviceName: "test"
         });
         expect(mfa._getDeviceName()).to.equal("test");
@@ -350,33 +361,84 @@ describe("Mfa Client _getSecret", function() {
     });
 
     it("should call addShares with CS and CSShare", function(done) {
+        var addSharesStub = sinon.stub(mfa, '_addShares');
         var stub = sinon.stub(mfa, 'request');
-        stub.onCall(0).yields(null, inits.testData.cs1);
-        stub.onCall(1).yields(null, inits.testData.cs2);
-
-        MPINAuth = {};
-        MPINAuth.addShares = spy;
+        stub.onCall(0).yields(null, { clientSecretShare: "clientSecretValue1" });
+        stub.onCall(1).yields(null, { clientSecret: "clientSecretValue2" });
 
         mfa._getSecret(inits.testData.userId, function(err) {
-            expect(spy.calledOnce).to.be.true;
-            expect(spy.getCalls()[0].args[0]).to.equal(inits.testData.cs1.clientSecretShare);
-            expect(spy.getCalls()[0].args[1]).to.equal(inits.testData.cs2.clientSecret);
+            expect(addSharesStub.calledOnce).to.be.true;
+            expect(addSharesStub.getCalls()[0].args[0]).to.equal("clientSecretValue1");
+            expect(addSharesStub.getCalls()[0].args[1]).to.equal("clientSecretValue2");
             done();
         });
+
     });
 
     afterEach(function() {
         mfa.request.restore && mfa.request.restore();
+        mfa._addShares.restore && mfa._addShares.restore();
     });
 });
 
+describe("Mfa Client _addShares", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(inits.testData.init);
+        mfa.options.settings = inits.testData.settings;
+    });
+
+    it("should return error code", function () {
+        sinon.stub(mfa.mpin, "RECOMBINE_G1").returns(-1);
+        expect(mfa._addShares("test", "test")).to.equal(-1);
+    });
+
+    it("should return combined client secret", function () {
+        sinon.stub(mfa.mpin, "RECOMBINE_G1").returns(0);
+        expect(mfa._addShares("test", "test")).to.equal("");
+    });
+
+    afterEach(function () {
+        mfa.mpin.RECOMBINE_G1.restore && mfa.mpin.RECOMBINE_G1.restore();
+    });
+});
+
+describe("Mfa Client _calculateMPinToken", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(inits.testData.init);
+        mfa.options.settings = inits.testData.settings;
+    });
+
+    it("should return error code", function () {
+        sinon.stub(mfa.mpin, "EXTRACT_PIN").returns(-1);
+        expect(mfa._calculateMPinToken("test", "1234", "hex")).to.equal(-1);
+    });
+
+    it("should return combined client secret", function () {
+        sinon.stub(mfa.mpin, "EXTRACT_PIN").returns(0);
+        expect(mfa._calculateMPinToken("test", "1234", "hex")).to.equal("0000");
+    });
+
+    afterEach(function () {
+        mfa.mpin.EXTRACT_PIN.restore && mfa.mpin.EXTRACT_PIN.restore();
+    });
+});
+
+
 describe("Mfa Client finishRegistration", function() {
-    var mfa, userData;
+    var mfa;
 
     beforeEach(function () {
+        localStorage.clear();
         mfa = new Mfa(inits.testData.init);
-        userData = inits.testData.users[inits.testData.userId];
-        mfa.users.add(inits.testData.userId, userData);
+        mfa.users.add("test@example.com", {
+            mpinId: "exampleMpinId",
+            csHex: "testCsHex",
+            state: "ACTIVATED"
+        });
     });
 
     it("should return MISSING_USERID when called w/o userId", function (done) {
@@ -399,34 +461,20 @@ describe("Mfa Client finishRegistration", function() {
         mfa.users.suitableFor.restore && mfa.users.suitableFor.restore();
     });
 
-    it("should hash userPin if it is not a number", function (done) {
-        var spy = sinon.spy(mfa, "toHash");
-        MPINAuth = {};
-        MPINAuth.calculateMPinToken = function() {};
-
-        mfa.finishRegistration(inits.testData.userId, "testPin", function () {
-            expect(spy.calledOnce).to.be.true;
-            done();
-        });
-    });
-
-    it("should call calculateMpinToken with mpinId, Pin & csHex", function (done) {
-        var spy = sinon.spy();
-        MPINAuth = {};
-        MPINAuth.calculateMPinToken = spy;
+    it("should call calculateMpinToken with mpinId, Pin", function (done) {
+        var calculateMPinTokenStub = sinon.stub(mfa, "_calculateMPinToken");
 
         mfa.finishRegistration(inits.testData.userId, "1234", function (data) {
-            expect(spy.calledOnce).to.be.true;
-            expect(spy.getCalls()[0].args[0]).to.equal(userData.mpinId);
-            expect(spy.getCalls()[0].args[1]).to.equal("1234");
-            expect(spy.getCalls()[0].args[2]).to.equal(userData.csHex);
+            expect(calculateMPinTokenStub.calledOnce).to.be.true;
+            expect(calculateMPinTokenStub.getCalls()[0].args[0]).to.equal("exampleMpinId");
+            expect(calculateMPinTokenStub.getCalls()[0].args[1]).to.equal("1234");
             done();
         });
     });
 
     afterEach(function() {
         mfa._registration.restore && mfa._registration.restore();
-        mfa.users.delete(inits.testData.userId);
+        mfa._calculateMPinToken.restore && mfa._calculateMPinToken.restore();
     });
 });
 
@@ -469,8 +517,11 @@ describe("Mfa Client authenticate", function () {
 
     before(function () {
         mfa = new Mfa(inits.testData.init);
-        userData = inits.testData.users[inits.testData.userId];
-        mfa.users.add(inits.testData.userId, userData);
+        mfa.users.add("test@example.com", {
+            mpinId: "exampleMpinId",
+            csHex: "testCsHex",
+            state: "ACTIVATED"
+        });
     });
 
     it("should return MISSING_USERID w/o userId", function (done) {
@@ -507,35 +558,46 @@ describe("Mfa Client _getPass1", function () {
     before(function () {
         mfa = new Mfa(inits.testData.init);
         mfa.options.settings = inits.testData.settings;
-
-        MPINAuth = { pass1Request: function () {} };
-        sinon.stub(MPINAuth, 'pass1Request').returns({ success: true }, null);
     });
 
     it("shoud make a request for first pass", function (done) {
-        var stub = sinon.stub(mfa, "request").yields(null, { success: true });
+        var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa.mpin, "CLIENT_1").returns(0);
 
-        mfa._getPass1(inits.testData.userId, "1234", function () {
-            expect(stub.calledOnce).to.be.true;
-            expect(stub.getCalls()[0].args[0]).to.be.an.object;
-            expect(stub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass1");
-            expect(stub.getCalls()[0].args[0].type).to.equal("POST");
+        mfa._getPass1(inits.testData.userId, "1234", [], [], function () {
+            expect(requestStub.calledOnce).to.be.true;
+            expect(requestStub.getCalls()[0].args[0]).to.be.an.object;
+            expect(requestStub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass1");
+            expect(requestStub.getCalls()[0].args[0].type).to.equal("POST");
             done();
         });
     });
 
     it("should pass response to callback", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa.mpin, "CLIENT_1").returns(0);
 
-        mfa._getPass1(inits.testData.userId, "1234", function (err, data) {
+        mfa._getPass1(inits.testData.userId, "1234", [], [], function (err, data) {
             expect(data).to.exist;
             expect(data.success).to.be.true;
             done();
         });
     });
 
+    it("should pass error to callback", function (done) {
+        sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa.mpin, "CLIENT_1").returns(-14);
+
+        mfa._getPass1(inits.testData.userId, "1234", [], [], function (err, data) {
+            expect(err).to.exist;
+            expect(err.code).to.equal("PASS_1_ERROR");
+            done();
+        });
+    });
+
     afterEach(function () {
         mfa.request.restore && mfa.request.restore();
+        mfa.mpin.CLIENT_1.restore && mfa.mpin.CLIENT_1.restore();
     });
 });
 
@@ -545,15 +607,13 @@ describe("Mfa Client _getPass2", function () {
     before(function () {
         mfa = new Mfa(inits.testData.init);
         mfa.options.settings = inits.testData.settings;
-
-        MPINAuth = { pass2Request: function () {} };
     });
 
     it("shoud make a request for second pass", function (done) {
-        sinon.stub(MPINAuth, 'pass2Request').returns({ error: true }, null);
         var stub = sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa.mpin, "CLIENT_2").returns(0);
 
-        mfa._getPass2(inits.testData.userId, "yHex", false, function () {
+        mfa._getPass2(inits.testData.userId, "yHex", [], [], false, function () {
             expect(stub.calledOnce).to.be.true;
             expect(stub.getCalls()[0].args[0]).to.be.an.object;
             expect(stub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass2");
@@ -563,25 +623,33 @@ describe("Mfa Client _getPass2", function () {
     });
 
     it("should pass response to callback", function (done) {
-        sinon.stub(MPINAuth, 'pass2Request').returns({ error: true }, null);
         sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa.mpin, "CLIENT_2").returns(0);
 
-        mfa._getPass2(inits.testData.userId, "1234", false, function (err, data) {
+        mfa._getPass2(inits.testData.userId, "yHex", [], [], false, function (err, data) {
             expect(data).to.exist;
             expect(data.success).to.be.true;
             done();
         });
     });
 
+    it("should pass error to callback", function (done) {
+        sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa.mpin, "CLIENT_2").returns(-14);
+
+        mfa._getPass2(inits.testData.userId, "yHex", [], [], false, function (err, data) {
+            expect(err).to.exist;
+            expect(err.code).to.equal("PASS_2_ERROR");
+            done();
+        });
+    });
+
     it("should make a request for OTP", function (done) {
         var stub = sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa.mpin, "CLIENT_2").returns(0);
 
-        var pass2RequestStub = sinon.stub(MPINAuth, "pass2Request").returns({success: true});
-
-        mfa._getPass2(inits.testData.userId, "1234", true, function (err, data) {
+        mfa._getPass2(inits.testData.userId, "yHex", [], [], true, function (err, data) {
             expect(stub.calledOnce).to.be.true;
-            expect(pass2RequestStub.calledOnce).to.be.true;
-            expect(pass2RequestStub.getCalls()[0].args[1]).to.be.true;
             done();
         });
 
@@ -589,7 +657,7 @@ describe("Mfa Client _getPass2", function () {
 
     afterEach(function () {
         mfa.request.restore && mfa.request.restore();
-        MPINAuth.pass2Request.restore && MPINAuth.pass2Request.restore();
+        mfa.mpin.CLIENT_2.restore && mfa.mpin.CLIENT_2.restore();
     });
 });
 
@@ -723,8 +791,11 @@ describe("Mfa Client fetchOTP", function () {
 
     before(function () {
         mfa = new Mfa(inits.testData.init);
-        userData = inits.testData.users[inits.testData.userId];
-        mfa.users.add(inits.testData.userId, userData);
+        mfa.users.add("test@example.com", {
+            mpinId: "exampleMpinId",
+            csHex: "testCsHex",
+            state: "ACTIVATED"
+        });
     });
 
     it("should return MISSING_USERID w/o userId", function (done) {
