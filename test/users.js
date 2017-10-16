@@ -8,7 +8,7 @@ if (typeof require !== 'undefined') {
 describe("Mfa Users loadData", function () {
     var mfa;
 
-    before(function () {
+    beforeEach(function () {
         localStorage.clear();
         mfa = new Mfa(inits.testData.init);
     });
@@ -28,6 +28,41 @@ describe("Mfa Users loadData", function () {
         mfa.users.loadData();
 
         expect(mfa.users.exists("test@example.com")).to.be.true;
+    });
+
+    it("should sort identities by last used timestamp", function () {
+        localStorage.setItem("mfa", JSON.stringify([
+            {
+                "userId": "test1@example.com",
+                "customerId": "customerId",
+                "state": "ACTIVATED",
+                "mpinId": "exampleMpinId1",
+                "csHex": "testCsHex1",
+                "lastUsed": 30
+            },
+            {
+                "userId": "test2@example.com",
+                "customerId": "customerId",
+                "state": "ACTIVATED",
+                "mpinId": "exampleMpinId2",
+                "csHex": "testCsHex2",
+                "lastUsed": 29
+            },
+            {
+                "userId": "test3@example.com",
+                "customerId": "customerId",
+                "state": "ACTIVATED",
+                "mpinId": "exampleMpinId3",
+                "csHex": "testCsHex3",
+                "lastUsed": 31
+            }
+        ]));
+
+        mfa.users.loadData();
+
+        expect(mfa.users.data[0].userId).to.equal("test2@example.com");
+        expect(mfa.users.data[1].userId).to.equal("test1@example.com");
+        expect(mfa.users.data[2].userId).to.equal("test3@example.com");
     });
 });
 
