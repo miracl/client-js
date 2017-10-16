@@ -211,7 +211,7 @@ describe("Mfa Client _registration", function() {
     });
 
     it("should return error, when register request fail", function(done) {
-        sinon.stub(mfa, 'request').yields({}, null);
+        sinon.stub(mfa, 'request').yields({ error: true }, null);
 
         mfa._registration(inits.testData.userId, function(err) {
             expect(err).to.exist;
@@ -219,14 +219,26 @@ describe("Mfa Client _registration", function() {
         });
     });
 
-    it("should store userId, when register successful", function(done) {
-        sinon.stub(mfa, 'request').yields(null, {});
+    it("should store started user", function(done) {
+        sinon.stub(mfa, 'request').yields(null, { success: true, active: false });
 
         mfa._registration(inits.testData.userId, function(err, data) {
             expect(mfa.users.exists(inits.testData.userId)).to.be.true;
+            expect(mfa.users.get(inits.testData.userId, "state")).to.equal("STARTED");
             done();
         });
     });
+
+    it("should store activated user", function(done) {
+        sinon.stub(mfa, 'request').yields(null, { success: true, active: true });
+
+        mfa._registration(inits.testData.userId, function(err, data) {
+            expect(mfa.users.exists(inits.testData.userId)).to.be.true;
+            expect(mfa.users.get(inits.testData.userId, "state")).to.equal("ACTIVATED");
+            done();
+        });
+    });
+
 
     afterEach(function() {
         mfa.request.restore && mfa.request.restore();
@@ -281,6 +293,16 @@ describe("Mfa Client confirmRegistration", function() {
             throw Error(err);
         });
 
+    });
+
+    it("should fire errorCb when identity is not in suitable state", function (done) {
+        sinon.stub(mfa, '_getSecret').yields(null, {});
+        sinon.stub(mfa.users, "suitableFor").returns(false);
+
+        mfa.confirmRegistration(inits.testData.userId, function successCb(data) {}, function errorCb(err) {
+            expect(err).to.exist;
+            done();
+        });
     });
 
     it("should return MISSING_USERID when try to call confirmRegistration w/o userId", function (done) {
