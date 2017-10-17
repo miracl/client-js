@@ -434,7 +434,7 @@ describe("Mfa Client finishRegistration", function() {
     beforeEach(function () {
         localStorage.clear();
         mfa = new Mfa(inits.testData.init);
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
@@ -516,7 +516,7 @@ describe("Mfa Client authenticate", function () {
 
     before(function () {
         mfa = new Mfa(inits.testData.init);
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
@@ -789,7 +789,7 @@ describe("Mfa Client fetchOTP", function () {
 
     before(function () {
         mfa = new Mfa(inits.testData.init);
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });

@@ -62,7 +62,7 @@ describe("Mfa Users loadData", function () {
     });
 });
 
-describe("Mfa Users add", function () {
+describe("Mfa Users write", function () {
     var mfa;
 
     before(function () {
@@ -70,9 +70,8 @@ describe("Mfa Users add", function () {
         mfa = new Mfa(inits.testData.init);
     });
 
-    it("should add user", function () {
-        userId = "test@example.com";
-        userData = {
+    it("should add new user data", function () {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
@@ -80,13 +79,13 @@ describe("Mfa Users add", function () {
     });
 
     it("should update user data", function () {
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
         expect(mfa.users.exists("test@example.com")).to.be.true;
 
-        mfa.users.add("test@example.com", { state: "REVOKED" });
+        mfa.users.write("test@example.com", { state: "REVOKED" });
         expect(mfa.users.get("test@example.com", "state")).to.equal("REVOKED");
     });
 
@@ -97,12 +96,15 @@ describe("Mfa Users add", function () {
             state: "ACTIVATED",
             mpinId: "exampleMpinId"
         };
-        mfa.users.add("test@example.com", userData);
-        expect(mfa.users.exists(userId)).to.be.true;
+        mfa.users.data = [otherCustomerData];
+
+        mfa.users.write("test@example.com", { state: "REVOKED" });
+
+        expect(mfa.users.data[0]).to.deep.equal(otherCustomerData);
     });
 
     it("should not store sensitive data", function () {
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED",
             csHex: "testCsHex",
@@ -123,7 +125,7 @@ describe("Mfa Users suitableFor", function() {
     });
 
     it("should return True with user.state Activated for startRegistration", function () {
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
@@ -131,7 +133,7 @@ describe("Mfa Users suitableFor", function() {
     });
 
     it("should return True with user.state Activated for confirmRegistration", function () {
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
@@ -139,7 +141,7 @@ describe("Mfa Users suitableFor", function() {
     });
 
     it("should return False with invalid operation", function () {
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
@@ -147,7 +149,7 @@ describe("Mfa Users suitableFor", function() {
     });
 
     it("should return True with user.state Invalid for startRegistration", function () {
-        mfa.users.add("invalid@example.com", {
+        mfa.users.write("invalid@example.com", {
             mpinId: "exampleMpinId",
             state: "INVALID"
         });
@@ -155,7 +157,7 @@ describe("Mfa Users suitableFor", function() {
     });
 
     it("should return False with user.state Invalid for confirmRegistration", function () {
-        mfa.users.add("invalid@example.com", {
+        mfa.users.write("invalid@example.com", {
             mpinId: "exampleMpinId",
             state: "INVALID"
         });
@@ -163,7 +165,7 @@ describe("Mfa Users suitableFor", function() {
     });
 
     it("should return False with user.state Invalid for finishRegistration", function () {
-        mfa.users.add("invalid@example.com", {
+        mfa.users.write("invalid@example.com", {
             mpinId: "exampleMpinId",
             state: "INVALID"
         });
@@ -171,7 +173,7 @@ describe("Mfa Users suitableFor", function() {
     });
 
     it("should return True with user.state Started for confirmRegistration", function () {
-        mfa.users.add("started@example.com", {
+        mfa.users.write("started@example.com", {
             mpinId: "exampleMpinId",
             state: "STARTED"
         });
@@ -271,7 +273,7 @@ describe("Mfa Users delete", function () {
     });
 
     it("should remove an user", function () {
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
@@ -357,7 +359,7 @@ describe("Mfa Users store", function () {
     });
 
     it("should write identity data to localStorage", function () {
-        mfa.users.add("test@example.com", {
+        mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
