@@ -21,8 +21,7 @@ describe("Mfa Users loadData", function () {
                 "userId":"test@example.com",
                 "customerId":"customerId",
                 "state":"ACTIVATED",
-                "mpinId":"exampleMpinId",
-                "csHex":"testCsHex"
+                "mpinId":"exampleMpinId"
             }
         ]));
         mfa.users.loadData();
@@ -37,7 +36,6 @@ describe("Mfa Users loadData", function () {
                 "customerId": "customerId",
                 "state": "ACTIVATED",
                 "mpinId": "exampleMpinId1",
-                "csHex": "testCsHex1",
                 "lastUsed": 30
             },
             {
@@ -45,7 +43,6 @@ describe("Mfa Users loadData", function () {
                 "customerId": "customerId",
                 "state": "ACTIVATED",
                 "mpinId": "exampleMpinId2",
-                "csHex": "testCsHex2",
                 "lastUsed": 29
             },
             {
@@ -53,7 +50,6 @@ describe("Mfa Users loadData", function () {
                 "customerId": "customerId",
                 "state": "ACTIVATED",
                 "mpinId": "exampleMpinId3",
-                "csHex": "testCsHex3",
                 "lastUsed": 31
             }
         ]));
@@ -78,11 +74,43 @@ describe("Mfa Users add", function () {
         userId = "test@example.com";
         userData = {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "ACTIVATED"
+        });
+        expect(mfa.users.exists("test@example.com")).to.be.true;
+    });
+
+    it("should update user data", function () {
+        mfa.users.add("test@example.com", {
+            mpinId: "exampleMpinId",
+            state: "ACTIVATED"
+        });
+        expect(mfa.users.exists("test@example.com")).to.be.true;
+
+        mfa.users.add("test@example.com", { state: "REVOKED" });
+        expect(mfa.users.get("test@example.com", "state")).to.equal("REVOKED");
+    });
+
+    it("should update only identities for the current customer", function () {
+        var otherCustomerData = {
+            userId: "test@example.com",
+            customerId: "anotherCustomerId",
+            state: "ACTIVATED",
+            mpinId: "exampleMpinId"
         };
         mfa.users.add("test@example.com", userData);
         expect(mfa.users.exists(userId)).to.be.true;
+    });
+
+    it("should not store sensitive data", function () {
+        mfa.users.add("test@example.com", {
+            mpinId: "exampleMpinId",
+            state: "ACTIVATED",
+            csHex: "testCsHex",
+            regOTT: "testRegOTT"
+        });
+
+        expect(mfa.users.get("test@example.com", "csHex")).to.equal("");
+        expect(mfa.users.get("test@example.com", "regOTT")).to.equal("");
     });
 });
 
@@ -97,7 +125,6 @@ describe("Mfa Users suitableFor", function() {
     it("should return True with user.state Activated for startRegistration", function () {
         mfa.users.add("test@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "ACTIVATED"
         });
         expect(mfa.users.suitableFor("test@example.com", "start")).to.be.true;
@@ -106,7 +133,6 @@ describe("Mfa Users suitableFor", function() {
     it("should return True with user.state Activated for confirmRegistration", function () {
         mfa.users.add("test@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "ACTIVATED"
         });
         expect(mfa.users.suitableFor("test@example.com", "confirm")).to.be.true;
@@ -115,7 +141,6 @@ describe("Mfa Users suitableFor", function() {
     it("should return False with invalid operation", function () {
         mfa.users.add("test@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "ACTIVATED"
         });
         expect(mfa.users.suitableFor("test@example.com", "invalid")).to.be.false;
@@ -124,7 +149,6 @@ describe("Mfa Users suitableFor", function() {
     it("should return True with user.state Invalid for startRegistration", function () {
         mfa.users.add("invalid@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "INVALID"
         });
         expect(mfa.users.suitableFor("invalid@example.com", "start")).to.be.true;
@@ -133,7 +157,6 @@ describe("Mfa Users suitableFor", function() {
     it("should return False with user.state Invalid for confirmRegistration", function () {
         mfa.users.add("invalid@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "INVALID"
         });
         expect(mfa.users.suitableFor("invalid@example.com", "confirm")).to.be.false;
@@ -142,7 +165,6 @@ describe("Mfa Users suitableFor", function() {
     it("should return False with user.state Invalid for finishRegistration", function () {
         mfa.users.add("invalid@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "INVALID"
         });
         expect(mfa.users.suitableFor("invalid@example.com", "finish")).to.be.false;
@@ -151,7 +173,6 @@ describe("Mfa Users suitableFor", function() {
     it("should return True with user.state Started for confirmRegistration", function () {
         mfa.users.add("started@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "STARTED"
         });
         expect(mfa.users.suitableFor("started@example.com", "confirm")).to.be.true;
@@ -176,15 +197,13 @@ describe("Mfa Users exists", function () {
                 "userId":"test@example.com",
                 "customerId":"customerId",
                 "state":"ACTIVATED",
-                "mpinId":"exampleMpinId",
-                "csHex":"testCsHex"
+                "mpinId":"exampleMpinId"
             },
             {
                 "userId":"another.customer@example.com",
                 "customerId":"anotherCustomerId",
                 "state":"ACTIVATED",
-                "mpinId":"anotherExampleMpinId",
-                "csHex":"anotherTestCsHex"
+                "mpinId":"anotherExampleMpinId"
             }
         ]));
         mfa = new Mfa(inits.testData.init);
@@ -213,22 +232,19 @@ describe("Mfa Users list", function () {
                 "userId":"test@example.com",
                 "customerId":"customerId",
                 "state":"ACTIVATED",
-                "mpinId":"exampleMpinId",
-                "csHex":"testCsHex"
+                "mpinId":"exampleMpinId"
             },
             {
                 "userId":"test2@example.com",
                 "customerId":"customerId",
                 "state":"ACTIVATED",
-                "mpinId":"exampleMpinId2",
-                "csHex":"testCsHex2"
+                "mpinId":"exampleMpinId2"
             },
             {
                 "userId":"another.customer@example.com",
                 "customerId":"anotherCustomerId",
                 "state":"ACTIVATED",
-                "mpinId":"anotherExampleMpinId",
-                "csHex":"anotherTestCsHex"
+                "mpinId":"anotherExampleMpinId"
             }
         ]));
         mfa = new Mfa(inits.testData.init);
@@ -257,7 +273,6 @@ describe("Mfa Users delete", function () {
     it("should remove an user", function () {
         mfa.users.add("test@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "ACTIVATED"
         });
         expect(mfa.users.exists("test@example.com")).to.be.true;
@@ -279,15 +294,13 @@ describe("Mfa Users get", function () {
                 "userId":"test@example.com",
                 "customerId":"customerId",
                 "state":"ACTIVATED",
-                "mpinId":"exampleMpinId",
-                "csHex":"testCsHex"
+                "mpinId":"exampleMpinId"
             },
             {
                 "userId":"another.customer@example.com",
                 "customerId":"anotherCustomerId",
                 "state":"ACTIVATED",
-                "mpinId":"anotherExampleMpinId",
-                "csHex":"anotherTestCsHex"
+                "mpinId":"anotherExampleMpinId"
             }
         ]));
         mfa = new Mfa(inits.testData.init);
@@ -316,8 +329,7 @@ describe("Mfa Users updateLastUsed", function () {
                 "userId":"test@example.com",
                 "customerId":"customerId",
                 "state":"ACTIVATED",
-                "mpinId":"exampleMpinId",
-                "csHex":"testCsHex"
+                "mpinId":"exampleMpinId"
             }
         ]));
         mfa = new Mfa(inits.testData.init);

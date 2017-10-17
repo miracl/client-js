@@ -436,7 +436,6 @@ describe("Mfa Client finishRegistration", function() {
         mfa = new Mfa(inits.testData.init);
         mfa.users.add("test@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "ACTIVATED"
         });
     });
@@ -519,7 +518,6 @@ describe("Mfa Client authenticate", function () {
         mfa = new Mfa(inits.testData.init);
         mfa.users.add("test@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "ACTIVATED"
         });
     });
@@ -793,7 +791,6 @@ describe("Mfa Client fetchOTP", function () {
         mfa = new Mfa(inits.testData.init);
         mfa.users.add("test@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "ACTIVATED"
         });
     });
