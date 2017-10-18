@@ -306,6 +306,36 @@ describe("Mfa Users get", function () {
     });
 });
 
+describe("Mfa Users updateLastUsed", function () {
+    var mfa;
+
+    beforeEach(function () {
+        localStorage.clear();
+        localStorage.setItem("mfa", JSON.stringify([
+            {
+                "userId":"test@example.com",
+                "customerId":"customerId",
+                "state":"ACTIVATED",
+                "mpinId":"exampleMpinId",
+                "csHex":"testCsHex"
+            }
+        ]));
+        mfa = new Mfa(inits.testData.init);
+    });
+
+    it("should set last used timestamp", function () {
+        var currentTime = new Date().getTime();
+        mfa.users.updateLastUsed("test@example.com");
+        expect(mfa.users.get("test@example.com", "lastUsed")).to.be.least(currentTime);
+    });
+
+    it("should write updated data to localStorage", function () {
+        var currentTime = new Date().getTime();
+        mfa.users.updateLastUsed("test@example.com");
+        expect(JSON.parse(localStorage.getItem("mfa"))[0].lastUsed).to.be.least(currentTime);
+    });
+});
+
 describe("Mfa Users store", function () {
     var mfa;
 
