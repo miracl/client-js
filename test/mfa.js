@@ -41,8 +41,8 @@ describe("Mfa Client init", function() {
         mfa = new Mfa(testData.init);
     });
 
-    it("should fire errorCb, when have problem with _getSettings", function (done) {
-        sinon.stub(mfa, '_getSettings').yields({ error: true }, null);
+    it("should fire errorCb when settings can't be fetched", function (done) {
+        sinon.stub(mfa, "request").yields({ error: true }, null);
         mfa.init(function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
             expect(err.error).to.be.true;
@@ -50,16 +50,17 @@ describe("Mfa Client init", function() {
         });
     });
 
-    it("should fire successCb, when fetch _getSettings", function (done) {
-        sinon.stub(mfa, '_getSettings').yields(null, { success: true });
+    it("should fire successCb after fetching settings", function (done) {
+        sinon.stub(mfa, "request").yields(null, testData.settings);
         mfa.init(function successCb(success) {
             expect(success).to.exist;
+            expect(mfa.options.settings).to.deep.equal(testData.settings);
             done();
         }, function errorCb(err) {});
     });
 
     afterEach(function() {
-        mfa._getSettings.restore && mfa._getSettings.restore();
+        mfa.request.restore && mfa.request.restore();
     });
 });
 
@@ -73,36 +74,6 @@ describe("Mfa Client setAccessId", function () {
     it("should set access id", function () {
         mfa.setAccessId("test");
         expect(mfa.accessId).to.equal("test");
-    });
-});
-
-describe("Mfa Client _getSettings", function() {
-    var mfa;
-
-    before(function () {
-        mfa = new Mfa(testData.init);
-    });
-
-    it("should store server settings", function(done) {
-        sinon.stub(mfa, 'request').yields({}, null);
-
-        mfa._getSettings(function(err) {
-            expect(err).to.exist;
-            done();
-        });
-    });
-
-    it("should store server settings", function(done) {
-        sinon.stub(mfa, "request").yields(null, testData.settings);
-
-        mfa._getSettings(function(successData) {
-            expect(mfa.options.settings).to.deep.equal(testData.settings);
-            done();
-        });
-    });
-
-    afterEach(function() {
-        mfa.request.restore && mfa.request.restore();
     });
 });
 
