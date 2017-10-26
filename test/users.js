@@ -2,7 +2,6 @@ if (typeof require !== 'undefined') {
     var expect = require('chai').expect;
     var sinon = require('sinon');
     var Mfa = require('../index');
-    var inits = require("./init");
 }
 
 describe("Mfa Users loadData", function () {
@@ -10,7 +9,7 @@ describe("Mfa Users loadData", function () {
 
     beforeEach(function () {
         localStorage.clear();
-        mfa = new Mfa(inits.testData.init);
+        mfa = new Mfa(testData.init);
     });
 
     it("should load localStorage data", function () {
@@ -67,7 +66,7 @@ describe("Mfa Users write", function () {
 
     before(function () {
         localStorage.clear();
-        mfa = new Mfa(inits.testData.init);
+        mfa = new Mfa(testData.init);
     });
 
     it("should add new user data", function () {
@@ -121,7 +120,7 @@ describe("Mfa Users suitableFor", function() {
 
     beforeEach(function () {
         localStorage.clear();
-        mfa = new Mfa(inits.testData.init);
+        mfa = new Mfa(testData.init);
     });
 
     it("should return True with user.state Activated for startRegistration", function () {
@@ -208,7 +207,7 @@ describe("Mfa Users exists", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(inits.testData.init);
+        mfa = new Mfa(testData.init);
     });
 
     it("should return true for existing user", function () {
@@ -249,7 +248,7 @@ describe("Mfa Users list", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(inits.testData.init);
+        mfa = new Mfa(testData.init);
     });
 
     it("should return a list of users", function () {
@@ -267,9 +266,18 @@ describe("Mfa Users list", function () {
 describe("Mfa Users delete", function () {
     var mfa;
 
-    before(function () {
+    beforeEach(function () {
         localStorage.clear();
-        mfa = new Mfa(inits.testData.init);
+        localStorage.setItem("mfa", JSON.stringify([
+            {
+                "userId":"test@example.com",
+                "customerId":"customerId",
+                "state":"ACTIVATED",
+                "mpinId":"exampleMpinId",
+                "csHex":"testCsHex"
+            }
+        ]));
+        mfa = new Mfa(testData.init);
     });
 
     it("should remove an user", function () {
@@ -280,10 +288,15 @@ describe("Mfa Users delete", function () {
         expect(mfa.users.exists("test@example.com")).to.be.true;
 
         var storeSpy = sinon.spy(mfa.users, "store");
+
         mfa.users.delete("test@example.com");
         expect(mfa.users.exists("test@example.com")).to.be.false;
         expect(storeSpy.calledOnce).to.be.true;
     });
+
+    afterEach(function () {
+        mfa.users.store.restore && mfa.users.store.restore();
+    })
 });
 
 describe("Mfa Users get", function () {
@@ -305,7 +318,7 @@ describe("Mfa Users get", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(inits.testData.init);
+        mfa = new Mfa(testData.init);
     });
 
     it("should fetch a property of the user", function () {
@@ -334,7 +347,7 @@ describe("Mfa Users updateLastUsed", function () {
                 "mpinId":"exampleMpinId"
             }
         ]));
-        mfa = new Mfa(inits.testData.init);
+        mfa = new Mfa(testData.init);
     });
 
     it("should set last used timestamp", function () {
@@ -355,7 +368,7 @@ describe("Mfa Users store", function () {
 
     before(function () {
         localStorage.clear();
-        mfa = new Mfa(inits.testData.init);
+        mfa = new Mfa(testData.init);
     });
 
     it("should write identity data to localStorage", function () {
