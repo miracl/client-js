@@ -34,33 +34,6 @@ describe("Mfa Client", function() {
     });
 });
 
-describe("Mfa Client logger", function() {
-    var mfa, spy;
-    before(function () {
-        testData.init.debug = 1;
-        mfa = new Mfa(testData.init);
-    });
-
-    it("should call console info", function () {
-        spy = sinon.spy();
-        console.info = spy;
-        mfa.log("message")
-        expect(spy.calledOnce).to.be.true;
-    });
-
-    it("should call console error", function () {
-        spy = sinon.spy();
-        console.error = spy;
-        mfa.log("message", true)
-        expect(spy.calledOnce).to.be.true;
-    });
-
-    after(function () {
-        mfa.restore();
-        delete(testData.init.debug);
-    });
-});
-
 describe("Mfa Client init", function() {
     var mfa;
 
