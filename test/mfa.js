@@ -804,11 +804,20 @@ describe("Mfa Client request", function() {
         };
     });
 
-    it("should return error missing CB", function () {
-        var res = mfa.request({ url: "reqUrl" });
+    it("should throw error missing callback", function () {
+        expect(function () {
+            mfa.request({ url: "reqUrl" });
+        }).to.throw(Object).that.deep.equals({ code: "MISSING_CALLBACK", description: "Bad or missing callback" });
 
-        expect(res).to.exist;
-        expect(res.code).to.equal('MISSING_CALLBACK');
+        expect(function () {
+            mfa.request({ url: "reqUrl" }, "string");
+        }).to.throw(Object).that.deep.equals({ code: "MISSING_CALLBACK", description: "Bad or missing callback" });
+    });
+
+    it("should throw error missing URL", function () {
+        expect(function () {
+            mfa.request({}, function () {});
+        }).to.throw(Object).that.deep.equals({ code: "MISSING_REQUEST_URL", description: "Missing URL for request" });
     });
 
     it("should handle successful JSON response", function () {
