@@ -275,7 +275,21 @@ describe("Mfa Users delete", function () {
                 "state":"ACTIVATED",
                 "mpinId":"exampleMpinId",
                 "csHex":"testCsHex"
-            }
+            },
+            {
+                "userId":"another.customer@example.com",
+                "customerId":"anotherCustomerId",
+                "state":"ACTIVATED",
+                "mpinId":"anotherExampleMpinId",
+                "csHex":"anotherTestCsHex"
+            },
+            {
+                "userId":"test@example.com",
+                "customerId":"anotherCustomerId",
+                "state":"ACTIVATED",
+                "mpinId":"exampleMpinId2",
+                "csHex":"testCsHex2"
+            },
         ]));
         mfa = new Mfa(testData.init);
     });
@@ -292,6 +306,33 @@ describe("Mfa Users delete", function () {
         mfa.users.delete("test@example.com");
         expect(mfa.users.exists("test@example.com")).to.be.false;
         expect(storeSpy.calledOnce).to.be.true;
+    });
+
+    it("should do nothing with non existing user", function () {
+        var storeSpy = sinon.spy(mfa.users, "store");
+
+        mfa.users.delete("missing@example.com");
+        expect(storeSpy.callCount).to.equal(0);
+    });
+
+    it("should not delete user for another customer", function () {
+        var storeSpy = sinon.spy(mfa.users, "store");
+
+        mfa.users.delete("another.customer@example.com");
+        expect(storeSpy.callCount).to.equal(0);
+    });
+
+    it("should not delete user with the same id for another customer", function () {
+        var storeSpy = sinon.spy(mfa.users, "store");
+
+        mfa.users.delete("test@example.com");
+        expect(mfa.users.exists("test@example.com")).to.be.false;
+        expect(storeSpy.calledOnce).to.be.true;
+
+        var localStorageData = JSON.parse(localStorage.getItem("mfa"));
+
+        expect(localStorageData[1].userId).to.equal("test@example.com");
+        expect(localStorageData[1].customerId).to.equal("anotherCustomerId");
     });
 
     afterEach(function () {
