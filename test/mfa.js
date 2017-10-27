@@ -776,12 +776,31 @@ describe("Mfa Client fetchOTP", function () {
         sinon.stub(mfa, "_getPass").yields(null, { success: true });
         var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
         requestStub.onFirstCall().yields(null, { success: true });
-        requestStub.onSecondCall().yields({ error: true, status: 410 }, null);
+        requestStub.onSecondCall().yields({ error: true, status: 400 }, null);
 
         mfa.fetchOTP("test@example.com", "1234", function (data) {
             throw new Error(err);
         }, function (err) {
             expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should mark the identity as revoked on authenticate error 410", function (done) {
+        sinon.stub(mfa, "_getPass").yields(null, { success: true });
+        var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
+        requestStub.onFirstCall().yields(null, { success: true });
+        requestStub.onSecondCall().yields({ error: true, status: 410 }, null);
+
+        var userWriteSpy = sinon.spy(mfa.users, "write");
+
+        mfa.fetchOTP("test@example.com", "1234", function (data) {
+            throw new Error(err);
+        }, function (err) {
+            expect(err).to.exist;
+            expect(userWriteSpy.calledOnce).to.be.true;
+            expect(userWriteSpy.getCalls()[0].args[0]).to.equal("test@example.com");
+            expect(userWriteSpy.getCalls()[0].args[1].state).to.equal("REVOKED");
             done();
         });
     });
