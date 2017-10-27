@@ -1,22 +1,32 @@
-if (typeof require !== 'undefined') {
-    var expect = require('chai').expect;
-    var sinon = require('sinon');
-    var Mfa = require('../index');
+if (typeof require !== "undefined") {
+    var expect = require("chai").expect;
+    var sinon = require("sinon");
+    var Mfa = require("../index");
 }
 
 describe("Mfa Client", function() {
-    it("should throw Error w/o init server", function () {
+    it("should throw Error w/o options", function () {
         expect(function () {
             var mfa = new Mfa();
-        }).to.throw(Object).that.deep.equals({ code: "MISSING_SERVER", description: "Missing server parameter" });
+        }).to.throw("Missing options");
+    });
+
+    it("should throw Error w/o init server", function () {
+        expect(function () {
+            var mfa = new Mfa({
+                customerId: testData.init.customerId,
+                seed: testData.init.seed
+            });
+        }).to.throw("Missing server address");
     });
 
     it("should throw Error w/o customer", function () {
         expect(function () {
             var mfa = new Mfa({
-                server: testData.init.server
+                server: testData.init.server,
+                seed: testData.init.seed
             });
-        }).to.throw(Object).that.deep.equals({ code: "MISSING_CUSTOMER_ID", description: "Missing customer ID" });
+        }).to.throw("Missing customer ID");
     });
 
     it("should throw Error w/o seed", function () {
@@ -108,28 +118,14 @@ describe("Mfa Client startRegistration", function() {
         mfa = new Mfa(testData.init);
     });
 
-    it("should call errorCb with MISSING_USERID when called w/o userId", function (done) {
-        mfa.startRegistration("", function () {}, function (err) {
-            expect(err).to.exist;
-            expect(err.code).to.equal("MISSING_USERID");
-            done();
-        })
-    });
-
-    it("should call errorCb with WRONG_FLOW when user is not suitable", function (done) {
-        sinon.stub(mfa.users, "suitableFor").returns(false);
-
-        mfa.startRegistration("test@example.com", function () {}, function (err) {
-            expect(err).to.exist;
-            expect(err.code).to.equal("WRONG_FLOW");
-            done()
-        });
-
-        mfa.users.suitableFor.restore && mfa.users.suitableFor.restore();
+    it("should throw error w/o userId", function () {
+        expect(function () {
+            mfa.startRegistration("", function () {}, function () {});
+        }).to.throw("Missing user ID");
     });
 
     it("should fire errorCb, when have problem with _registration", function (done) {
-        sinon.stub(mfa, '_registration').yields({}, null);
+        sinon.stub(mfa, "_registration").yields({}, null);
         mfa.startRegistration("test@example.com", function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
             done();
@@ -139,13 +135,13 @@ describe("Mfa Client startRegistration", function() {
     });
 
     it("should fire successCb, when _registration passed successful", function (done) {
-        sinon.stub(mfa, '_registration').yields(null, {});
+        sinon.stub(mfa, "_registration").yields(null, {});
 
         mfa.startRegistration("test@example.com", function successCb(data) {
             expect(data).to.exist;
             done();
         }, function errorCb(err) {
-            throw new Error(err.code);
+            throw new Error(err.name);
         });
 
         mfa._registration.restore && mfa._registration.restore();
@@ -165,7 +161,7 @@ describe("Mfa Client _registration", function() {
     });
 
     it("should return error, when register request fail", function(done) {
-        sinon.stub(mfa, 'request').yields({ error: true }, null);
+        sinon.stub(mfa, "request").yields({ error: true }, null);
 
         mfa._registration("test@example.com", function(err) {
             expect(err).to.exist;
@@ -174,7 +170,7 @@ describe("Mfa Client _registration", function() {
     });
 
     it("should store started user", function(done) {
-        sinon.stub(mfa, 'request').yields(null, { success: true, active: false });
+        sinon.stub(mfa, "request").yields(null, { success: true, active: false });
 
         mfa._registration("test@example.com", function(err, data) {
             expect(mfa.users.exists("test@example.com")).to.be.true;
@@ -184,7 +180,7 @@ describe("Mfa Client _registration", function() {
     });
 
     it("should store activated user", function(done) {
-        sinon.stub(mfa, 'request').yields(null, { success: true, active: true });
+        sinon.stub(mfa, "request").yields(null, { success: true, active: true });
 
         mfa._registration("test@example.com", function(err, data) {
             expect(mfa.users.exists("test@example.com")).to.be.true;
@@ -206,20 +202,26 @@ describe("Mfa Client confirmRegistration", function() {
         mfa = new Mfa(testData.init);
     });
 
+    it("should throw error w/o userId", function () {
+        expect(function () {
+            mfa.confirmRegistration("", function () {}, function () {});
+        }).to.throw("Missing user ID");
+    });
+
     it("should fire errorCb when _getSecret1 return 401 & error should be IDENTITY_NOT_VERIFIED", function (done) {
-        sinon.stub(mfa, '_getSecret1').yields({ status: 401 }, null);
-        sinon.stub(mfa.users, "suitableFor").returns(true);
+        sinon.stub(mfa, "_getSecret1").yields({ status: 401 }, null);
+        mfa.users.write("test@example.com", { state: "ACTIVATED" });
 
         mfa.confirmRegistration("test@example.com", function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
-            expect(err.code).to.equal('IDENTITY_NOT_VERIFIED');
+            expect(err.name).to.equal("NotVerifiedError");
             done();
         });
     });
 
     it("should fire errorCb when _getSecret1 returns another error", function (done) {
-        sinon.stub(mfa, '_getSecret1').yields({ status: 400 }, null);
-        sinon.stub(mfa.users, "suitableFor").returns(true);
+        sinon.stub(mfa, "_getSecret1").yields({ status: 400 }, null);
+        mfa.users.write("test@example.com", { state: "ACTIVATED" });
 
         mfa.confirmRegistration("test@example.com", function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
@@ -228,7 +230,7 @@ describe("Mfa Client confirmRegistration", function() {
     });
 
     it("should fire errorCb when _getSecret1 return other error", function (done) {
-        sinon.stub(mfa, '_getSecret1').yields({}, null);
+        sinon.stub(mfa, "_getSecret1").yields({}, null);
 
         mfa.confirmRegistration("test@example.com", function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
@@ -237,8 +239,8 @@ describe("Mfa Client confirmRegistration", function() {
     });
 
     it("should fire successCb when _getSecret1 return Ok", function (done) {
-        sinon.stub(mfa, '_getSecret').yields(null, {});
-        sinon.stub(mfa.users, "suitableFor").returns(true);
+        sinon.stub(mfa, "_getSecret").yields(null, {});
+        mfa.users.write("test@example.com", { state: "ACTIVATED" });
 
         mfa.confirmRegistration("test@example.com", function successCb(data) {
             expect(data).to.exist;
@@ -250,8 +252,8 @@ describe("Mfa Client confirmRegistration", function() {
     });
 
     it("should fire errorCb when identity is not in suitable state", function (done) {
-        sinon.stub(mfa, '_getSecret').yields(null, {});
-        sinon.stub(mfa.users, "suitableFor").returns(false);
+        sinon.stub(mfa, "_getSecret").yields(null, {});
+        mfa.users.write("test@example.com", { state: "INVALID" });
 
         mfa.confirmRegistration("test@example.com", function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
@@ -259,18 +261,17 @@ describe("Mfa Client confirmRegistration", function() {
         });
     });
 
-    it("should return MISSING_USERID when try to call confirmRegistration w/o userId", function (done) {
-        mfa.confirmRegistration("", function () {}, function (err) {
-            expect(err).to.exist;
-            expect(err.code).to.equal('MISSING_USERID');
-            done();
-        })
+    it("should return MISSING_USERID when try to call confirmRegistration w/o userId", function () {
+        it("should throw error w/o userId", function () {
+            expect(function () {
+                mfa.confirmRegistration("", function () {}, function () {});
+            }).to.throw("Missing user ID");
+        });
     });
 
     afterEach(function() {
         mfa._getSecret.restore && mfa._getSecret.restore();
         mfa._getSecret1.restore && mfa._getSecret1.restore();
-        mfa.users.suitableFor.restore && mfa.users.suitableFor.restore();
     });
 });
 
@@ -284,7 +285,7 @@ describe("Mfa Client _getSecret", function() {
     });
 
     it("should return error, when signature request fail", function(done) {
-        sinon.stub(mfa, 'request').yields({}, null);
+        sinon.stub(mfa, "request").yields({}, null);
 
         mfa._getSecret("test@example.com", function(err) {
             expect(err).to.exist;
@@ -293,7 +294,7 @@ describe("Mfa Client _getSecret", function() {
     });
 
     it("should return error, when signature2 request fail", function(done) {
-        var stub = sinon.stub(mfa, 'request');
+        var stub = sinon.stub(mfa, "request");
         stub.onCall(0).yields(null, {});
         stub.onCall(1).yields({}, null);
 
@@ -304,8 +305,8 @@ describe("Mfa Client _getSecret", function() {
     });
 
     it("should call addShares with CS and CSShare", function(done) {
-        var addSharesStub = sinon.stub(mfa, '_addShares');
-        var stub = sinon.stub(mfa, 'request');
+        var addSharesStub = sinon.stub(mfa, "_addShares");
+        var stub = sinon.stub(mfa, "request");
         stub.onCall(0).yields(null, { clientSecretShare: "clientSecretValue1" });
         stub.onCall(1).yields(null, { clientSecret: "clientSecretValue2" });
 
@@ -315,7 +316,20 @@ describe("Mfa Client _getSecret", function() {
             expect(addSharesStub.getCalls()[0].args[1]).to.equal("clientSecretValue2");
             done();
         });
+    });
 
+    it("should return error when addShares fails", function(done) {
+        var thrownError = new Error;
+        var addSharesStub = sinon.stub(mfa, "_addShares").throws(thrownError);
+        var stub = sinon.stub(mfa, "request");
+        stub.onCall(0).yields(null, { clientSecretShare: "clientSecretValue1" });
+        stub.onCall(1).yields(null, { clientSecret: "clientSecretValue2" });
+
+        mfa._getSecret("test@example.com", function(err) {
+            expect(addSharesStub.calledOnce).to.be.true;
+            expect(err).to.equal(thrownError);
+            done();
+        });
     });
 
     afterEach(function() {
@@ -332,9 +346,11 @@ describe("Mfa Client _addShares", function () {
         mfa.options.settings = testData.settings;
     });
 
-    it("should return error code", function () {
+    it("should throw error on crypto failure", function () {
         sinon.stub(mfa.mpin, "RECOMBINE_G1").returns(-1);
-        expect(mfa._addShares("test", "test")).to.equal(-1);
+        expect(function () {
+            mfa._addShares("test", "test");
+        }).to.throw("CryptoError");
     });
 
     it("should return combined client secret", function () {
@@ -355,9 +371,11 @@ describe("Mfa Client _calculateMPinToken", function () {
         mfa.options.settings = testData.settings;
     });
 
-    it("should return error code", function () {
+    it("should throw error on crypto failure", function () {
         sinon.stub(mfa.mpin, "EXTRACT_PIN").returns(-1);
-        expect(mfa._calculateMPinToken("test", "1234", "hex")).to.equal(-1);
+        expect(function () {
+            mfa._calculateMPinToken("test", "1234", "hex")
+        }).to.throw("CryptoError");
     });
 
     it("should return combined client secret", function () {
@@ -383,24 +401,20 @@ describe("Mfa Client finishRegistration", function() {
         });
     });
 
-    it("should return MISSING_USERID when called w/o userId", function (done) {
-        mfa.finishRegistration("", "", function () {}, function (err) {
-            expect(err).to.exist;
-            expect(err.code).to.equal('MISSING_USERID');
-            done();
-        });
+    it("should throw error w/o userId", function () {
+        expect(function () {
+            mfa.finishRegistration("", "", function () {}, function () {});
+        }).to.throw("Missing user ID");
     });
 
-    it("should call errorCb with WRONG_FLOW when user is not suitable", function (done) {
-        sinon.stub(mfa.users, "suitableFor").returns(false);
+    it("should call errorCb with IdentityError when user is not suitable", function (done) {
+        mfa.users.write("test@example.com", { state: "STARTED" });
 
         mfa.finishRegistration("test@example.com", "1234", function () {}, function (err) {
             expect(err).to.exist;
-            expect(err.code).to.equal("WRONG_FLOW");
+            expect(err.name).to.equal("IdentityError");
             done();
         });
-
-        mfa.users.suitableFor.restore && mfa.users.suitableFor.restore();
     });
 
     it("should call calculateMpinToken with mpinId, Pin", function (done) {
@@ -410,6 +424,17 @@ describe("Mfa Client finishRegistration", function() {
             expect(calculateMPinTokenStub.calledOnce).to.be.true;
             expect(calculateMPinTokenStub.getCalls()[0].args[0]).to.equal("exampleMpinId");
             expect(calculateMPinTokenStub.getCalls()[0].args[1]).to.equal("1234");
+            done();
+        });
+    });
+
+    it("should call errorCb when calculateMpinToken fails", function(done) {
+        var thrownError = new Error;
+        var calculateMPinTokenStub = sinon.stub(mfa, "_calculateMPinToken").throws(thrownError);
+
+        mfa.finishRegistration("test@example.com", "1234", function () {}, function(err) {
+            expect(calculateMPinTokenStub.calledOnce).to.be.true;
+            expect(err).to.equal(thrownError);
             done();
         });
     });
@@ -465,10 +490,10 @@ describe("Mfa Client authenticate", function () {
         });
     });
 
-    it("should return MISSING_USERID w/o userId", function (done) {
+    it("should call errorCb w/o userId", function (done) {
         mfa.authenticate("", "", function () {}, function (err) {
             expect(err).to.exist;
-            expect(err.code).to.equal('MISSING_USERID');
+            expect(err.name).to.equal("IdentityError");
             done();
         });
     });
@@ -531,7 +556,7 @@ describe("Mfa Client _getPass1", function () {
 
         mfa._getPass1("test@example.com", "1234", [], [], function (err, data) {
             expect(err).to.exist;
-            expect(err.code).to.equal("PASS_1_ERROR");
+            expect(err.name).to.equal("CryptoError");
             done();
         });
     });
@@ -580,7 +605,7 @@ describe("Mfa Client _getPass2", function () {
 
         mfa._getPass2("test@example.com", "yHex", [], [], false, function (err, data) {
             expect(err).to.exist;
-            expect(err.code).to.equal("PASS_2_ERROR");
+            expect(err.name).to.equal("CryptoError");
             done();
         });
     });
@@ -611,8 +636,8 @@ describe("Mfa Client _getPass", function () {
     });
 
     it("shoud call _getPass1 and _getPass2", function (done) {
-        var getPass1Stub = sinon.stub(mfa, '_getPass1').yields(null, { success: true });
-        var getPass2Stub = sinon.stub(mfa, '_getPass2').yields(null, { success: true });
+        var getPass1Stub = sinon.stub(mfa, "_getPass1").yields(null, { success: true });
+        var getPass2Stub = sinon.stub(mfa, "_getPass2").yields(null, { success: true });
 
         mfa._getPass("test@example.com", "1234", false, function () {
             expect(getPass1Stub.calledOnce).to.be.true;
@@ -622,7 +647,7 @@ describe("Mfa Client _getPass", function () {
     });
 
     it("should call callback with error when _getPass1 fails", function (done) {
-        sinon.stub(mfa, '_getPass1').yields({ error: true }, null);
+        sinon.stub(mfa, "_getPass1").yields({ error: true }, null);
 
         mfa._getPass("test@example.com", "1234", false, function (err, data) {
             expect(err).to.exist;
@@ -631,8 +656,8 @@ describe("Mfa Client _getPass", function () {
     });
 
     it("should call callback with error when _getPass2 fails", function (done) {
-        sinon.stub(mfa, '_getPass1').yields(null, { success: true });
-        sinon.stub(mfa, '_getPass2').yields({ error: true }, null);
+        sinon.stub(mfa, "_getPass1").yields(null, { success: true });
+        sinon.stub(mfa, "_getPass2").yields({ error: true }, null);
 
         mfa._getPass("test@example.com", "1234", false, function (err, data) {
             expect(err).to.exist;
@@ -738,10 +763,10 @@ describe("Mfa Client fetchOTP", function () {
         });
     });
 
-    it("should return MISSING_USERID w/o userId", function (done) {
+    it("should return call errorCb w/o userId", function (done) {
         mfa.fetchOTP("", "", function () {}, function (err) {
             expect(err).to.exist;
-            expect(err.code).to.equal('MISSING_USERID');
+            expect(err.name).to.equal("IdentityError");
             done();
         });
     });
@@ -826,17 +851,17 @@ describe("Mfa Client request", function() {
     it("should throw error missing callback", function () {
         expect(function () {
             mfa.request({ url: "reqUrl" });
-        }).to.throw(Object).that.deep.equals({ code: "MISSING_CALLBACK", description: "Bad or missing callback" });
+        }).to.throw("Bad or missing callback");
 
         expect(function () {
             mfa.request({ url: "reqUrl" }, "string");
-        }).to.throw(Object).that.deep.equals({ code: "MISSING_CALLBACK", description: "Bad or missing callback" });
+        }).to.throw("Bad or missing callback");
     });
 
     it("should throw error missing URL", function () {
         expect(function () {
             mfa.request({}, function () {});
-        }).to.throw(Object).that.deep.equals({ code: "MISSING_REQUEST_URL", description: "Missing URL for request" });
+        }).to.throw("Missing URL for request");
     });
 
     it("should handle successful JSON response", function () {
@@ -897,7 +922,8 @@ describe("Mfa Client request", function() {
         requests[0].respond(400, { }, "");
 
         expect(callback.callCount).to.equal(1);
-        sinon.assert.calledWith(callback, { code: "REQUEST_ERROR", description: "Bad Request", status: 400 }, null);
+        expect(callback.getCalls()[0].args[0].name).to.equal("RequestError");
+        expect(callback.getCalls()[0].args[1]).to.be.null;
     });
 
     it("should handle aborted request", function () {
@@ -912,6 +938,9 @@ describe("Mfa Client request", function() {
         requests[0].respond(0, { }, "");
 
         expect(callback.callCount).to.equal(1);
-        sinon.assert.calledWith(callback, { code: "REQUEST_ABORTED", description: "The request was aborted", status: 0 }, null);
+        expect(callback.callCount).to.equal(1);
+        expect(callback.getCalls()[0].args[0].name).to.equal("RequestError");
+        expect(callback.getCalls()[0].args[0].message).to.equal("The request was aborted");
+        expect(callback.getCalls()[0].args[1]).to.be.null;
     });
 });
