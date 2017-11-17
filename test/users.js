@@ -347,14 +347,12 @@ describe("Mfa Users store", function () {
     it("should write identity data to localStorage", function () {
         mfa.users.add("test@example.com", {
             mpinId: "exampleMpinId",
-            csHex: "testCsHex",
             state: "ACTIVATED"
         });
 
         mfa.users.store();
 
         expect(JSON.parse(localStorage.getItem("mfa"))[0]).to.deep.equal({
-            "csHex": "testCsHex",
             "customerId": "customerId",
             "mpinId": "exampleMpinId",
             "state": "ACTIVATED",
