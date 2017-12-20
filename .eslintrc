@@ -29,6 +29,29 @@
             "error",
             "always"
         ],
-	   "no-console":0
+        "one-var": [
+            "error",
+            "always"
+        ],
+        "eol-last": [
+            "error",
+            "always"
+        ],
+        "brace-style": [
+            "error",
+            "1tbs"
+        ],
+        "curly": [
+            "error",
+            "all"
+        ],
+        "no-undefined": "error",
+        "no-multiple-empty-lines": [
+            "error",
+            {
+                "max": 2
+            }
+        ],
+        "no-console":0
     }
 }
