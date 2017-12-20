@@ -7,16 +7,20 @@ global.CTX = require("milagro-crypto-js");
 
 // Reusable test data
 global.testData = {
-    init: {
-        server: "http://server.com",
-        customerId: "customerId",
-        seed: "hexSeed"
+    init: function () {
+        return {
+            server: "http://server.com",
+            customerId: "customerId",
+            seed: "hexSeed"
+        };
     },
-    settings: {
-        certivoxURL: "https://miracl.com",
-        dtaUrl: "https://api.miracl.net",
-        registerURL: "https://api.miracl.net/register/user",
-        signatureURL: "https://api.miracl.net/signature",
-        mpinAuthServerURL: "https://api.miracl.net/rps"
+    settings: function () {
+        return {
+            certivoxURL: "https://miracl.com",
+            dtaUrl: "https://api.miracl.net",
+            registerURL: "https://api.miracl.net/register/user",
+            signatureURL: "https://api.miracl.net/signature",
+            mpinAuthServerURL: "https://api.miracl.net/rps"
+        }
     }
 };

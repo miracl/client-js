@@ -14,8 +14,8 @@ describe("Mfa Client", function() {
     it("should throw Error w/o init server", function () {
         expect(function () {
             var mfa = new Mfa({
-                customerId: testData.init.customerId,
-                seed: testData.init.seed
+                customerId: testData.init().customerId,
+                seed: testData.init().seed
             });
         }).to.throw("Missing server address");
     });
@@ -23,8 +23,8 @@ describe("Mfa Client", function() {
     it("should throw Error w/o customer", function () {
         expect(function () {
             var mfa = new Mfa({
-                server: testData.init.server,
-                seed: testData.init.seed
+                server: testData.init().server,
+                seed: testData.init().seed
             });
         }).to.throw("Missing customer ID");
     });
@@ -32,14 +32,14 @@ describe("Mfa Client", function() {
     it("should throw Error w/o seed", function () {
         expect(function () {
             var mfa = new Mfa({
-                server: inits.testData.init.server,
-                customerId: inits.testData.init.customerId
+                server: testData.init().server,
+                customerId: testData.init().customerId
             });
         }).to.throw("Missing random number generator seed");
     });
 
     it("should return Instance of Mfa", function () {
-        var mfa = new Mfa(testData.init);
+        var mfa = new Mfa(testData.init());
         expect(mfa).to.be.an.instanceof(Mfa);
     });
 });
@@ -48,7 +48,7 @@ describe("Mfa Client init", function() {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should fire errorCb when settings can't be fetched", function (done) {
@@ -61,10 +61,10 @@ describe("Mfa Client init", function() {
     });
 
     it("should fire successCb after fetching settings", function (done) {
-        sinon.stub(mfa, "request").yields(null, testData.settings);
+        sinon.stub(mfa, "request").yields(null, testData.settings());
         mfa.init(function successCb(success) {
             expect(success).to.exist;
-            expect(mfa.options.settings).to.deep.equal(testData.settings);
+            expect(mfa.options.settings).to.deep.equal(testData.settings());
             done();
         }, function errorCb(err) {});
     });
@@ -78,7 +78,7 @@ describe("Mfa Client setAccessId", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should set access id", function () {
@@ -92,18 +92,18 @@ describe("Mfa Client _getDeviceName", function () {
 
     it("should return default device name", function () {
         mfa = new Mfa({
-            server: testData.init.server,
-            customerId: testData.init.customerId,
-            seed: testData.init.seed
+            server: testData.init().server,
+            customerId: testData.init().customerId,
+            seed: testData.init().seed
         });
         expect(mfa._getDeviceName()).to.equal("Browser");
     });
 
     it("should return provided device name", function () {
         mfa = new Mfa({
-            server: testData.init.server,
-            customerId: testData.init.customerId,
-            seed: testData.init.seed,
+            server: testData.init().server,
+            customerId: testData.init().customerId,
+            seed: testData.init().seed,
             deviceName: "test"
         });
         expect(mfa._getDeviceName()).to.equal("test");
@@ -115,7 +115,7 @@ describe("Mfa Client startRegistration", function() {
 
     before(function () {
         localStorage.clear();
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should throw error w/o userId", function () {
@@ -156,8 +156,8 @@ describe("Mfa Client _registration", function() {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
-        mfa.options.settings = testData.settings;
+        mfa = new Mfa(testData.init());
+        mfa.options.settings = testData.settings();
     });
 
     it("should return error, when register request fail", function(done) {
@@ -199,7 +199,7 @@ describe("Mfa Client confirmRegistration", function() {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should throw error w/o userId", function () {
@@ -279,8 +279,8 @@ describe("Mfa Client _getSecret", function() {
     var mfa, spy;
 
     before(function () {
-        mfa = new Mfa(testData.init);
-        mfa.options.settings = testData.settings;
+        mfa = new Mfa(testData.init());
+        mfa.options.settings = testData.settings();
         spy = sinon.spy();
     });
 
@@ -342,8 +342,8 @@ describe("Mfa Client _addShares", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
-        mfa.options.settings = testData.settings;
+        mfa = new Mfa(testData.init());
+        mfa.options.settings = testData.settings();
     });
 
     it("should throw error on crypto failure", function () {
@@ -367,8 +367,8 @@ describe("Mfa Client _calculateMPinToken", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
-        mfa.options.settings = testData.settings;
+        mfa = new Mfa(testData.init());
+        mfa.options.settings = testData.settings();
     });
 
     it("should throw error on crypto failure", function () {
@@ -394,7 +394,7 @@ describe("Mfa Client finishRegistration", function() {
 
     beforeEach(function () {
         localStorage.clear();
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
         mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
@@ -449,7 +449,7 @@ describe("Mfa Client register", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should go through the registration flow", function (done) {
@@ -483,7 +483,7 @@ describe("Mfa Client authenticate", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
         mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
@@ -522,8 +522,8 @@ describe("Mfa Client _getPass1", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
-        mfa.options.settings = testData.settings;
+        mfa = new Mfa(testData.init());
+        mfa.options.settings = testData.settings();
     });
 
     it("shoud make a request for first pass", function (done) {
@@ -571,8 +571,8 @@ describe("Mfa Client _getPass2", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
-        mfa.options.settings = testData.settings;
+        mfa = new Mfa(testData.init());
+        mfa.options.settings = testData.settings();
     });
 
     it("shoud make a request for second pass", function (done) {
@@ -631,8 +631,8 @@ describe("Mfa Client _getPass", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
-        mfa.options.settings = testData.settings;
+        mfa = new Mfa(testData.init());
+        mfa.options.settings = testData.settings();
     });
 
     it("shoud call _getPass1 and _getPass2", function (done) {
@@ -675,7 +675,7 @@ describe("Mfa Client startAuthentication", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should call the error callback when there is an error", function (done) {
@@ -709,8 +709,8 @@ describe("Mfa Client finishAuthentication", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
-        mfa.options.settings = testData.settings;
+        mfa = new Mfa(testData.init());
+        mfa.options.settings = testData.settings();
     });
 
     it("should call error callback when request fails", function (done) {
@@ -756,7 +756,7 @@ describe("Mfa Client fetchOTP", function () {
     var mfa;
 
     before(function () {
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
         mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
@@ -840,7 +840,7 @@ describe("Mfa Client request", function() {
     var mfa, server, requests = [];
 
     before(function () {
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
 
         var xhr = global.XMLHttpRequest = sinon.useFakeXMLHttpRequest();
         xhr.onCreate = function (xhr) {

@@ -9,7 +9,7 @@ describe("Mfa Users loadData", function () {
 
     beforeEach(function () {
         localStorage.clear();
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should load localStorage data", function () {
@@ -66,7 +66,7 @@ describe("Mfa Users write", function () {
 
     before(function () {
         localStorage.clear();
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should add new user data", function () {
@@ -134,7 +134,7 @@ describe("Mfa Users exists", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should return true for existing user", function () {
@@ -175,7 +175,7 @@ describe("Mfa Users list", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should return a list of users", function () {
@@ -218,7 +218,7 @@ describe("Mfa Users delete", function () {
                 "csHex":"testCsHex2"
             },
         ]));
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should remove an user", function () {
@@ -286,7 +286,7 @@ describe("Mfa Users get", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should fetch a property of the user", function () {
@@ -315,7 +315,7 @@ describe("Mfa Users updateLastUsed", function () {
                 "mpinId":"exampleMpinId"
             }
         ]));
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should set last used timestamp", function () {
@@ -336,7 +336,7 @@ describe("Mfa Users store", function () {
 
     before(function () {
         localStorage.clear();
-        mfa = new Mfa(testData.init);
+        mfa = new Mfa(testData.init());
     });
 
     it("should write identity data to localStorage", function () {
