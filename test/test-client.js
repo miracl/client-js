@@ -161,6 +161,23 @@ describe("Mfa Client request", function() {
         expect(callback.callCount).to.equal(1);
     });
 
+    it("should set Authorization Header", function () {
+        requests = [];
+
+        var callback = sinon.spy();
+        mfa.request({
+            url: "/test-auth",
+            authorization: "Bearer test"
+        }, callback);
+
+        expect(requests.length).to.equal(1);
+        expect(requests[0].requestHeaders).to.have.property("Authorization");
+        expect(requests[0].requestHeaders["Authorization"]).to.equal("Bearer test");
+        requests[0].respond(200, { "Content-Type": "application/json" }, "{ \"test\": 1 }");
+
+        expect(callback.callCount).to.equal(1);
+    });
+
     it("should handle error response", function () {
         requests = [];
 
