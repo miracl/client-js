@@ -16,11 +16,12 @@ global.testData = {
     },
     settings: function () {
         return {
-            certivoxURL: "https://miracl.com",
+            certivoxURL: "https://miracl.com/",
             dtaUrl: "https://api.miracl.net",
             registerURL: "https://api.miracl.net/register/user",
             signatureURL: "https://api.miracl.net/signature",
-            mpinAuthServerURL: "https://api.miracl.net/rps"
+            mpinAuthServerURL: "https://api.miracl.net/rps",
+            dvsRegURL: "https://api.miracl.net/dvs/register"
         }
     }
 };
