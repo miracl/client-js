@@ -42,6 +42,45 @@ describe("Mfa Client", function() {
         var mfa = new Mfa(testData.init());
         expect(mfa).to.be.an.instanceof(Mfa);
     });
+
+    it("should set default PIN length to 4 if there is none", function () {
+        var mfa = new Mfa({
+            server: "http://server.com",
+            customerId: "customerId",
+            seed: "hexSeed"
+        });
+        expect(mfa.options.client.defaultPinLength).to.equal(4);
+    });
+
+    it("should set default PIN length to 4 if less than 4", function () {
+        var mfa = new Mfa({
+            server: "http://server.com",
+            customerId: "customerId",
+            seed: "hexSeed",
+            defaultPinLength: 3
+        });
+        expect(mfa.options.client.defaultPinLength).to.equal(4);
+    });
+
+    it("should set default PIN length to 4 if more than 6", function () {
+        var mfa = new Mfa({
+            server: "http://server.com",
+            customerId: "customerId",
+            seed: "hexSeed",
+            defaultPinLength: 7
+        });
+        expect(mfa.options.client.defaultPinLength).to.equal(4);
+    });
+
+    it("should set default PIN length to provided value within range", function () {
+        var mfa = new Mfa({
+            server: "http://server.com",
+            customerId: "customerId",
+            seed: "hexSeed",
+            defaultPinLength: 5
+        });
+        expect(mfa.options.client.defaultPinLength).to.equal(5);
+    });
 });
 
 describe("Mfa Client init", function() {

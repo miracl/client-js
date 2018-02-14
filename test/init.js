@@ -11,7 +11,8 @@ global.testData = {
         return {
             server: "http://server.com",
             customerId: "customerId",
-            seed: "hexSeed"
+            seed: "hexSeed",
+            defaultPinLength: 4
         };
     },
     settings: function () {

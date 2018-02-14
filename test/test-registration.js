@@ -387,10 +387,50 @@ describe("Mfa Client register", function () {
         }, function (err) {
             throw Error(err);
         });
+    });
 
+    it("should pass provided PIN length to the PIN callback", function (done) {
+        var initStub = sinon.stub(mfa, "init").yields(true);
+        var startRegistrationStub = sinon.stub(mfa, "startRegistration").yields(true);
+        var confirmRegistrationStub = sinon.stub(mfa, "confirmRegistration").yields(true);
+        var finishRegistrationStub = sinon.stub(mfa, "finishRegistration").yields(true);
+
+        mfa.register("test@example.com", function (passPin, pinLength) {
+            expect(pinLength).to.equal(5);
+            passPin("1234");
+        }, function (confirm) {
+            mfa.users.write("test@example.com", {pinLength: 5});
+            confirm();
+        }, function (data) {
+            done();
+        }, function (err) {
+            throw Error(err);
+        });
+    });
+
+    it("should pass default PIN length to the PIN callback", function (done) {
+        var initStub = sinon.stub(mfa, "init").yields(true);
+        var startRegistrationStub = sinon.stub(mfa, "startRegistration").yields(true);
+        var confirmRegistrationStub = sinon.stub(mfa, "confirmRegistration").yields(true);
+        var finishRegistrationStub = sinon.stub(mfa, "finishRegistration").yields(true);
+
+        mfa.register("test@example.com", function (passPin, pinLength) {
+            expect(pinLength).to.equal(4);
+            passPin("1234");
+        }, function (confirm) {
+            confirm();
+        }, function (data) {
+            done();
+        }, function (err) {
+            throw Error(err);
+        });
+    });
+
+    afterEach(function () {
         mfa.init.restore && mfa.init.restore();
         mfa.startRegistration.restore && mfa.startRegistration.restore();
         mfa.confirmRegistration.restore && mfa.confirmRegistration.restore();
         mfa.finishRegistration.restore && mfa.finishRegistration.restore();
+        mfa.users.delete("test@example.com");
     });
 });
