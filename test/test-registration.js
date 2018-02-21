@@ -125,13 +125,24 @@ describe("Mfa Client confirmRegistration", function() {
         }).to.throw("Missing user ID");
     });
 
-    it("should fire errorCb when _getSecret1 return 401 & error should be IDENTITY_NOT_VERIFIED", function (done) {
+    it("should fire errorCb when _getSecret1 return 401 & error should be NotVerifiedError", function (done) {
         sinon.stub(mfa, "_getSecret1").yields({ status: 401 }, null);
         mfa.users.write("test@example.com", { state: "ACTIVATED" });
 
         mfa.confirmRegistration("test@example.com", function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
             expect(err.name).to.equal("NotVerifiedError");
+            done();
+        });
+    });
+
+    it("should fire errorCb when _getSecret1 return 404 & error should be VerificationExpiredError", function (done) {
+        sinon.stub(mfa, "_getSecret1").yields({ status: 404 }, null);
+        mfa.users.write("test@example.com", { state: "ACTIVATED" });
+
+        mfa.confirmRegistration("test@example.com", function successCb(data) {}, function errorCb(err) {
+            expect(err).to.exist;
+            expect(err.name).to.equal("VerificationExpiredError");
             done();
         });
     });
