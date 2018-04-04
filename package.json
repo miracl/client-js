@@ -12,14 +12,13 @@
     "buildOut": "dist/mfa.js"
   },
   "scripts": {
-    "step1": "rm -rf dist .tmp",
-    "step2": "mkdir .tmp dist",
-    "step3": "cd $npm_package_config_cryptoPath && cat $npm_package_config_cryptoSrc > $npm_package_config_cryptoTmp",
-    "step4": "cat $npm_package_config_cryptoTmpFile $npm_package_config_libMfa > $npm_package_config_buildOut",
-    "build": "npm run step1 && npm run step2 && npm run step3 && npm run step4",
+    "cleanDir": "rm -rf dist .tmp",
+    "makeDir": "mkdir .tmp dist",
+    "concatCrypto": "cd $npm_package_config_cryptoPath && cat $npm_package_config_cryptoSrc > $npm_package_config_cryptoTmp",
+    "concatSrc": "cat $npm_package_config_cryptoTmpFile $npm_package_config_libMfa > $npm_package_config_buildOut",
+    "build": "npm run cleanDir && npm run makeDir && npm run concatCrypto && npm run concatSrc",
     "test": "mocha",
     "cover": "istanbul cover _mocha",
-    "lcov": "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "lint": "eslint ."
   },
   "repository": {
