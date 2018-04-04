@@ -38,3 +38,10 @@ var mfaOptions = {
 }
 var mfa = new Mfa(mfaOptions);
 ```
+
+## Build in Docker image
+
+```
+docker build -t mfa-client-builder .
+docker run -v $PWD:/home/node mfa-client-builder npm run build
+```
