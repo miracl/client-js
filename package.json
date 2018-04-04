@@ -9,14 +9,16 @@
     "cryptoTmp": "../../../../.tmp/crypto.js",
     "cryptoTmpFile": ".tmp/crypto.js",
     "libMfa": "lib/mfa.js",
-    "buildOut": "dist/mfa.js"
+    "buildOut": "dist/mfa.js",
+    "buildMin": "dist/mfa.min.js"
   },
   "scripts": {
     "cleanDir": "rm -rf dist .tmp",
     "makeDir": "mkdir .tmp dist",
     "concatCrypto": "cd $npm_package_config_cryptoPath && cat $npm_package_config_cryptoSrc > $npm_package_config_cryptoTmp",
     "concatSrc": "cat $npm_package_config_cryptoTmpFile $npm_package_config_libMfa > $npm_package_config_buildOut",
-    "build": "npm run cleanDir && npm run makeDir && npm run concatCrypto && npm run concatSrc",
+    "uglify": "uglifyjs $npm_package_config_buildOut --comments -o $npm_package_config_buildMin",
+    "build": "npm run cleanDir && npm run makeDir && npm run concatCrypto && npm run concatSrc && npm run uglify",
     "test": "mocha",
     "cover": "istanbul cover _mocha",
     "lint": "eslint ."
@@ -38,7 +40,8 @@
   },
   "homepage": "https://github.com/miracl/mfa-client-js#readme",
   "dependencies": {
-    "milagro-crypto-js": "git+https://github.com/milagro-crypto/milagro-crypto-js.git#3.0.2"
+    "milagro-crypto-js": "git+https://github.com/milagro-crypto/milagro-crypto-js.git#3.0.2",
+    "uglify-js": "^2.8.22"
   },
   "devDependencies": {
     "chai": "^3.5.0",
