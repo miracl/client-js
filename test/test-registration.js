@@ -14,13 +14,13 @@ describe("Mfa Client startRegistration", function() {
 
     it("should throw error w/o userId", function () {
         expect(function () {
-            mfa.startRegistration("", function () {}, function () {});
+            mfa.startRegistration("", null, function () {}, function () {});
         }).to.throw("Missing user ID");
     });
 
     it("should fire errorCb, when have problem with _registration", function (done) {
         sinon.stub(mfa, "_registration").yields({}, null);
-        mfa.startRegistration("test@example.com", function successCb(data) {}, function errorCb(err) {
+        mfa.startRegistration("test@example.com", null, function successCb(data) {}, function errorCb(err) {
             expect(err).to.exist;
             done();
         });
@@ -31,7 +31,7 @@ describe("Mfa Client startRegistration", function() {
     it("should fire successCb, when _registration passed successful", function (done) {
         sinon.stub(mfa, "_registration").yields(null, {});
 
-        mfa.startRegistration("test@example.com", function successCb(data) {
+        mfa.startRegistration("test@example.com", null, function successCb(data) {
             expect(data).to.exist;
             done();
         }, function errorCb(err) {
@@ -57,7 +57,7 @@ describe("Mfa Client _registration", function() {
     it("should return error, when register request fail", function(done) {
         sinon.stub(mfa, "request").yields({ error: true }, null);
 
-        mfa._registration("test@example.com", function(err) {
+        mfa._registration("test@example.com", null, function(err) {
             expect(err).to.exist;
             done();
         });
@@ -66,7 +66,7 @@ describe("Mfa Client _registration", function() {
     it("should store started user", function(done) {
         sinon.stub(mfa, "request").yields(null, { success: true, active: false });
 
-        mfa._registration("test@example.com", function(err, data) {
+        mfa._registration("test@example.com", null, function(err, data) {
             expect(mfa.users.exists("test@example.com")).to.be.true;
             expect(mfa.users.get("test@example.com", "state")).to.equal("STARTED");
             done();
@@ -76,7 +76,7 @@ describe("Mfa Client _registration", function() {
     it("should store activated user", function(done) {
         sinon.stub(mfa, "request").yields(null, { success: true, active: true });
 
-        mfa._registration("test@example.com", function(err, data) {
+        mfa._registration("test@example.com", null, function(err, data) {
             expect(mfa.users.exists("test@example.com")).to.be.true;
             expect(mfa.users.get("test@example.com", "state")).to.equal("ACTIVATED");
             done();
@@ -385,7 +385,7 @@ describe("Mfa Client register", function () {
         var confirmRegistrationStub = sinon.stub(mfa, "confirmRegistration").yields(true);
         var finishRegistrationStub = sinon.stub(mfa, "finishRegistration").yields(true);
 
-        mfa.register("test@example.com", function (passPin) {
+        mfa.register("test@example.com", null, function (passPin) {
             passPin("1234");
         }, function (confirm) {
             confirm();
@@ -406,7 +406,7 @@ describe("Mfa Client register", function () {
         var confirmRegistrationStub = sinon.stub(mfa, "confirmRegistration").yields(true);
         var finishRegistrationStub = sinon.stub(mfa, "finishRegistration").yields(true);
 
-        mfa.register("test@example.com", function (passPin, pinLength) {
+        mfa.register("test@example.com", null, function (passPin, pinLength) {
             expect(pinLength).to.equal(5);
             passPin("1234");
         }, function (confirm) {
@@ -425,11 +425,29 @@ describe("Mfa Client register", function () {
         var confirmRegistrationStub = sinon.stub(mfa, "confirmRegistration").yields(true);
         var finishRegistrationStub = sinon.stub(mfa, "finishRegistration").yields(true);
 
-        mfa.register("test@example.com", function (passPin, pinLength) {
+        mfa.register("test@example.com", null, function (passPin, pinLength) {
             expect(pinLength).to.equal(4);
             passPin("1234");
         }, function (confirm) {
             confirm();
+        }, function (data) {
+            done();
+        }, function (err) {
+            throw Error(err);
+        });
+    });
+
+    it("should auto confirm when registration code is provided", function (done) {
+        var initStub = sinon.stub(mfa, "init").yields(true);
+        var startRegistrationStub = sinon.stub(mfa, "startRegistration").yields(true);
+        var confirmRegistrationStub = sinon.stub(mfa, "confirmRegistration").yields(true);
+        var finishRegistrationStub = sinon.stub(mfa, "finishRegistration").yields(true);
+
+        mfa.register("test@example.com", 123456, function (passPin, pinLength) {
+            expect(pinLength).to.equal(4);
+            passPin("1234");
+        }, function () {
+            throw Error("Called confirm");
         }, function (data) {
             done();
         }, function (err) {
