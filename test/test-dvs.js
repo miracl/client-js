@@ -174,7 +174,7 @@ describe("Mfa Client _getDvsSecret2", function () {
     it("should call error callback when request fails", function (done) {
         sinon.stub(mfa, "request").yields({}, null);
 
-        mfa._getDvsSecret2({ params: "test" }, function (data) {
+        mfa._getDvsSecret2({ cs2url: "https://test/clientSecret" }, function (data) {
             throw new Error(data);
         }, function(err) {
             expect(err).to.exist;
@@ -185,7 +185,7 @@ describe("Mfa Client _getDvsSecret2", function () {
     it("should call success callback with data", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa._getDvsSecret2({ params: "test" }, function (cs2Data) {
+        mfa._getDvsSecret2({ cs2url: "https://test/clientSecret" }, function (cs2Data) {
             expect(cs2Data).to.exist;
             expect(cs2Data).to.have.property("success");
             expect(cs2Data.success).to.be.true;
@@ -198,9 +198,9 @@ describe("Mfa Client _getDvsSecret2", function () {
     it("should make request with passed params", function (done) {
         var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa._getDvsSecret2({ params: "test" }, function (cs2Data) {
+        mfa._getDvsSecret2({ cs2url: "https://test/clientSecret" }, function (cs2Data) {
             expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.getCalls()[0].args[0].url).to.equal("https://miracl.com/clientSecret?test");
+            expect(requestStub.getCalls()[0].args[0].url).to.equal("https://test/clientSecret");
             done();
         }, function(err) {
             throw new Error(err);
@@ -287,7 +287,7 @@ describe("Mfa Client createSigningIdentity", function () {
         sinon.stub(mfa, "_getSignMpinId").returns("signMpinId");
         sinon.stub(mfa, "_calculateMPinToken").returns("token");
 
-        mfa.createSigningIdentity("test@example.com", "mpinId", "share1Hex", "share2Hex", { privateKey: "private", publicKey: "public" }, 1234);
+        mfa.createSigningIdentity("test@example.com", "mpinId", "dtas", "share1Hex", "share2Hex", { privateKey: "private", publicKey: "public" }, 1234);
 
         expect(mfa.users.get("test@example.com", "mpinId")).to.equal("mpinId");
         expect(mfa.users.get("test@example.com", "publicKey")).to.equal("public");

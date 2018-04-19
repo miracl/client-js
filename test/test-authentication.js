@@ -272,8 +272,90 @@ describe("Mfa Client finishAuthentication", function () {
         });
     });
 
+    it("should renew identity secret if requested", function(done) {
+        sinon.stub(mfa, "request").yields(null, { success: true, renewSecret: { test: 1 } });
+        var renewSecretSpy = sinon.stub(mfa, "_renewSecret").yields();
+
+        mfa.finishAuthentication("test@example.com", 1234, "authOTT", function () {
+            expect(renewSecretSpy.calledOnce).to.be.true;
+            done();
+        }, function (err) {
+            throw new Error(err);
+        });
+    });
+
     afterEach(function () {
         mfa.request.restore && mfa.request.restore();
+    });
+});
+
+describe("Mfa Client _renewSecret", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(testData.init());
+        mfa.options.settings = testData.settings();
+    });
+
+    it("should renew the identity secret", function (done) {
+        sinon.stub(mfa, "request").yields(null, {});
+        var calculateMPinTokenStub = sinon.stub(mfa, "_calculateMPinToken");
+        var addSharesStub = sinon.stub(mfa, "_addShares");
+        var authenticateStub = sinon.stub(mfa, "authenticate").yields();
+
+        mfa._renewSecret("test@example.com", 1234, { cs2url: "https://test/cs2url"}, function () {
+            expect(calculateMPinTokenStub.calledOnce).to.be.true;
+            expect(addSharesStub.calledOnce).to.be.true;
+            done();
+        }, function (err) {
+            throw new Error(err);
+        });
+    });
+
+    it("should call error callback on request error", function (done) {
+        sinon.stub(mfa, "request").yields({ error: true });
+
+        mfa._renewSecret("test@example.com", 1234, { cs2url: "https://test/cs2url"}, function () {
+            throw new Error(err);
+        }, function (err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should call error callback if addShares fails", function (done) {
+        sinon.stub(mfa, "request").yields(null, {});
+        var addSharesStub = sinon.stub(mfa, "_addShares").throws(new Error("addShares error"));
+        var calculateMPinTokenStub = sinon.stub(mfa, "_calculateMPinToken");
+
+        mfa._renewSecret("test@example.com", 1234, { cs2url: "https://test/cs2url"}, function () {
+            throw new Error(err);
+        }, function (err) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("addShares error");
+            done();
+        });
+    });
+
+    it("should call error callback if addShares fails", function (done) {
+        sinon.stub(mfa, "request").yields(null, {});
+        var addSharesStub = sinon.stub(mfa, "_addShares");
+        var calculateMPinTokenStub = sinon.stub(mfa, "_calculateMPinToken").throws(new Error("calculateMPinToken error"));
+
+        mfa._renewSecret("test@example.com", 1234, { cs2url: "https://test/cs2url"}, function () {
+            throw new Error(err);
+        }, function (err) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("calculateMPinToken error");
+            done();
+        });
+    });
+
+    afterEach(function () {
+        mfa.request.restore && mfa.request.restore();
+        mfa._addShares.restore && mfa._addShares.restore();
+        mfa._calculateMPinToken.restore && mfa._calculateMPinToken.restore();
+        mfa.authenticate.restore && mfa.authenticate.restore();
     });
 });
 

@@ -114,7 +114,7 @@ describe("Mfa Client init", function() {
 
         mfa.init(function successCb() {
             expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.getCalls()[0].args[0].url).to.equal("http://server.com/rps/clientSettings?cid=test");
+            expect(requestStub.getCalls()[0].args[0].url).to.equal("http://server.com/rps/v2/clientSettings?cid=test");
             done();
         }, function errorCb(err) {});
     });
