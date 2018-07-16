@@ -24,8 +24,6 @@ describe("Mfa Client startRegistration", function() {
             expect(err).to.exist;
             done();
         });
-
-        mfa._registration.restore && mfa._registration.restore();
     });
 
     it("should fire successCb, when _registration passed successful", function (done) {
@@ -37,8 +35,18 @@ describe("Mfa Client startRegistration", function() {
         }, function errorCb(err) {
             throw new Error(err.name);
         });
+    });
 
-        mfa._registration.restore && mfa._registration.restore();
+    it("should fire errorCb when registration code is not valid", function (done) {
+        sinon.stub(mfa, "_registration").yields({ status: 403 }, null);
+
+        mfa.startRegistration("test@example.com", "123456", function successCb(data) {
+            throw new Error();
+        }, function errorCb(err) {
+            expect(err).to.exist;
+            expect(err.name).to.equal("InvalidRegCodeError");
+            done();
+        });
     });
 
     afterEach(function() {
