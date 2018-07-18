@@ -311,10 +311,12 @@ describe("Mfa Client signMessage", function () {
     it("should return U and V", function () {
         sinon.stub(mfa.mpin, "CLIENT").returns(0);
 
-        var result = mfa.signMessage("test@example.com", "1234", "message", "timestamp");
-
-        expect(result.U).to.equal("")
-        expect(result.V).to.equal("")
+        mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
+            expect(result.U).to.equal("")
+            expect(result.V).to.equal("")
+        }, function (err) {
+            throw new Error(err);
+        });
 
         mfa.mpin.CLIENT.restore();
     });
@@ -322,9 +324,11 @@ describe("Mfa Client signMessage", function () {
     it("should throw error on crypto failure", function () {
         sinon.stub(mfa.mpin, "CLIENT").returns(-1);
 
-        expect(function () {
-            mfa.signMessage("test@example.com", "1234", "message", "timestamp");
-        }).to.throw("CryptoError");
+        mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
+            throw new Error(result);
+        }, function (err) {
+            expect(err.name).to.equal("CryptoError");
+        });
 
         mfa.mpin.CLIENT.restore();
     });
