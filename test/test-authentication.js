@@ -55,7 +55,7 @@ describe("Mfa Client _getPass1", function () {
         var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa.mpin, "CLIENT_1").returns(0);
 
-        mfa._getPass1("test@example.com", "1234", [], [], function () {
+        mfa._getPass1("test@example.com", "1234", ["oidc"], [], [], function () {
             expect(requestStub.calledOnce).to.be.true;
             expect(requestStub.getCalls()[0].args[0]).to.be.an.object;
             expect(requestStub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass1");
@@ -68,7 +68,7 @@ describe("Mfa Client _getPass1", function () {
         sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa.mpin, "CLIENT_1").returns(0);
 
-        mfa._getPass1("test@example.com", "1234", [], [], function (err, data) {
+        mfa._getPass1("test@example.com", "1234", ["oidc"], [], [], function (err, data) {
             expect(data).to.exist;
             expect(data.success).to.be.true;
             done();
@@ -79,7 +79,7 @@ describe("Mfa Client _getPass1", function () {
         sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa.mpin, "CLIENT_1").returns(-14);
 
-        mfa._getPass1("test@example.com", "1234", [], [], function (err, data) {
+        mfa._getPass1("test@example.com", "1234", ["oidc"], [], [], function (err, data) {
             expect(err).to.exist;
             expect(err.name).to.equal("CryptoError");
             done();
@@ -104,7 +104,7 @@ describe("Mfa Client _getPass2", function () {
         var stub = sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa.mpin, "CLIENT_2").returns(0);
 
-        mfa._getPass2("test@example.com", "yHex", [], [], false, function () {
+        mfa._getPass2("test@example.com", ["oidc"], "yHex", [], [], function () {
             expect(stub.calledOnce).to.be.true;
             expect(stub.getCalls()[0].args[0]).to.be.an.object;
             expect(stub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass2");
@@ -117,7 +117,7 @@ describe("Mfa Client _getPass2", function () {
         sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa.mpin, "CLIENT_2").returns(0);
 
-        mfa._getPass2("test@example.com", "yHex", [], [], false, function (err, data) {
+        mfa._getPass2("test@example.com", ["oidc"], "yHex", [], [], function (err, data) {
             expect(data).to.exist;
             expect(data.success).to.be.true;
             done();
@@ -128,7 +128,7 @@ describe("Mfa Client _getPass2", function () {
         sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa.mpin, "CLIENT_2").returns(-14);
 
-        mfa._getPass2("test@example.com", "yHex", [], [], false, function (err, data) {
+        mfa._getPass2("test@example.com", ["oidc"], "yHex", [], [], function (err, data) {
             expect(err).to.exist;
             expect(err.name).to.equal("CryptoError");
             done();
@@ -139,7 +139,7 @@ describe("Mfa Client _getPass2", function () {
         var stub = sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa.mpin, "CLIENT_2").returns(0);
 
-        mfa._getPass2("test@example.com", "yHex", [], [], true, function (err, data) {
+        mfa._getPass2("test@example.com", ["otp", "otp-auth"], "yHex", [], [], function (err, data) {
             expect(stub.calledOnce).to.be.true;
             done();
         });
@@ -164,7 +164,7 @@ describe("Mfa Client _getPass", function () {
         var getPass1Stub = sinon.stub(mfa, "_getPass1").yields(null, { success: true });
         var getPass2Stub = sinon.stub(mfa, "_getPass2").yields(null, { success: true });
 
-        mfa._getPass("test@example.com", "1234", false, function () {
+        mfa._getPass("test@example.com", "1234", ["oidc"], function () {
             expect(getPass1Stub.calledOnce).to.be.true;
             expect(getPass2Stub.calledOnce).to.be.true;
             done();
@@ -174,7 +174,7 @@ describe("Mfa Client _getPass", function () {
     it("should call callback with error when _getPass1 fails", function (done) {
         sinon.stub(mfa, "_getPass1").yields({ error: true }, null);
 
-        mfa._getPass("test@example.com", "1234", false, function (err, data) {
+        mfa._getPass("test@example.com", "1234", ["oidc"], function (err, data) {
             expect(err).to.exist;
             done();
         });
@@ -184,7 +184,7 @@ describe("Mfa Client _getPass", function () {
         sinon.stub(mfa, "_getPass1").yields(null, { success: true });
         sinon.stub(mfa, "_getPass2").yields({ error: true }, null);
 
-        mfa._getPass("test@example.com", "1234", false, function (err, data) {
+        mfa._getPass("test@example.com", "1234", ["oidc"], function (err, data) {
             expect(err).to.exist;
             done();
         });
@@ -206,7 +206,7 @@ describe("Mfa Client startAuthentication", function () {
     it("should call the error callback when there is an error", function (done) {
         sinon.stub(mfa, "_getPass").yields({ error: true }, null);
 
-        mfa.startAuthentication("test@example.com", "1234", function (data) {
+        mfa.startAuthentication("test@example.com", "1234", ["oidc"], function (data) {
             done();
         }, function (err) {
             expect(err).to.exist;
@@ -217,7 +217,7 @@ describe("Mfa Client startAuthentication", function () {
     it("should call the success callback after getting the passes", function (done) {
         sinon.stub(mfa, "_getPass").yields(null, { success: true });
 
-        mfa.startAuthentication("test@example.com", "1234", function (data) {
+        mfa.startAuthentication("test@example.com", "1234", ["oidc"], function (data) {
             expect(data).to.exist;
             done();
         }, function (err) {
@@ -241,7 +241,7 @@ describe("Mfa Client finishAuthentication", function () {
     it("should call error callback when request fails", function (done) {
         sinon.stub(mfa, "request").yields({ error: true }, null);
 
-        mfa.finishAuthentication("test@example.com", 1234, "authOTT", function (data) {
+        mfa.finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (data) {
             done();
         }, function (err) {
             expect(err).to.exist;
@@ -252,7 +252,7 @@ describe("Mfa Client finishAuthentication", function () {
     it("should call the success callback after successful request", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa.finishAuthentication("test@example.com", 1234, "authOTT", function (data) {
+        mfa.finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (data) {
             expect(data).to.exist;
             done();
         }, function (err) {
@@ -263,7 +263,7 @@ describe("Mfa Client finishAuthentication", function () {
     it("should mark an identity as revoked", function (done) {
         sinon.stub(mfa, "request").yields({ status: 410 }, null);
 
-        mfa.finishAuthentication("test@example.com", 1234, "authOTT", function (data) {
+        mfa.finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (data) {
             throw new Error(data);
         }, function (err) {
             expect(err).to.exist;
@@ -274,10 +274,22 @@ describe("Mfa Client finishAuthentication", function () {
 
     it("should renew identity secret if requested", function(done) {
         sinon.stub(mfa, "request").yields(null, { success: true, renewSecret: { test: 1 } });
-        var renewSecretSpy = sinon.stub(mfa, "_renewSecret").yields();
+        var renewSecretStub = sinon.stub(mfa, "_renewSecret").yields();
 
-        mfa.finishAuthentication("test@example.com", 1234, "authOTT", function () {
-            expect(renewSecretSpy.calledOnce).to.be.true;
+        mfa.finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function () {
+            expect(renewSecretStub.calledOnce).to.be.true;
+            done();
+        }, function (err) {
+            throw new Error(err);
+        });
+    });
+
+    it("should renew DVS secret if requested", function(done) {
+        sinon.stub(mfa, "request").yields(null, { success: true, dvsRegister: { test: 1 } });
+        var renewDvsSecretStub = sinon.stub(mfa, "_renewDvsSecret").yields();
+
+        mfa.finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function () {
+            expect(renewDvsSecretStub.calledOnce).to.be.true;
             done();
         }, function (err) {
             throw new Error(err);
@@ -371,7 +383,7 @@ describe("Mfa Client _getOTP", function () {
     });
 
     it("should return call errorCb w/o userId", function (done) {
-        mfa._getOTP("", "", "authentication", function () {}, function (err) {
+        mfa._getOTP("", "", ["otp", "otp-auth"], function () {}, function (err) {
             expect(err).to.exist;
             expect(err.name).to.equal("IdentityError");
             done();
@@ -382,7 +394,7 @@ describe("Mfa Client _getOTP", function () {
         sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa, "_getPass").yields({ error: true }, null);
 
-        mfa._getOTP("test@example.com", "1234", "authentication", function (data) {
+        mfa._getOTP("test@example.com", "1234", ["otp", "otp-auth"], function (data) {
             done();
         }, function (err) {
             expect(err).to.exist;
@@ -394,7 +406,7 @@ describe("Mfa Client _getOTP", function () {
         var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa, "_getPass").yields(null, { success: true });
 
-        mfa._getOTP("test@example.com", "1234", "authentication", function (data) {
+        mfa._getOTP("test@example.com", "1234", ["otp", "otp-auth"], function (data) {
             // Called twice for init and authenticate
             expect(requestStub.callCount).to.equal(2);
             expect(data).to.exist;
@@ -410,7 +422,7 @@ describe("Mfa Client _getOTP", function () {
         requestStub.onFirstCall().yields(null, { success: true });
         requestStub.onSecondCall().yields({ error: true, status: 400 }, null);
 
-        mfa._getOTP("test@example.com", "1234", "authentication", function (data) {
+        mfa._getOTP("test@example.com", "1234", ["otp", "otp-auth"], function (data) {
             throw new Error(err);
         }, function (err) {
             expect(err).to.exist;
@@ -426,7 +438,7 @@ describe("Mfa Client _getOTP", function () {
 
         var userWriteSpy = sinon.spy(mfa.users, "write");
 
-        mfa._getOTP("test@example.com", "1234", "authentication", function (data) {
+        mfa._getOTP("test@example.com", "1234", ["otp", "otp-auth"], function (data) {
             throw new Error(err);
         }, function (err) {
             expect(err).to.exist;
@@ -460,7 +472,7 @@ describe("Mfa Client fetchOTP", function () {
         mfa.fetchOTP("test@example.com", "1234", function (data) {
             expect(data.success).to.be.true;
             expect(getOTPStub.calledOnce).to.be.true;
-            expect(getOTPStub.getCalls()[0].args[2]).to.equal("authentication");
+            expect(getOTPStub.getCalls()[0].args[2]).to.deep.equal(["otp", "otp-auth"]);
             done();
         }, function (err) {
             throw new Error(err);
@@ -487,7 +499,7 @@ describe("Mfa Client fetchRegistrationCode", function () {
         mfa.fetchRegistrationCode("test@example.com", "1234", function (data) {
             expect(data.success).to.be.true;
             expect(getOTPStub.calledOnce).to.be.true;
-            expect(getOTPStub.getCalls()[0].args[2]).to.equal("registration");
+            expect(getOTPStub.getCalls()[0].args[2]).to.deep.equal(["otp", "otp-reg"]);
             done();
         }, function (err) {
             throw new Error(err);
