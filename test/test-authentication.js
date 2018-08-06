@@ -86,6 +86,16 @@ describe("Mfa Client _getPass1", function () {
         });
     });
 
+    it("should handle dvs scope", function (done) {
+        var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa.ctx().MPIN, "CLIENT_1").returns(0);
+
+        mfa._getPass1("test@example.com", "1234", ["dvs-auth"], [], [], function (err, data) {
+            expect(requestStub.getCalls()[0].args[0].data.scope).to.deep.equal(["dvs-auth"]);
+            done();
+        });
+    });
+
     afterEach(function () {
         mfa.request.restore && mfa.request.restore();
         mfa.ctx().MPIN.CLIENT_1.restore && mfa.ctx().MPIN.CLIENT_1.restore();
@@ -139,11 +149,25 @@ describe("Mfa Client _getPass2", function () {
         var stub = sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa.ctx().MPIN, "CLIENT_2").returns(0);
 
-        mfa._getPass2("test@example.com", ["otp", "otp-auth"], "yHex", [], [], function (err, data) {
+        mfa._getPass2("test@example.com", ["otp"], "yHex", [], [], function (err, data) {
             expect(stub.calledOnce).to.be.true;
             done();
         });
+    });
 
+    it("should handle dvs scope", function (done) {
+        var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
+        sinon.stub(mfa.ctx().MPIN, "CLIENT_2").returns(0);
+
+        mfa.dvsUsers.write("test@example.com", {
+            mpinId: "thisIsDvsId",
+            state: "ACTIVATED"
+        });
+
+        mfa._getPass2("test@example.com", ["dvs-auth"], "yHex", [], [], function (err, data) {
+            expect(requestStub.getCalls()[0].args[0].data.mpin_id).to.equal("thisIsDvsId");
+            done();
+        });
     });
 
     afterEach(function () {
@@ -288,7 +312,7 @@ describe("Mfa Client finishAuthentication", function () {
         sinon.stub(mfa, "request").yields(null, { success: true, dvsRegister: { test: 1 } });
         var renewDvsSecretStub = sinon.stub(mfa, "_renewDvsSecret").yields();
 
-        mfa.finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function () {
+        mfa.finishAuthentication("test@example.com", 1234, ["dvs-auth"], "authOTT", function () {
             expect(renewDvsSecretStub.calledOnce).to.be.true;
             done();
         }, function (err) {
@@ -371,7 +395,7 @@ describe("Mfa Client _renewSecret", function () {
     });
 });
 
-describe("Mfa Client _getOTP", function () {
+describe("Mfa Client _authentication", function () {
     var mfa;
 
     before(function () {
@@ -383,7 +407,7 @@ describe("Mfa Client _getOTP", function () {
     });
 
     it("should return call errorCb w/o userId", function (done) {
-        mfa._getOTP("", "", ["otp", "otp-auth"], function () {}, function (err) {
+        mfa._authentication("", "", ["otp"], function () {}, function (err) {
             expect(err).to.exist;
             expect(err.name).to.equal("IdentityError");
             done();
@@ -394,7 +418,7 @@ describe("Mfa Client _getOTP", function () {
         sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa, "_getPass").yields({ error: true }, null);
 
-        mfa._getOTP("test@example.com", "1234", ["otp", "otp-auth"], function (data) {
+        mfa._authentication("test@example.com", "1234", ["otp"], function (data) {
             done();
         }, function (err) {
             expect(err).to.exist;
@@ -406,7 +430,7 @@ describe("Mfa Client _getOTP", function () {
         var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa, "_getPass").yields(null, { success: true });
 
-        mfa._getOTP("test@example.com", "1234", ["otp", "otp-auth"], function (data) {
+        mfa._authentication("test@example.com", "1234", ["otp"], function (data) {
             // Called twice for init and authenticate
             expect(requestStub.callCount).to.equal(2);
             expect(data).to.exist;
@@ -422,7 +446,7 @@ describe("Mfa Client _getOTP", function () {
         requestStub.onFirstCall().yields(null, { success: true });
         requestStub.onSecondCall().yields({ error: true, status: 400 }, null);
 
-        mfa._getOTP("test@example.com", "1234", ["otp", "otp-auth"], function (data) {
+        mfa._authentication("test@example.com", "1234", ["otp"], function (data) {
             throw new Error(err);
         }, function (err) {
             expect(err).to.exist;
@@ -438,7 +462,7 @@ describe("Mfa Client _getOTP", function () {
 
         var userWriteSpy = sinon.spy(mfa.users, "write");
 
-        mfa._getOTP("test@example.com", "1234", ["otp", "otp-auth"], function (data) {
+        mfa._authentication("test@example.com", "1234", ["otp"], function (data) {
             throw new Error(err);
         }, function (err) {
             expect(err).to.exist;
@@ -467,18 +491,18 @@ describe("Mfa Client fetchOTP", function () {
     });
 
     it("should return call errorCb w/o userId", function (done) {
-        var getOTPStub = sinon.stub(mfa, "_getOTP").yields({ success: true });
+        var authenticationStub = sinon.stub(mfa, "_authentication").yields({ success: true });
 
         mfa.fetchOTP("test@example.com", "1234", function (data) {
             expect(data.success).to.be.true;
-            expect(getOTPStub.calledOnce).to.be.true;
-            expect(getOTPStub.getCalls()[0].args[2]).to.deep.equal(["otp", "otp-auth"]);
+            expect(authenticationStub.calledOnce).to.be.true;
+            expect(authenticationStub.getCalls()[0].args[2]).to.deep.equal(["otp"]);
             done();
         }, function (err) {
             throw new Error(err);
         });
 
-        getOTPStub.restore();
+        authenticationStub.restore();
     });
 });
 
@@ -494,17 +518,17 @@ describe("Mfa Client fetchRegistrationCode", function () {
     });
 
     it("should return call errorCb w/o userId", function (done) {
-        var getOTPStub = sinon.stub(mfa, "_getOTP").yields({ success: true });
+        var authenticationStub = sinon.stub(mfa, "_authentication").yields({ success: true });
 
         mfa.fetchRegistrationCode("test@example.com", "1234", function (data) {
             expect(data.success).to.be.true;
-            expect(getOTPStub.calledOnce).to.be.true;
-            expect(getOTPStub.getCalls()[0].args[2]).to.deep.equal(["otp", "otp-reg"]);
+            expect(authenticationStub.calledOnce).to.be.true;
+            expect(authenticationStub.getCalls()[0].args[2]).to.deep.equal(["reg-code"]);
             done();
         }, function (err) {
             throw new Error(err);
         });
 
-        getOTPStub.restore();
+        authenticationStub.restore();
     });
 });

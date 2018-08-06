@@ -12,21 +12,16 @@ describe("Mfa Client registerDvs", function () {
     });
 
     it("should go through the DVS registration flow", function (done) {
-        var initStub = sinon.stub(mfa, "init").yields(true);
-        var startAuthenticationStub = sinon.stub(mfa, "startAuthentication").yields(true);
-        var finishAuthenticationStub = sinon.stub(mfa, "finishAuthentication").yields(true);
+        var authenticationStub = sinon.stub(mfa, "_authentication").yields(true);
 
         mfa.registerDvs("test@example.com", "1234", function (result) {
-            expect(startAuthenticationStub.calledOnce).to.be.true;
-            expect(finishAuthenticationStub.calledOnce).to.be.true;
+            expect(authenticationStub.calledOnce).to.be.true;
             done();
         }, function (err) {
             throw new Error(err);
         });
 
-        mfa.init.restore && mfa.init.restore();
-        mfa.startAuthentication.restore && mfa.startAuthentication.restore();
-        mfa.finishAuthentication.restore && mfa.finishAuthentication.restore();
+        mfa._authentication.restore && mfa._authentication.restore();
     });
 
 });
@@ -326,39 +321,32 @@ describe("Mfa Client signMessage", function () {
         mfa = new Mfa(testData.init());
     });
 
-    it("should return U and V", function () {
-        sinon.stub(mfa, "init").yields(true);
+    it("should return U and V", function (done) {
         sinon.stub(mfa.ctx().MPIN, "CLIENT").returns(0);
-        var startAuthenticationStub = sinon.stub(mfa, "startAuthentication").yields(true);
-        var finishAuthenticationStub = sinon.stub(mfa, "finishAuthentication").yields(true);
-
+        var authenticationStub = sinon.stub(mfa, "_authentication").yields(true);
 
         mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
             expect(result.u).to.equal("");
             expect(result.v).to.equal("");
+            done();
         }, function (err) {
             throw new Error(err);
         });
 
-        mfa.startAuthentication.restore && mfa.startAuthentication.restore();
-        mfa.finishAuthentication.restore && mfa.finishAuthentication.restore();
         mfa.ctx().MPIN.CLIENT.restore();
+        mfa._authentication.restore && mfa._authentication.restore();
     });
 
-    it("should throw error on crypto failure", function () {
-        sinon.stub(mfa, "init").yields(true);
+    it("should throw error on crypto failure", function (done) {
         sinon.stub(mfa.ctx().MPIN, "CLIENT").returns(-1);
 
         mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
             throw new Error(result);
         }, function (err) {
             expect(err.name).to.equal("CryptoError");
+            done();
         });
 
         mfa.ctx().MPIN.CLIENT.restore();
-    });
-
-    afterEach(function () {
-        mfa.init.restore && mfa.init.restore();
     });
 });
