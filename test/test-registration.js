@@ -283,19 +283,19 @@ describe("Mfa Client _addShares", function () {
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(mfa.mpin, "RECOMBINE_G1").returns(-1);
+        sinon.stub(mfa.ctx().MPIN, "RECOMBINE_G1").returns(-1);
         expect(function () {
             mfa._addShares("test", "test");
         }).to.throw("CryptoError");
     });
 
     it("should return combined client secret", function () {
-        sinon.stub(mfa.mpin, "RECOMBINE_G1").returns(0);
+        sinon.stub(mfa.ctx().MPIN, "RECOMBINE_G1").returns(0);
         expect(mfa._addShares("test", "test")).to.equal("");
     });
 
     afterEach(function () {
-        mfa.mpin.RECOMBINE_G1.restore && mfa.mpin.RECOMBINE_G1.restore();
+        mfa.ctx().MPIN.RECOMBINE_G1.restore && mfa.ctx().MPIN.RECOMBINE_G1.restore();
     });
 });
 
@@ -308,19 +308,19 @@ describe("Mfa Client _calculateMPinToken", function () {
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(mfa.mpin, "EXTRACT_PIN").returns(-1);
+        sinon.stub(mfa.ctx().MPIN, "EXTRACT_PIN").returns(-1);
         expect(function () {
             mfa._calculateMPinToken("test", "1234", "hex")
         }).to.throw("CryptoError");
     });
 
     it("should return combined client secret", function () {
-        sinon.stub(mfa.mpin, "EXTRACT_PIN").returns(0);
+        sinon.stub(mfa.ctx().MPIN, "EXTRACT_PIN").returns(0);
         expect(mfa._calculateMPinToken("test", "1234", "hex")).to.equal("0000");
     });
 
     afterEach(function () {
-        mfa.mpin.EXTRACT_PIN.restore && mfa.mpin.EXTRACT_PIN.restore();
+        mfa.ctx().MPIN.EXTRACT_PIN.restore && mfa.ctx().MPIN.EXTRACT_PIN.restore();
     });
 });
 

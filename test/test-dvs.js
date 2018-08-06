@@ -43,7 +43,7 @@ describe("Mfa Client _renewDvsSecret", function () {
         var getDvsSecret2Stub = sinon.stub(mfa, "_getDvsSecret2").yields(true);
         var createSigningIdentityStub = sinon.stub(mfa, "createSigningIdentity").returns(true);
 
-        mfa._renewDvsSecret("test@example.com", "1234", {token: "token", curve: "curve"}, function () {
+        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function () {
             expect(getDvsSecret1Stub.calledOnce).to.be.true;
             expect(getDvsSecret2Stub.calledOnce).to.be.true;
             expect(createSigningIdentityStub.calledOnce).to.be.true;
@@ -57,7 +57,7 @@ describe("Mfa Client _renewDvsSecret", function () {
         sinon.stub(mfa, "init").yields(true);
         sinon.stub(mfa, "_getDvsSecret1").callsArgWith(3, { error: true });
 
-        mfa._renewDvsSecret("test@example.com", "1234", {token: "token", curve: "curve"}, function () {
+        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function () {
             throw new Error();
         }, function (err) {
             expect(err).to.exist;
@@ -71,7 +71,7 @@ describe("Mfa Client _renewDvsSecret", function () {
         sinon.stub(mfa, "_getDvsSecret1").yields(true);
         sinon.stub(mfa, "_getDvsSecret2").callsArgWith(2, { error: true });
 
-        mfa._renewDvsSecret("test@example.com", "1234", {token: "token", curve: "curve"}, function () {
+        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function () {
             throw new Error();
         }, function (err) {
             expect(err).to.exist;
@@ -86,7 +86,7 @@ describe("Mfa Client _renewDvsSecret", function () {
         sinon.stub(mfa, "_getDvsSecret2").yields(true);
         sinon.stub(mfa, "createSigningIdentity").throws({ error: true });
 
-        mfa._renewDvsSecret("test@example.com", "1234", {token: "token", curve: "curve"}, function () {
+        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function () {
             throw new Error();
         }, function (err) {
             expect(err).to.exist;
@@ -228,13 +228,13 @@ describe("Mfa Client generateSignKeypair", function () {
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(mfa.mpin, "GET_DVS_KEYPAIR").returns(-1);
+        sinon.stub(mfa.ctx().MPIN, "GET_DVS_KEYPAIR").returns(-1);
 
         expect(function () {
             mfa.generateSignKeypair();
         }).to.throw("CryptoError");
 
-        mfa.mpin.GET_DVS_KEYPAIR.restore();
+        mfa.ctx().MPIN.GET_DVS_KEYPAIR.restore();
     });
 });
 
@@ -246,21 +246,21 @@ describe("Mfa Client _generateSignClientSecret", function () {
     });
 
     it("should return the modified client secret", function () {
-        sinon.stub(mfa.mpin, "GET_G1_MULTIPLE").returns(0);
+        sinon.stub(mfa.ctx().MPIN, "GET_G1_MULTIPLE").returns(0);
 
         expect(mfa._generateSignClientSecret("privateKey", "0f")).to.equal("0f");
 
-        mfa.mpin.GET_G1_MULTIPLE.restore();
+        mfa.ctx().MPIN.GET_G1_MULTIPLE.restore();
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(mfa.mpin, "GET_G1_MULTIPLE").returns(-1);
+        sinon.stub(mfa.ctx().MPIN, "GET_G1_MULTIPLE").returns(-1);
 
         expect(function () {
             mfa._generateSignClientSecret("privateKey", "secret");
         }).to.throw("CryptoError");
 
-        mfa.mpin.GET_G1_MULTIPLE.restore();
+        mfa.ctx().MPIN.GET_G1_MULTIPLE.restore();
     });
 });
 
@@ -289,7 +289,23 @@ describe("Mfa Client createSigningIdentity", function () {
         sinon.stub(mfa, "_getSignMpinId").returns("signMpinId");
         sinon.stub(mfa, "_calculateMPinToken").returns("token");
 
-        mfa.createSigningIdentity("test@example.com", "dvsMpinId", "dtas", "share1Hex", "share2Hex", { privateKey: "private", publicKey: "public" }, 1234);
+        mfa.createSigningIdentity(
+            "test@example.com",
+            "1234",
+            {
+                mpinId: "dvsMpinId",
+                dtas: "dtas",
+                dvsClientSecretShare: "share1Hex",
+                curve: "BN254CX"
+            },
+            {
+                dvsClientSecret: "share2Hex"
+            },
+            {
+                privateKey: "private",
+                publicKey: "public"
+            }
+        );
 
         expect(mfa.dvsUsers.get("test@example.com", "mpinId")).to.equal("dvsMpinId");
         expect(mfa.dvsUsers.get("test@example.com", "publicKey")).to.equal("public");
@@ -311,20 +327,27 @@ describe("Mfa Client signMessage", function () {
     });
 
     it("should return U and V", function () {
-        sinon.stub(mfa.mpin, "CLIENT").returns(0);
+        sinon.stub(mfa, "init").yields(true);
+        sinon.stub(mfa.ctx().MPIN, "CLIENT").returns(0);
+        var startAuthenticationStub = sinon.stub(mfa, "startAuthentication").yields(true);
+        var finishAuthenticationStub = sinon.stub(mfa, "finishAuthentication").yields(true);
+
 
         mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
-            expect(result.U).to.equal("")
-            expect(result.V).to.equal("")
+            expect(result.u).to.equal("");
+            expect(result.v).to.equal("");
         }, function (err) {
             throw new Error(err);
         });
 
-        mfa.mpin.CLIENT.restore();
+        mfa.startAuthentication.restore && mfa.startAuthentication.restore();
+        mfa.finishAuthentication.restore && mfa.finishAuthentication.restore();
+        mfa.ctx().MPIN.CLIENT.restore();
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(mfa.mpin, "CLIENT").returns(-1);
+        sinon.stub(mfa, "init").yields(true);
+        sinon.stub(mfa.ctx().MPIN, "CLIENT").returns(-1);
 
         mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
             throw new Error(result);
@@ -332,6 +355,10 @@ describe("Mfa Client signMessage", function () {
             expect(err.name).to.equal("CryptoError");
         });
 
-        mfa.mpin.CLIENT.restore();
+        mfa.ctx().MPIN.CLIENT.restore();
+    });
+
+    afterEach(function () {
+        mfa.init.restore && mfa.init.restore();
     });
 });

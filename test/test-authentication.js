@@ -53,7 +53,7 @@ describe("Mfa Client _getPass1", function () {
 
     it("shoud make a request for first pass", function (done) {
         var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
-        sinon.stub(mfa.mpin, "CLIENT_1").returns(0);
+        sinon.stub(mfa.ctx().MPIN, "CLIENT_1").returns(0);
 
         mfa._getPass1("test@example.com", "1234", ["oidc"], [], [], function () {
             expect(requestStub.calledOnce).to.be.true;
@@ -66,7 +66,7 @@ describe("Mfa Client _getPass1", function () {
 
     it("should pass response to callback", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
-        sinon.stub(mfa.mpin, "CLIENT_1").returns(0);
+        sinon.stub(mfa.ctx().MPIN, "CLIENT_1").returns(0);
 
         mfa._getPass1("test@example.com", "1234", ["oidc"], [], [], function (err, data) {
             expect(data).to.exist;
@@ -77,7 +77,7 @@ describe("Mfa Client _getPass1", function () {
 
     it("should pass error to callback", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
-        sinon.stub(mfa.mpin, "CLIENT_1").returns(-14);
+        sinon.stub(mfa.ctx().MPIN, "CLIENT_1").returns(-14);
 
         mfa._getPass1("test@example.com", "1234", ["oidc"], [], [], function (err, data) {
             expect(err).to.exist;
@@ -88,7 +88,7 @@ describe("Mfa Client _getPass1", function () {
 
     afterEach(function () {
         mfa.request.restore && mfa.request.restore();
-        mfa.mpin.CLIENT_1.restore && mfa.mpin.CLIENT_1.restore();
+        mfa.ctx().MPIN.CLIENT_1.restore && mfa.ctx().MPIN.CLIENT_1.restore();
     });
 });
 
@@ -102,7 +102,7 @@ describe("Mfa Client _getPass2", function () {
 
     it("shoud make a request for second pass", function (done) {
         var stub = sinon.stub(mfa, "request").yields(null, { success: true });
-        sinon.stub(mfa.mpin, "CLIENT_2").returns(0);
+        sinon.stub(mfa.ctx().MPIN, "CLIENT_2").returns(0);
 
         mfa._getPass2("test@example.com", ["oidc"], "yHex", [], [], function () {
             expect(stub.calledOnce).to.be.true;
@@ -115,7 +115,7 @@ describe("Mfa Client _getPass2", function () {
 
     it("should pass response to callback", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
-        sinon.stub(mfa.mpin, "CLIENT_2").returns(0);
+        sinon.stub(mfa.ctx().MPIN, "CLIENT_2").returns(0);
 
         mfa._getPass2("test@example.com", ["oidc"], "yHex", [], [], function (err, data) {
             expect(data).to.exist;
@@ -126,7 +126,7 @@ describe("Mfa Client _getPass2", function () {
 
     it("should pass error to callback", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
-        sinon.stub(mfa.mpin, "CLIENT_2").returns(-14);
+        sinon.stub(mfa.ctx().MPIN, "CLIENT_2").returns(-14);
 
         mfa._getPass2("test@example.com", ["oidc"], "yHex", [], [], function (err, data) {
             expect(err).to.exist;
@@ -137,7 +137,7 @@ describe("Mfa Client _getPass2", function () {
 
     it("should make a request for OTP", function (done) {
         var stub = sinon.stub(mfa, "request").yields(null, { success: true });
-        sinon.stub(mfa.mpin, "CLIENT_2").returns(0);
+        sinon.stub(mfa.ctx().MPIN, "CLIENT_2").returns(0);
 
         mfa._getPass2("test@example.com", ["otp", "otp-auth"], "yHex", [], [], function (err, data) {
             expect(stub.calledOnce).to.be.true;
@@ -148,7 +148,7 @@ describe("Mfa Client _getPass2", function () {
 
     afterEach(function () {
         mfa.request.restore && mfa.request.restore();
-        mfa.mpin.CLIENT_2.restore && mfa.mpin.CLIENT_2.restore();
+        mfa.ctx().MPIN.CLIENT_2.restore && mfa.ctx().MPIN.CLIENT_2.restore();
     });
 });
 
