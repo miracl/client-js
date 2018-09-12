@@ -13,9 +13,11 @@ describe("Mfa Client registerDvs", function () {
 
     it("should go through the DVS registration flow", function (done) {
         var authenticationStub = sinon.stub(mfa, "_authentication").yields(true);
+        var renewDvsSecretStub = sinon.stub(mfa, "_renewDvsSecret").yields(true);
 
         mfa.registerDvs("test@example.com", "1234", function (result) {
             expect(authenticationStub.calledOnce).to.be.true;
+            expect(renewDvsSecretStub.calledOnce).to.be.true;
             done();
         }, function (err) {
             throw new Error(err);
