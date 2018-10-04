@@ -113,6 +113,19 @@ describe("Mfa Users write", function () {
         expect(mfa.users.get("test@example.com", "csHex")).to.equal("");
         expect(mfa.users.get("test@example.com", "regOTT")).to.equal("");
     });
+
+    it("should add a created timestamp for new identity", function () {
+        var beforeCreate = Math.floor(Date.now() / 1000);
+
+        mfa.users.write("timestamp@example.com", {
+            mpinId: "timestampMpinId",
+            state: "ACTIVATED"
+        });
+
+        expect(mfa.users.get("timestamp@example.com", "created")).to.exist;
+        expect(mfa.users.get("timestamp@example.com", "created")).to.be.at.least(beforeCreate);
+        expect(mfa.users.get("timestamp@example.com", "created")).to.be.at.most(Math.ceil(Date.now() / 1000));
+    });
 });
 
 describe("Mfa Users exists", function () {
