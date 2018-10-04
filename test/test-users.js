@@ -313,6 +313,14 @@ describe("Mfa Users get", function () {
     it("should check only identities for the current customer", function () {
         expect(mfa.users.get("another.customer@example.com", "mpinId")).to.be.false;
     });
+
+    it("should fetch all user data if a property is not requested", function () {
+        var userData = mfa.users.get("test@example.com");
+        expect(userData.customerId).to.equal("customerId");
+        expect(userData.mpinId).to.equal("exampleMpinId");
+        expect(userData.state).to.equal("ACTIVATED");
+        expect(userData.userId).to.equal("test@example.com");
+    });
 });
 
 describe("Mfa Users updateLastUsed", function () {
@@ -360,11 +368,11 @@ describe("Mfa Users store", function () {
 
         mfa.users.store();
 
-        expect(JSON.parse(localStorage.getItem("mfa"))[0]).to.deep.equal({
-            "customerId": "customerId",
-            "mpinId": "exampleMpinId",
-            "state": "ACTIVATED",
-            "userId": "test@example.com"
-        });
+        var userData = JSON.parse(localStorage.getItem("mfa"))[0];
+
+        expect(userData.customerId).to.equal("customerId");
+        expect(userData.mpinId).to.equal("exampleMpinId");
+        expect(userData.state).to.equal("ACTIVATED");
+        expect(userData.userId).to.equal("test@example.com");
     });
 });
