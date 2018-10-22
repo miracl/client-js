@@ -29,15 +29,6 @@ describe("Mfa Client", function() {
         }).to.throw("Missing customer ID");
     });
 
-    it("should throw Error w/o seed", function () {
-        expect(function () {
-            var mfa = new Mfa({
-                server: testData.init().server,
-                customerId: testData.init().customerId
-            });
-        }).to.throw("Missing random number generator seed");
-    });
-
     it("should return Instance of Mfa", function () {
         var mfa = new Mfa(testData.init());
         expect(mfa).to.be.an.instanceof(Mfa);
