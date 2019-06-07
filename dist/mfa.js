@@ -15685,7 +15685,7 @@ var Mfa = Mfa || {};
         clientSecretBytes = self._hexToBytes(clientSecretHex);
         mpinIdBytes = self._hexToBytes(mpinIdHex);
 
-        errorCode = self.ctx(curve).MPIN.EXTRACT_PIN(self.ctx(curve).MPIN.HASH_TYPE, mpinIdBytes, PIN, clientSecretBytes);
+        errorCode = self.ctx(curve).MPIN.EXTRACT_PIN(self.ctx(curve).MPIN.SHA256, mpinIdBytes, PIN, clientSecretBytes);
         if (errorCode !== 0) {
             throw new CryptoError("Could not extract PIN from client secret", errorCode);
         }
@@ -15789,7 +15789,7 @@ var Mfa = Mfa || {};
             mpinIdHex = self._getSignMpinId(userStorage.get(userId, "mpinId"), userStorage.get(userId, "publicKey"));
         }
 
-        errorCode = self.ctx(curve).MPIN.CLIENT_1(self.ctx(curve).MPIN.HASH_TYPE, 0, self._hexToBytes(mpinIdHex), self.rng, X, userPin, self._hexToBytes(tokenHex), SEC, U, UT, self._hexToBytes(0));
+        errorCode = self.ctx(curve).MPIN.CLIENT_1(self.ctx(curve).MPIN.SHA256, 0, self._hexToBytes(mpinIdHex), self.rng, X, userPin, self._hexToBytes(tokenHex), SEC, U, UT, self._hexToBytes(0));
         if (errorCode !== 0) {
             return callback(new CryptoError("Could not calculate pass 1 request data", errorCode), null);
         }
@@ -16062,7 +16062,7 @@ var Mfa = Mfa || {};
             errorCode,
             signatureData;
 
-        errorCode = self.ctx(curve).MPIN.CLIENT(self.ctx(curve).MPIN.HASH_TYPE, 0, mpinIdBytes, self.rng, X, userPin, tokenBytes, SEC, U, null, null, timestamp, Y1, messageBytes);
+        errorCode = self.ctx(curve).MPIN.CLIENT(self.ctx(curve).MPIN.SHA256, 0, mpinIdBytes, self.rng, X, userPin, tokenBytes, SEC, U, null, null, timestamp, Y1, messageBytes);
         if (errorCode != 0) {
             errorCb(new CryptoError("Could not sign message", errorCode));
         }
