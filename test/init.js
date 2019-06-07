@@ -3,7 +3,7 @@ var LocalStorage = require('node-localstorage').LocalStorage;
 global.localStorage = new LocalStorage('./localStorageTemp');
 
 // Load the crypto library
-global.CTX = require("milagro-crypto-js");
+global.CTX = require("@miracl/crypto-js");
 
 // Reusable test data
 global.testData = {

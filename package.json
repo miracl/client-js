@@ -1,5 +1,5 @@
 {
-  "name": "@miracl/mfa-client-js",
+  "name": "@miracl/client-js",
   "version": "4.2.0",
   "description": "Headless MFA client library",
   "main": "index.js",
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/miracl/mfa-client-js.git"
+    "url": "git+https://gitlab.corp.miracl.com/mfa/pkg/client-js.git"
   },
   "keywords": [
     "JS",
@@ -36,12 +36,8 @@
   ],
   "author": "MIRACL",
   "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/miracl/mfa-client-js/issues"
-  },
-  "homepage": "https://github.com/miracl/mfa-client-js#readme",
   "dependencies": {
-    "milagro-crypto-js": "git+https://github.com/miracl/milagro-crypto-js.git#3.6.0",
+    "@miracl/crypto-js": "git+https://gitlab.corp.miracl.com/mfa/pkg/crypto-js.git",
     "uglify-js": "^2.8.22"
   },
   "devDependencies": {
