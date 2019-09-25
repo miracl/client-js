@@ -4,18 +4,24 @@ if (typeof require !== 'undefined') {
     var Mfa = require('../index');
 }
 
-describe("Mfa Users loadData", function () {
-    var mfa;
-
-    beforeEach(function () {
-        localStorage.clear();
-        mfa = new Mfa(testData.init());
+describe("Mfa Users init", function () {
+    it("should fail without compliant user storage", function () {
+        expect(function () {
+            var config = testData.init();
+            config.userStorage = {};
+            var mfa = new Mfa(config);
+        }).to.throw("Invalid user storage object");
     });
+});
 
-    it("should load localStorage data", function () {
+describe("Mfa Users loadData", function () {
+    it("should load user storage data", function () {
+        var config = testData.init();
+        var mfa = new Mfa(config);
+
         expect(mfa.users.exists("test@example.com")).to.be.false;
 
-        localStorage.setItem("mfa", JSON.stringify([
+        config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
                 "customerId":"customerId",
@@ -29,7 +35,9 @@ describe("Mfa Users loadData", function () {
     });
 
     it("should sort identities by last used timestamp", function () {
-        localStorage.setItem("mfa", JSON.stringify([
+        var config = testData.init();
+
+        config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId": "test1@example.com",
                 "customerId": "customerId",
@@ -53,7 +61,7 @@ describe("Mfa Users loadData", function () {
             }
         ]));
 
-        mfa.users.loadData();
+        var mfa = new Mfa(config);
 
         expect(mfa.users.data[0].userId).to.equal("test2@example.com");
         expect(mfa.users.data[1].userId).to.equal("test1@example.com");
@@ -65,7 +73,6 @@ describe("Mfa Users write", function () {
     var mfa;
 
     before(function () {
-        localStorage.clear();
         mfa = new Mfa(testData.init());
     });
 
@@ -132,8 +139,8 @@ describe("Mfa Users exists", function () {
     var mfa;
 
     before(function () {
-        localStorage.clear();
-        localStorage.setItem("mfa", JSON.stringify([
+        var config = testData.init();
+        config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
                 "customerId":"customerId",
@@ -147,7 +154,7 @@ describe("Mfa Users exists", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(testData.init());
+        mfa = new Mfa(config);
     });
 
     it("should return true for existing user", function () {
@@ -167,8 +174,8 @@ describe("Mfa Users list", function () {
     var mfa;
 
     before(function () {
-        localStorage.clear();
-        localStorage.setItem("mfa", JSON.stringify([
+        var config = testData.init();
+        config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
                 "customerId":"customerId",
@@ -188,7 +195,7 @@ describe("Mfa Users list", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(testData.init());
+        mfa = new Mfa(config);
     });
 
     it("should return a list of users", function () {
@@ -204,11 +211,11 @@ describe("Mfa Users list", function () {
 });
 
 describe("Mfa Users delete", function () {
-    var mfa;
+    var mfa, config;
 
     beforeEach(function () {
-        localStorage.clear();
-        localStorage.setItem("mfa", JSON.stringify([
+        config = testData.init()
+        config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
                 "customerId":"customerId",
@@ -231,7 +238,7 @@ describe("Mfa Users delete", function () {
                 "csHex":"testCsHex2"
             },
         ]));
-        mfa = new Mfa(testData.init());
+        mfa = new Mfa(config);
     });
 
     it("should remove an user", function () {
@@ -269,10 +276,10 @@ describe("Mfa Users delete", function () {
         expect(mfa.users.exists("test@example.com")).to.be.false;
         expect(storeSpy.calledOnce).to.be.true;
 
-        var localStorageData = JSON.parse(localStorage.getItem("mfa"));
+        var userStorageData = JSON.parse(config.userStorage.getItem("mfa"));
 
-        expect(localStorageData[1].userId).to.equal("test@example.com");
-        expect(localStorageData[1].customerId).to.equal("anotherCustomerId");
+        expect(userStorageData[1].userId).to.equal("test@example.com");
+        expect(userStorageData[1].customerId).to.equal("anotherCustomerId");
     });
 
     afterEach(function () {
@@ -284,8 +291,8 @@ describe("Mfa Users get", function () {
     var mfa;
 
     before(function () {
-        localStorage.clear();
-        localStorage.setItem("mfa", JSON.stringify([
+        var config = testData.init();
+        config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
                 "customerId":"customerId",
@@ -299,7 +306,7 @@ describe("Mfa Users get", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(testData.init());
+        mfa = new Mfa(config);
     });
 
     it("should fetch a property of the user", function () {
@@ -324,11 +331,11 @@ describe("Mfa Users get", function () {
 });
 
 describe("Mfa Users updateLastUsed", function () {
-    var mfa;
+    var mfa, config;
 
     beforeEach(function () {
-        localStorage.clear();
-        localStorage.setItem("mfa", JSON.stringify([
+        config = testData.init();
+        config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
                 "customerId":"customerId",
@@ -336,7 +343,7 @@ describe("Mfa Users updateLastUsed", function () {
                 "mpinId":"exampleMpinId"
             }
         ]));
-        mfa = new Mfa(testData.init());
+        mfa = new Mfa(config);
     });
 
     it("should set last used timestamp", function () {
@@ -345,22 +352,22 @@ describe("Mfa Users updateLastUsed", function () {
         expect(mfa.users.get("test@example.com", "lastUsed")).to.be.least(currentTime);
     });
 
-    it("should write updated data to localStorage", function () {
+    it("should write updated data to user storage", function () {
         var currentTime = new Date().getTime();
         mfa.users.updateLastUsed("test@example.com");
-        expect(JSON.parse(localStorage.getItem("mfa"))[0].lastUsed).to.be.least(currentTime);
+        expect(JSON.parse(config.userStorage.getItem("mfa"))[0].lastUsed).to.be.least(currentTime);
     });
 });
 
 describe("Mfa Users store", function () {
-    var mfa;
+    var mfa, config;
 
     before(function () {
-        localStorage.clear();
-        mfa = new Mfa(testData.init());
+        config = testData.init();
+        mfa = new Mfa(config);
     });
 
-    it("should write identity data to localStorage", function () {
+    it("should write identity data to user storage", function () {
         mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
@@ -368,7 +375,7 @@ describe("Mfa Users store", function () {
 
         mfa.users.store();
 
-        var userData = JSON.parse(localStorage.getItem("mfa"))[0];
+        var userData = JSON.parse(config.userStorage.getItem("mfa"))[0];
 
         expect(userData.customerId).to.equal("customerId");
         expect(userData.mpinId).to.equal("exampleMpinId");

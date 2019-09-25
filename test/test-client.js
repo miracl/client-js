@@ -13,20 +13,26 @@ describe("Mfa Client", function() {
 
     it("should throw Error w/o init server", function () {
         expect(function () {
-            var mfa = new Mfa({
-                customerId: testData.init().customerId,
-                seed: testData.init().seed
-            });
+            var config = testData.init();
+            delete config["server"];
+            var mfa = new Mfa(config);
         }).to.throw("Missing server address");
     });
 
     it("should throw Error w/o customer", function () {
         expect(function () {
-            var mfa = new Mfa({
-                server: testData.init().server,
-                seed: testData.init().seed
-            });
+            var config = testData.init();
+            delete config["customerId"];
+            var mfa = new Mfa(config);
         }).to.throw("Missing customer ID");
+    });
+
+    it("should throw Error w/o user storage", function () {
+        expect(function () {
+            var config = testData.init();
+            delete config["userStorage"];
+            var mfa = new Mfa(config);
+        }).to.throw("Missing user storage object");
     });
 
     it("should return Instance of Mfa", function () {
@@ -35,41 +41,30 @@ describe("Mfa Client", function() {
     });
 
     it("should set default PIN length to 4 if there is none", function () {
-        var mfa = new Mfa({
-            server: "http://server.com",
-            customerId: "customerId",
-            seed: "hexSeed"
-        });
+        var config = testData.init();
+        delete config["defaultPinLength"];
+        var mfa = new Mfa(config);
         expect(mfa.options.client.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to 4 if less than 4", function () {
-        var mfa = new Mfa({
-            server: "http://server.com",
-            customerId: "customerId",
-            seed: "hexSeed",
-            defaultPinLength: 3
-        });
+        var config = testData.init();
+        config.defaultPinLength = 3;
+        var mfa = new Mfa(config);
         expect(mfa.options.client.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to 4 if more than 6", function () {
-        var mfa = new Mfa({
-            server: "http://server.com",
-            customerId: "customerId",
-            seed: "hexSeed",
-            defaultPinLength: 7
-        });
+        var config = testData.init();
+        config.defaultPinLength = 7;
+        var mfa = new Mfa(config);
         expect(mfa.options.client.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to provided value within range", function () {
-        var mfa = new Mfa({
-            server: "http://server.com",
-            customerId: "customerId",
-            seed: "hexSeed",
-            defaultPinLength: 5
-        });
+        var config = testData.init();
+        config.defaultPinLength = 5;
+        var mfa = new Mfa(config);
         expect(mfa.options.client.defaultPinLength).to.equal(5);
     });
 });

@@ -15358,6 +15358,10 @@ var Mfa = Mfa || {};
             throw new Error("Missing customer ID");
         }
 
+        if (!options.userStorage) {
+            throw new Error("Missing user storage object");
+        }
+
         // Ensure that default PIN lenght is between 4 and 6
         if (!options.defaultPinLength || options.defaultPinLength > 6 || options.defaultPinLength < 4) {
             options.defaultPinLength = 4;
@@ -15367,8 +15371,8 @@ var Mfa = Mfa || {};
         self.rng = new (self.ctx().RAND)();
         self.rng.clean();
 
-        self.users = new Users(options.customerId);
-        self.dvsUsers = new Users(options.customerId, "dvs");
+        self.users = new Users(options.userStorage, options.customerId, "mfa");
+        self.dvsUsers = new Users(options.userStorage, options.customerId, "dvs");
 
         self.options = {};
         self.options.client = options;
@@ -16178,9 +16182,14 @@ var Mfa = Mfa || {};
     /**
      * USER MANAGEMENT
      */
-    Users = function (customerId, storageKey) {
+    Users = function (storage, customerId, storageKey) {
         var self = this;
 
+        if (typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
+            throw new Error("Invalid user storage object");
+        }
+
+        self.storage = storage;
         self.customerId = customerId;
         self.storageKey = storageKey ? storageKey : "mfa";
 
@@ -16200,7 +16209,7 @@ var Mfa = Mfa || {};
     Users.prototype.loadData = function () {
         var self = this;
 
-        self.data = JSON.parse(localStorage.getItem(self.storageKey)) || [];
+        self.data = JSON.parse(self.storage.getItem(self.storageKey)) || [];
 
         self.store();
 
@@ -16311,7 +16320,7 @@ var Mfa = Mfa || {};
             delete self.data[i].regOTT;
         }
 
-        localStorage.setItem(self.storageKey, JSON.stringify(self.data));
+        self.storage.setItem(self.storageKey, JSON.stringify(self.data));
     };
 
 })();

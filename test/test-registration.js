@@ -8,7 +8,6 @@ describe("Mfa Client startRegistration", function() {
     var mfa;
 
     before(function () {
-        localStorage.clear();
         mfa = new Mfa(testData.init());
     });
 
@@ -101,21 +100,14 @@ describe("Mfa Client _getDeviceName", function () {
     var mfa;
 
     it("should return default device name", function () {
-        mfa = new Mfa({
-            server: testData.init().server,
-            customerId: testData.init().customerId,
-            seed: testData.init().seed
-        });
+        mfa = new Mfa(testData.init());
         expect(mfa._getDeviceName()).to.equal("Browser");
     });
 
     it("should return provided device name", function () {
-        mfa = new Mfa({
-            server: testData.init().server,
-            customerId: testData.init().customerId,
-            seed: testData.init().seed,
-            deviceName: "test"
-        });
+        var config = testData.init();
+        config.deviceName = "test";
+        mfa = new Mfa(config);
         expect(mfa._getDeviceName()).to.equal("test");
     })
 });
@@ -328,7 +320,6 @@ describe("Mfa Client finishRegistration", function() {
     var mfa;
 
     beforeEach(function () {
-        localStorage.clear();
         mfa = new Mfa(testData.init());
         mfa.users.write("test@example.com", {
             mpinId: "exampleMpinId",
