@@ -1,8 +1,7 @@
 # Headless MFA Client Library
 
-[![Master Build Status](https://travis-ci.org/miracl/mfa-client-js.svg?branch=master)](https://travis-ci.org/miracl/mfa-client-js)
-[![Master Coverage Status](https://coveralls.io/repos/github/miracl/mfa-client-js/badge.svg?branch=master)](https://coveralls.io/github/miracl/mfa-client-js?branch=master)
-
+[![pipeline status](https://gitlab.corp.miracl.com/mfa/maas/pkg/client-js/badges/master/pipeline.svg)](https://gitlab.corp.miracl.com/mfa/maas/pkg/client-js/commits/master)
+[![coverage report](https://gitlab.corp.miracl.com/mfa/maas/pkg/client-js/badges/master/coverage.svg)](https://gitlab.corp.miracl.com/mfa/maas/pkg/client-js/commits/master)
 
 ## Installation
 
@@ -42,6 +41,5 @@ var mfa = new Mfa(mfaOptions);
 ## Build in Docker image
 
 ```
-docker build -t mfa-client-builder .
-docker run -v $PWD:/home/node mfa-client-builder npm run build
+docker run -v $PWD:/src -w /src node:alpine npm run build
 ```

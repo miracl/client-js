@@ -1,0 +1,5 @@
+include:
+  - project: "gitlab-ci/snippets"
+    file: "common.yml"
+  - project: "gitlab-ci/snippets"
+    file: "js-component.yml"
