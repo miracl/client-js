@@ -4,6 +4,37 @@ if (typeof require !== "undefined") {
     var Mfa = require("../index");
 }
 
+describe("Mfa Client verify", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(testData.init());
+    });
+
+    it("should return error when verification request fails", function (done) {
+        sinon.stub(mfa, "request").yields({ error: true }, null);
+
+        mfa.verify("test@example.com", "clientID", "http://example.com", null, function errorCb(err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should call success callback when verification request succeeds", function (done) {
+        sinon.stub(mfa, "request").yields(null, { success: true });
+
+        mfa.verify("test@example.com", "clientID", "http://example.com", function successCb() {
+            done();
+        }, function errorCb(err) {
+            throw new Error(err.name);
+        });
+    });
+
+    afterEach(function() {
+        mfa.request.restore && mfa.request.restore();
+    });
+});
+
 describe("Mfa Client startRegistration", function() {
     var mfa;
 
