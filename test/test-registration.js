@@ -14,7 +14,7 @@ describe("Mfa Client verify", function () {
     it("should return error when verification request fails", function (done) {
         sinon.stub(mfa, "request").yields({ error: true }, null);
 
-        mfa.verify("test@example.com", "clientID", "http://example.com", null, function errorCb(err) {
+        mfa.verify("test@example.com", "clientID", null, function errorCb(err) {
             expect(err).to.exist;
             done();
         });
@@ -23,7 +23,7 @@ describe("Mfa Client verify", function () {
     it("should call success callback when verification request succeeds", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa.verify("test@example.com", "clientID", "http://example.com", function successCb() {
+        mfa.verify("test@example.com", "clientID", function successCb() {
             done();
         }, function errorCb(err) {
             throw new Error(err.name);
@@ -417,8 +417,6 @@ describe("Mfa Client register", function () {
 
         mfa.register("test@example.com", null, function (passPin) {
             passPin("1234");
-        }, function (confirm) {
-            confirm();
         }, function (data) {
             expect(initStub.calledOnce).to.be.true;
             expect(startRegistrationStub.calledOnce).to.be.true;
@@ -436,12 +434,11 @@ describe("Mfa Client register", function () {
         var confirmRegistrationStub = sinon.stub(mfa, "confirmRegistration").yields(true);
         var finishRegistrationStub = sinon.stub(mfa, "finishRegistration").yields(true);
 
+        mfa.users.write("test@example.com", {pinLength: 5});
+
         mfa.register("test@example.com", null, function (passPin, pinLength) {
             expect(pinLength).to.equal(5);
             passPin("1234");
-        }, function (confirm) {
-            mfa.users.write("test@example.com", {pinLength: 5});
-            confirm();
         }, function (data) {
             done();
         }, function (err) {
@@ -458,8 +455,6 @@ describe("Mfa Client register", function () {
         mfa.register("test@example.com", null, function (passPin, pinLength) {
             expect(pinLength).to.equal(4);
             passPin("1234");
-        }, function (confirm) {
-            confirm();
         }, function (data) {
             done();
         }, function (err) {
@@ -476,8 +471,6 @@ describe("Mfa Client register", function () {
         mfa.register("test@example.com", 123456, function (passPin, pinLength) {
             expect(pinLength).to.equal(4);
             passPin("1234");
-        }, function () {
-            throw Error("Called confirm");
         }, function (data) {
             done();
         }, function (err) {
