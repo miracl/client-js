@@ -313,12 +313,12 @@ describe("Mfa Users get", function () {
         expect(mfa.users.get("test@example.com", "mpinId")).to.equal("exampleMpinId");
     });
 
-    it("should return false for missing user", function () {
-        expect(mfa.users.get("missing@example.com", "mpinId")).to.be.false;
+    it("should return undefined for missing user", function () {
+        expect(mfa.users.get("missing@example.com", "mpinId")).to.be.undefined;
     });
 
     it("should check only identities for the current customer", function () {
-        expect(mfa.users.get("another.customer@example.com", "mpinId")).to.be.false;
+        expect(mfa.users.get("another.customer@example.com", "mpinId")).to.be.undefined;
     });
 
     it("should fetch all user data if a property is not requested", function () {
