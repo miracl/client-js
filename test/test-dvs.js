@@ -225,13 +225,13 @@ describe("Mfa Client generateSignKeypair", function () {
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(mfa.ctx().MPIN, "GET_DVS_KEYPAIR").returns(-1);
+        sinon.stub(mfa.crypto().MPIN, "GET_DVS_KEYPAIR").returns(-1);
 
         expect(function () {
             mfa.generateSignKeypair();
         }).to.throw("CryptoError");
 
-        mfa.ctx().MPIN.GET_DVS_KEYPAIR.restore();
+        mfa.crypto().MPIN.GET_DVS_KEYPAIR.restore();
     });
 });
 
@@ -243,21 +243,21 @@ describe("Mfa Client _generateSignClientSecret", function () {
     });
 
     it("should return the modified client secret", function () {
-        sinon.stub(mfa.ctx().MPIN, "GET_G1_MULTIPLE").returns(0);
+        sinon.stub(mfa.crypto().MPIN, "GET_G1_MULTIPLE").returns(0);
 
         expect(mfa._generateSignClientSecret("privateKey", "0f")).to.equal("0f");
 
-        mfa.ctx().MPIN.GET_G1_MULTIPLE.restore();
+        mfa.crypto().MPIN.GET_G1_MULTIPLE.restore();
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(mfa.ctx().MPIN, "GET_G1_MULTIPLE").returns(-1);
+        sinon.stub(mfa.crypto().MPIN, "GET_G1_MULTIPLE").returns(-1);
 
         expect(function () {
             mfa._generateSignClientSecret("privateKey", "secret");
         }).to.throw("CryptoError");
 
-        mfa.ctx().MPIN.GET_G1_MULTIPLE.restore();
+        mfa.crypto().MPIN.GET_G1_MULTIPLE.restore();
     });
 });
 
@@ -324,7 +324,7 @@ describe("Mfa Client signMessage", function () {
     });
 
     it("should return U and V", function (done) {
-        sinon.stub(mfa.ctx().MPIN, "CLIENT").returns(0);
+        sinon.stub(mfa.crypto().MPIN, "CLIENT").returns(0);
         var authenticationStub = sinon.stub(mfa, "_authentication").yields(true);
 
         mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
@@ -340,7 +340,7 @@ describe("Mfa Client signMessage", function () {
     });
 
     it("should throw error on crypto failure", function (done) {
-        sinon.stub(mfa.ctx().MPIN, "CLIENT").returns(-1);
+        sinon.stub(mfa.crypto().MPIN, "CLIENT").returns(-1);
 
         mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
             throw new Error(result);
@@ -348,7 +348,9 @@ describe("Mfa Client signMessage", function () {
             expect(err.name).to.equal("CryptoError");
             done();
         });
+    });
 
-        mfa.ctx().MPIN.CLIENT.restore();
+    afterEach(function () {
+        mfa.crypto().MPIN.CLIENT.restore();
     });
 });
