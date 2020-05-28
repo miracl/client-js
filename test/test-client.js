@@ -69,16 +69,16 @@ describe("Mfa Client", function() {
     });
 });
 
-describe("Mfa Client init", function() {
+describe("Mfa Client _init", function() {
     var mfa;
 
     before(function () {
         mfa = new Mfa(testData.init());
     });
 
-    it("should fire errorCb when settings can't be fetched", function (done) {
+    it("should fire callback with error when settings can't be fetched", function (done) {
         sinon.stub(mfa, "request").yields({ error: true }, null);
-        mfa.init(function successCb(data) {}, function errorCb(err) {
+        mfa._init(function (err) {
             expect(err).to.exist;
             expect(err.error).to.be.true;
             done();
@@ -87,22 +87,24 @@ describe("Mfa Client init", function() {
 
     it("should fire successCb after fetching settings", function (done) {
         sinon.stub(mfa, "request").yields(null, testData.settings());
-        mfa.init(function successCb(success) {
+        mfa._init(function (err, success) {
+            expect(err).to.be.null;
             expect(success).to.exist;
             expect(mfa.options.settings).to.deep.equal(testData.settings());
             done();
-        }, function errorCb(err) {});
+        });
     });
 
     it("should pass client ID as param if there is one", function (done) {
         mfa.options.client.clientId = "test";
         var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa.init(function successCb() {
+        mfa._init(function (err) {
+            expect(err).to.be.null;
             expect(requestStub.calledOnce).to.be.true;
             expect(requestStub.getCalls()[0].args[0].url).to.equal("http://server.com/rps/v2/clientSettings?cid=test");
             done();
-        }, function errorCb(err) {});
+        });
     });
 
     afterEach(function() {
