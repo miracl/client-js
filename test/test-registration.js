@@ -14,7 +14,7 @@ describe("Mfa Client verify", function () {
     it("should return error when verification request fails", function (done) {
         sinon.stub(mfa, "request").yields({ error: true }, null);
 
-        mfa.verify("test@example.com", "clientID", null, function errorCb(err) {
+        mfa.verify("test@example.com", "clientID", function (err) {
             expect(err).to.exist;
             done();
         });
@@ -23,10 +23,10 @@ describe("Mfa Client verify", function () {
     it("should call success callback when verification request succeeds", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa.verify("test@example.com", "clientID", function successCb() {
+        mfa.verify("test@example.com", "clientID", function (err, data) {
+            expect(err).to.be.null;
+            expect(data).to.exist;
             done();
-        }, function errorCb(err) {
-            throw new Error(err.name);
         });
     });
 
