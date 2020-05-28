@@ -38,16 +38,16 @@
   "author": "MIRACL",
   "license": "Apache-2.0",
   "dependencies": {
-    "@miracl/crypto-js": "git+https://gitlab.corp.miracl.com/mfa/pkg/crypto-js.git",
-    "uglify-js": "^2.8.22"
+    "@miracl/crypto-js": "git+https://gitlab.corp.miracl.com/mfa/pkg/crypto-js.git"
   },
   "devDependencies": {
     "chai": "^3.5.0",
     "coveralls": "^3.0.2",
     "eslint": "^5.16.0",
     "istanbul": "^0.4.5",
-    "mocha": "^5.2.0",
-    "nodemon": "^1.17.3",
-    "sinon": "^2.1.0"
+    "mocha": "^7.2.0",
+    "nodemon": "^2.0.4",
+    "sinon": "^2.1.0",
+    "uglify-js": "^2.8.22"
   }
 }
