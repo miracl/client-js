@@ -12,18 +12,29 @@ describe("Mfa Client registerDvs", function () {
     });
 
     it("should go through the DVS registration flow", function (done) {
-        var authenticationStub = sinon.stub(mfa, "_authentication").yields(true);
-        var renewDvsSecretStub = sinon.stub(mfa, "_renewDvsSecret").yields(true);
+        var authenticationStub = sinon.stub(mfa, "_authentication").yields(null, true);
+        var renewDvsSecretStub = sinon.stub(mfa, "_renewDvsSecret").yields(null, true);
 
-        mfa.registerDvs("test@example.com", "1234", function (result) {
+        mfa.registerDvs("test@example.com", "1234", "1234", function (err, result) {
+            expect(err).to.be.null;
             expect(authenticationStub.calledOnce).to.be.true;
             expect(renewDvsSecretStub.calledOnce).to.be.true;
             done();
-        }, function (err) {
-            throw new Error(err);
         });
+    });
 
+    it("should fail if authentication fails", function (done) {
+        sinon.stub(mfa, "_authentication").yields({ error: true });
+
+        mfa.registerDvs("test@example.com", "1234", "1234", function (err, result) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    afterEach(function () {
         mfa._authentication.restore && mfa._authentication.restore();
+        mfa._renewDvsSecret.restore && mfa._renewDvsSecret.restore();
     });
 
 });
@@ -36,41 +47,36 @@ describe("Mfa Client _renewDvsSecret", function () {
     });
 
     it("should create a signing identity", function (done) {
-        var getDvsSecret1Stub = sinon.stub(mfa, "_getDvsSecret1").yields(true);
-        var getDvsSecret2Stub = sinon.stub(mfa, "_getDvsSecret2").yields(true);
-        var createSigningIdentityStub = sinon.stub(mfa, "createSigningIdentity").returns(true);
+        var getDvsSecret1Stub = sinon.stub(mfa, "_getDvsSecret1").yields(null, true);
+        var getSecret2Stub = sinon.stub(mfa, "_getSecret2").yields(null, true);
+        var createSigningIdentityStub = sinon.stub(mfa, "_createSigningIdentity").yields(null, true);
 
-        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function () {
+        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
+            expect(err).to.be.null;
             expect(getDvsSecret1Stub.calledOnce).to.be.true;
-            expect(getDvsSecret2Stub.calledOnce).to.be.true;
+            expect(getSecret2Stub.calledOnce).to.be.true;
             expect(createSigningIdentityStub.calledOnce).to.be.true;
             done();
-        }, function (err) {
-            throw new Error(err);
         });
     });
 
     it("should return error if _getDvsSecret1 fails", function (done) {
-        sinon.stub(mfa, "init").yields(true);
-        sinon.stub(mfa, "_getDvsSecret1").callsArgWith(3, { error: true });
+        sinon.stub(mfa, "_init").yields(null, true);
+        sinon.stub(mfa, "_getDvsSecret1").yields({ error: true });
 
-        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function () {
-            throw new Error();
-        }, function (err) {
+        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
             expect(err).to.exist;
             expect(err.error).to.be.true;
             done();
         });
     });
 
-    it("should return error if _getDvsSecret2 fails", function (done) {
-        sinon.stub(mfa, "init").yields(true);
-        sinon.stub(mfa, "_getDvsSecret1").yields(true);
-        sinon.stub(mfa, "_getDvsSecret2").callsArgWith(2, { error: true });
+    it("should return error if _getSecret2 fails", function (done) {
+        sinon.stub(mfa, "_init").yields(null,true);
+        sinon.stub(mfa, "_getDvsSecret1").yields(null, true);
+        sinon.stub(mfa, "_getSecret2").yields({ error: true }, null);
 
-        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function () {
-            throw new Error();
-        }, function (err) {
+        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
             expect(err).to.exist;
             expect(err.error).to.be.true;
             done();
@@ -78,14 +84,12 @@ describe("Mfa Client _renewDvsSecret", function () {
     });
 
     it("should return error if createSigningIdentity fails", function (done) {
-        sinon.stub(mfa, "init").yields(true);
-        sinon.stub(mfa, "_getDvsSecret1").yields(true);
-        sinon.stub(mfa, "_getDvsSecret2").yields(true);
-        sinon.stub(mfa, "createSigningIdentity").throws({ error: true });
+        sinon.stub(mfa, "_init").yields(true);
+        sinon.stub(mfa, "_getDvsSecret1").yields(null, true);
+        sinon.stub(mfa, "_getSecret2").yields(null, true);
+        sinon.stub(mfa, "_createSigningIdentity").yields({ error: true });
 
-        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function () {
-            throw new Error();
-        }, function (err) {
+        mfa._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
             expect(err).to.exist;
             expect(err.error).to.be.true;
             done();
@@ -93,10 +97,10 @@ describe("Mfa Client _renewDvsSecret", function () {
     });
 
     afterEach(function () {
-        mfa.init.restore && mfa.init.restore();
+        mfa._init.restore && mfa._init.restore();
         mfa._getDvsSecret1.restore && mfa._getDvsSecret1.restore();
-        mfa._getDvsSecret2.restore && mfa._getDvsSecret2.restore();
-        mfa.createSigningIdentity.restore && mfa.createSigningIdentity.restore();
+        mfa._getSecret2.restore && mfa._getSecret2.restore();
+        mfa._createSigningIdentity.restore && mfa._createSigningIdentity.restore();
     })
 });
 
@@ -111,9 +115,7 @@ describe("Mfa Client _getDvsSecret1", function () {
     it("should call error callback when request fails", function (done) {
         sinon.stub(mfa, "request").yields({}, null);
 
-        mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (data) {
-            throw new Error(data);
-        }, function(err) {
+        mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err, data) {
             expect(err).to.exist;
             done();
         });
@@ -122,25 +124,23 @@ describe("Mfa Client _getDvsSecret1", function () {
     it("should call success callback with data", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (cs1Data) {
+        mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err, cs1Data) {
+            expect(err).to.be.null;
             expect(cs1Data).to.exist;
             expect(cs1Data).to.have.property("success");
             expect(cs1Data.success).to.be.true;
             done();
-        }, function(err) {
-            throw new Error(err);
         });
     });
 
     it("should make request to dvs register endpoint", function (done) {
         var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function () {
+        mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
+            expect(err).to.be.null;
             expect(requestStub.calledOnce).to.be.true;
             expect(requestStub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/dvs/register");
             done();
-        }, function(err) {
-            throw new Error(err);
         });
     });
 
@@ -148,12 +148,11 @@ describe("Mfa Client _getDvsSecret1", function () {
         var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
         sinon.stub(mfa, "_getDeviceName").returns("device");
 
-        mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function () {
+        mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
+            expect(err).to.be.null;
             expect(requestStub.calledOnce).to.be.true;
             expect(requestStub.getCalls()[0].args[0].data).to.deep.equal({ publicKey: "public", deviceName: "device", dvsRegisterToken: "dvsRegisterToken" });
             done();
-        }, function(err) {
-            throw new Error(err);
         });
     });
 
@@ -162,56 +161,7 @@ describe("Mfa Client _getDvsSecret1", function () {
     });
 });
 
-describe("Mfa Client _getDvsSecret2", function () {
-    var mfa;
-
-    before(function () {
-        mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
-    });
-
-    it("should call error callback when request fails", function (done) {
-        sinon.stub(mfa, "request").yields({}, null);
-
-        mfa._getDvsSecret2({ cs2url: "https://test/clientSecret" }, function (data) {
-            throw new Error(data);
-        }, function(err) {
-            expect(err).to.exist;
-            done();
-        });
-    });
-
-    it("should call success callback with data", function (done) {
-        sinon.stub(mfa, "request").yields(null, { success: true });
-
-        mfa._getDvsSecret2({ cs2url: "https://test/clientSecret" }, function (cs2Data) {
-            expect(cs2Data).to.exist;
-            expect(cs2Data).to.have.property("success");
-            expect(cs2Data.success).to.be.true;
-            done();
-        }, function(err) {
-            throw new Error(err);
-        });
-    });
-
-    it("should make request with passed params", function (done) {
-        var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
-
-        mfa._getDvsSecret2({ cs2url: "https://test/clientSecret" }, function (cs2Data) {
-            expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.getCalls()[0].args[0].url).to.equal("https://test/clientSecret");
-            done();
-        }, function(err) {
-            throw new Error(err);
-        });
-    });
-
-    afterEach(function () {
-        mfa.request.restore && mfa.request.restore();
-    });
-});
-
-describe("Mfa Client generateSignKeypair", function () {
+describe("Mfa Client _generateSignKeypair", function () {
     var mfa;
 
     before(function () {
@@ -219,7 +169,7 @@ describe("Mfa Client generateSignKeypair", function () {
     });
 
     it("should return private and public key", function () {
-        var keypair = mfa.generateSignKeypair();
+        var keypair = mfa._generateSignKeypair();
         expect(keypair.privateKey).to.exist;
         expect(keypair.publicKey).to.exist;
     });
@@ -228,7 +178,7 @@ describe("Mfa Client generateSignKeypair", function () {
         sinon.stub(mfa.crypto().MPIN, "GET_DVS_KEYPAIR").returns(-1);
 
         expect(function () {
-            mfa.generateSignKeypair();
+            mfa._generateSignKeypair();
         }).to.throw("CryptoError");
 
         mfa.crypto().MPIN.GET_DVS_KEYPAIR.restore();
@@ -273,20 +223,20 @@ describe("Mfa Client _getSignMpinId", function () {
     });
 });
 
-describe("Mfa Client createSigningIdentity", function () {
+describe("Mfa Client _createSigningIdentity", function () {
     var mfa;
 
     before(function () {
         mfa = new Mfa(testData.init());
     });
 
-    it("should create identity ready for signing", function () {
+    it("should create identity ready for signing", function (done) {
         sinon.stub(mfa, "_addShares").returns("secret");
         sinon.stub(mfa, "_generateSignClientSecret").returns("signSecret");
         sinon.stub(mfa, "_getSignMpinId").returns("signMpinId");
-        sinon.stub(mfa, "_calculateMPinToken").returns("token");
+        sinon.stub(mfa, "_extractPin").returns("token");
 
-        mfa.createSigningIdentity(
+        mfa._createSigningIdentity(
             "test@example.com",
             "1234",
             {
@@ -301,19 +251,71 @@ describe("Mfa Client createSigningIdentity", function () {
             {
                 privateKey: "private",
                 publicKey: "public"
+            }, function (err, data) {
+                expect(err).to.be.null;
+                expect(mfa.dvsUsers.get("test@example.com", "mpinId")).to.equal("dvsMpinId");
+                expect(mfa.dvsUsers.get("test@example.com", "publicKey")).to.equal("public");
+                expect(mfa.dvsUsers.get("test@example.com", "token")).to.equal("token");
+                expect(mfa.dvsUsers.get("test@example.com", "state")).to.equal("REGISTERED");
+                done();
             }
         );
-
-        expect(mfa.dvsUsers.get("test@example.com", "mpinId")).to.equal("dvsMpinId");
-        expect(mfa.dvsUsers.get("test@example.com", "publicKey")).to.equal("public");
-        expect(mfa.dvsUsers.get("test@example.com", "token")).to.equal("token");
-        expect(mfa.dvsUsers.get("test@example.com", "state")).to.equal("REGISTERED");
-
-        mfa._addShares.restore();
-        mfa._generateSignClientSecret.restore();
-        mfa._getSignMpinId.restore();
-        mfa._calculateMPinToken.restore();
     });
+
+    it("should invoke callback with error if addShares fails", function (done) {
+        sinon.stub(mfa, "_addShares").throws(new Error);
+        sinon.stub(mfa, "_generateSignClientSecret").returns("signSecret");
+        sinon.stub(mfa, "_getSignMpinId").returns("signMpinId");
+        sinon.stub(mfa, "_extractPin").returns("token");
+
+        mfa._createSigningIdentity("test@example.com", "1234", {}, {}, {}, function (err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should invoke callback with error if generateSignClientSecret fails", function (done) {
+        sinon.stub(mfa, "_addShares").returns("secret");
+        sinon.stub(mfa, "_generateSignClientSecret").throws(new Error);
+        sinon.stub(mfa, "_getSignMpinId").returns("signMpinId");
+        sinon.stub(mfa, "_extractPin").returns("token");
+
+        mfa._createSigningIdentity("test@example.com", "1234", {}, {}, {}, function (err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should invoke callback with error if getSignMpinId fails", function (done) {
+        sinon.stub(mfa, "_addShares").returns("secret");
+        sinon.stub(mfa, "_generateSignClientSecret").returns("signSecret");
+        sinon.stub(mfa, "_getSignMpinId").throws(new Error);
+        sinon.stub(mfa, "_extractPin").returns("token");
+
+        mfa._createSigningIdentity("test@example.com", "1234", {}, {}, {}, function (err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should invoke callback with error if extractPin fails", function (done) {
+        sinon.stub(mfa, "_addShares").returns("secret");
+        sinon.stub(mfa, "_generateSignClientSecret").returns("signSecret");
+        sinon.stub(mfa, "_getSignMpinId").returns("signMpinId");
+        sinon.stub(mfa, "_extractPin").throws(new Error);
+
+        mfa._createSigningIdentity("test@example.com", "1234", {}, {}, {}, function (err) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    afterEach(function () {
+        mfa._addShares.restore && mfa._addShares.restore();
+        mfa._generateSignClientSecret.restore && mfa._generateSignClientSecret.restore();
+        mfa._getSignMpinId.restore && mfa._getSignMpinId.restore();
+        mfa._extractPin.restore && mfa._extractPin.restore();
+    })
 });
 
 describe("Mfa Client signMessage", function () {
@@ -325,26 +327,23 @@ describe("Mfa Client signMessage", function () {
 
     it("should return U and V", function (done) {
         sinon.stub(mfa.crypto().MPIN, "CLIENT").returns(0);
-        var authenticationStub = sinon.stub(mfa, "_authentication").yields(true);
+        var authenticationStub = sinon.stub(mfa, "_authentication").yields(null, true);
 
-        mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
+        mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (err, result) {
+            expect(err).to.be.null;
             expect(result.u).to.equal("");
             expect(result.v).to.equal("");
             done();
-        }, function (err) {
-            throw new Error(err);
         });
 
-        mfa.ctx().MPIN.CLIENT.restore();
         mfa._authentication.restore && mfa._authentication.restore();
     });
 
     it("should throw error on crypto failure", function (done) {
         sinon.stub(mfa.crypto().MPIN, "CLIENT").returns(-1);
 
-        mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (result) {
-            throw new Error(result);
-        }, function (err) {
+        mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (err, result) {
+            expect(err).to.exist;
             expect(err.name).to.equal("CryptoError");
             done();
         });
