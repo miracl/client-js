@@ -26,6 +26,7 @@ global.CTX = require("@miracl/crypto-js");
 global.testData = {
     init: function () {
         return {
+            authurl: "http://server.com/authorize",
             server: "http://server.com",
             customerId: "customerId",
             seed: "hexSeed",

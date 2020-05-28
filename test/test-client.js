@@ -125,6 +125,100 @@ describe("Mfa Client setAccessId", function () {
     });
 });
 
+describe("Mfa Client fetchAccessId", function () {
+    var mfa, sessionInfo;
+
+    before(function () {
+        mfa = new Mfa(testData.init());
+
+        sessionInfo = {
+            webOTT: 1,
+            accessURL: "https://example.com/access",
+            qrURL: "https://example.com#accessID"
+        };
+    });
+
+    it("should make a request for access ID", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(null, sessionInfo);
+
+        mfa.fetchAccessId("test@example.com", function (err, data) {
+            expect(data).to.deep.equal(sessionInfo);
+        });
+    });
+
+    it("should fail when request fails", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(new Error("Error"), null);
+
+        mfa.fetchAccessId("test@example.com", function (err, data) {
+            expect(err).to.exist;
+        });
+    });
+
+    it("should fail if response doesn't have all session data", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(null, {});
+
+        mfa.fetchAccessId("test@example.com", function (err, data) {
+            expect(err).to.exist;
+        });
+    });
+
+    it("should store session info", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(null, sessionInfo);
+
+        mfa.fetchAccessId("test@example.com", function (err, data) {
+            expect(mfa.session).to.deep.equal(sessionInfo);
+        });
+    });
+
+    it("should set the access ID", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(null, sessionInfo);
+
+        mfa.fetchAccessId("test@example.com", function (err, data) {
+            expect(mfa.accessId).to.equal("accessID");
+        });
+    });
+
+    afterEach(function() {
+        mfa.request.restore && mfa.request.restore();
+    });
+});
+
+describe("Mfa Client fetchStatus", function() {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(testData.init());
+    });
+
+    it("should make a request for session status", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(null, { status: "new" });
+
+        mfa.fetchStatus(function (err, data) {
+            expect(data.status).to.equal("new");
+        });
+    });
+
+    it("should fail when request fails", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(new Error("Error"), null);
+
+        mfa.fetchStatus(function (err, data) {
+            expect(err).to.exist;
+        });
+    });
+
+    it("should fail if response doesn't have expected data", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(null, {});
+
+        mfa.fetchStatus(function (err, data) {
+            expect(err).to.exist;
+        });
+    });
+
+    afterEach(function() {
+        mfa.request.restore && mfa.request.restore();
+    });
+});
+
 describe("Mfa Client request", function() {
     var mfa, server, requests = [];
 
