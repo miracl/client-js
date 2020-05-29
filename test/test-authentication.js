@@ -449,3 +449,29 @@ describe("Mfa Client fetchRegistrationCode", function () {
         authenticationStub.restore();
     });
 });
+
+describe("Mfa Client fetchAuthCode", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(testData.init());
+        mfa.users.write("test@example.com", {
+            mpinId: "exampleMpinId",
+            state: "ACTIVATED"
+        });
+    });
+
+    it("should call _authentication with scope 'authcode'", function (done) {
+        var authenticationStub = sinon.stub(mfa, "_authentication").yields(null, { success: true });
+
+        mfa.fetchAuthCode("test@example.com", "1234", function (err, data) {
+            expect(err).to.be.null;
+            expect(data.success).to.be.true;
+            expect(authenticationStub.calledOnce).to.be.true;
+            expect(authenticationStub.getCalls()[0].args[2]).to.deep.equal(["authcode"]);
+            done();
+        });
+
+        authenticationStub.restore();
+    });
+});
