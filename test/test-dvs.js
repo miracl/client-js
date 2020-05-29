@@ -139,7 +139,7 @@ describe("Mfa Client _getDvsSecret1", function () {
         mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
             expect(err).to.be.null;
             expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/dvs/register");
+            expect(requestStub.firstCall.args[0].url).to.equal("https://api.miracl.net/dvs/register");
             done();
         });
     });
@@ -151,7 +151,7 @@ describe("Mfa Client _getDvsSecret1", function () {
         mfa._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
             expect(err).to.be.null;
             expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.getCalls()[0].args[0].data).to.deep.equal({ publicKey: "public", deviceName: "device", dvsRegisterToken: "dvsRegisterToken" });
+            expect(requestStub.firstCall.args[0].data).to.deep.equal({ publicKey: "public", deviceName: "device", dvsRegisterToken: "dvsRegisterToken" });
             done();
         });
     });

@@ -250,8 +250,8 @@ describe("Mfa Client _createIdentity", function() {
 
         mfa._createIdentity("test@example.com", "1234", share1, share2, function(err) {
             expect(addSharesStub.calledOnce).to.be.true;
-            expect(addSharesStub.getCalls()[0].args[0]).to.equal("clientSecretValue1");
-            expect(addSharesStub.getCalls()[0].args[1]).to.equal("clientSecretValue2");
+            expect(addSharesStub.firstCall.args[0]).to.equal("clientSecretValue1");
+            expect(addSharesStub.firstCall.args[1]).to.equal("clientSecretValue2");
             done();
         });
     });
@@ -263,8 +263,8 @@ describe("Mfa Client _createIdentity", function() {
         mfa._createIdentity("test@example.com", "1234", {}, {}, function (data) {
             expect(addSharesStub.calledOnce).to.be.true;
             expect(extractPinStub.calledOnce).to.be.true;
-            expect(extractPinStub.getCalls()[0].args[0]).to.equal("exampleMpinId");
-            expect(extractPinStub.getCalls()[0].args[1]).to.equal("1234");
+            expect(extractPinStub.firstCall.args[0]).to.equal("exampleMpinId");
+            expect(extractPinStub.firstCall.args[1]).to.equal("1234");
             done();
         }, function (err) {
             throw new Error();

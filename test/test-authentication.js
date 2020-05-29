@@ -18,9 +18,9 @@ describe("Mfa Client _getPass1", function () {
 
         mfa._getPass1("test@example.com", "1234", ["oidc"], [], [], function () {
             expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.getCalls()[0].args[0]).to.be.an.object;
-            expect(requestStub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass1");
-            expect(requestStub.getCalls()[0].args[0].type).to.equal("POST");
+            expect(requestStub.firstCall.args[0]).to.be.an.object;
+            expect(requestStub.firstCall.args[0].url).to.equal("https://api.miracl.net/rps/pass1");
+            expect(requestStub.firstCall.args[0].type).to.equal("POST");
             done();
         });
     });
@@ -52,7 +52,7 @@ describe("Mfa Client _getPass1", function () {
         sinon.stub(mfa.crypto().MPIN, "CLIENT_1").returns(0);
 
         mfa._getPass1("test@example.com", "1234", ["dvs-auth"], [], [], function (err, data) {
-            expect(requestStub.getCalls()[0].args[0].data.scope).to.deep.equal(["dvs-auth"]);
+            expect(requestStub.firstCall.args[0].data.scope).to.deep.equal(["dvs-auth"]);
             done();
         });
     });
@@ -77,9 +77,9 @@ describe("Mfa Client _getPass2", function () {
 
         mfa._getPass2("test@example.com", ["oidc"], "yHex", [], [], function () {
             expect(stub.calledOnce).to.be.true;
-            expect(stub.getCalls()[0].args[0]).to.be.an.object;
-            expect(stub.getCalls()[0].args[0].url).to.equal("https://api.miracl.net/rps/pass2");
-            expect(stub.getCalls()[0].args[0].type).to.equal("POST");
+            expect(stub.firstCall.args[0]).to.be.an.object;
+            expect(stub.firstCall.args[0].url).to.equal("https://api.miracl.net/rps/pass2");
+            expect(stub.firstCall.args[0].type).to.equal("POST");
             done();
         });
     });
@@ -126,7 +126,7 @@ describe("Mfa Client _getPass2", function () {
         });
 
         mfa._getPass2("test@example.com", ["dvs-auth"], "yHex", [], [], function (err, data) {
-            expect(requestStub.getCalls()[0].args[0].data.mpin_id).to.equal("thisIsDvsId");
+            expect(requestStub.firstCall.args[0].data.mpin_id).to.equal("thisIsDvsId");
             done();
         });
     });
@@ -357,8 +357,8 @@ describe("Mfa Client _authentication", function () {
         mfa._authentication("test@example.com", "1234", ["otp"], function (err, data) {
             expect(err).to.exist;
             expect(userWriteSpy.calledOnce).to.be.true;
-            expect(userWriteSpy.getCalls()[0].args[0]).to.equal("test@example.com");
-            expect(userWriteSpy.getCalls()[0].args[1].state).to.equal("REVOKED");
+            expect(userWriteSpy.firstCall.args[0]).to.equal("test@example.com");
+            expect(userWriteSpy.firstCall.args[1].state).to.equal("REVOKED");
             done();
         });
     });
@@ -390,7 +390,7 @@ describe("Mfa Client authenticate", function () {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
-            expect(authenticationStub.getCalls()[0].args[2]).to.deep.equal(["oidc"]);
+            expect(authenticationStub.firstCall.args[2]).to.deep.equal(["oidc"]);
             done();
         });
 
@@ -416,7 +416,7 @@ describe("Mfa Client fetchOTP", function () {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
-            expect(authenticationStub.getCalls()[0].args[2]).to.deep.equal(["otp"]);
+            expect(authenticationStub.firstCall.args[2]).to.deep.equal(["otp"]);
             done();
         });
 
@@ -442,7 +442,7 @@ describe("Mfa Client fetchRegistrationCode", function () {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
-            expect(authenticationStub.getCalls()[0].args[2]).to.deep.equal(["reg-code"]);
+            expect(authenticationStub.firstCall.args[2]).to.deep.equal(["reg-code"]);
             done();
         });
 
@@ -468,7 +468,7 @@ describe("Mfa Client fetchAuthCode", function () {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
-            expect(authenticationStub.getCalls()[0].args[2]).to.deep.equal(["authcode"]);
+            expect(authenticationStub.firstCall.args[2]).to.deep.equal(["authcode"]);
             done();
         });
 

@@ -102,7 +102,7 @@ describe("Mfa Client _init", function() {
         mfa._init(function (err) {
             expect(err).to.be.null;
             expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.getCalls()[0].args[0].url).to.equal("http://server.com/rps/v2/clientSettings?cid=test");
+            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/clientSettings?cid=test");
             done();
         });
     });
@@ -358,8 +358,8 @@ describe("Mfa Client request", function() {
         requests[0].respond(400, { }, "");
 
         expect(callback.callCount).to.equal(1);
-        expect(callback.getCalls()[0].args[0].name).to.equal("RequestError");
-        expect(callback.getCalls()[0].args[1]).to.be.null;
+        expect(callback.firstCall.args[0].name).to.equal("RequestError");
+        expect(callback.firstCall.args[1]).to.be.null;
     });
 
     it("should handle aborted request", function () {
@@ -375,8 +375,8 @@ describe("Mfa Client request", function() {
 
         expect(callback.callCount).to.equal(1);
         expect(callback.callCount).to.equal(1);
-        expect(callback.getCalls()[0].args[0].name).to.equal("RequestError");
-        expect(callback.getCalls()[0].args[0].message).to.equal("The request was aborted");
-        expect(callback.getCalls()[0].args[1]).to.be.null;
+        expect(callback.firstCall.args[0].name).to.equal("RequestError");
+        expect(callback.firstCall.args[0].message).to.equal("The request was aborted");
+        expect(callback.firstCall.args[1]).to.be.null;
     });
 });
