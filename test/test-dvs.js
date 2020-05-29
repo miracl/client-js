@@ -1,8 +1,6 @@
-if (typeof require !== "undefined") {
-    var expect = require("chai").expect;
-    var sinon = require("sinon");
-    var Mfa = require("../index");
-}
+var expect = require("chai").expect;
+var sinon = require("sinon");
+var Mfa = require("../index");
 
 describe("Mfa Client registerDvs", function () {
     var mfa;

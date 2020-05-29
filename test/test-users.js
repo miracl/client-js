@@ -1,8 +1,6 @@
-if (typeof require !== 'undefined') {
-    var expect = require('chai').expect;
-    var sinon = require('sinon');
-    var Mfa = require('../index');
-}
+var expect = require('chai').expect;
+var sinon = require('sinon');
+var Mfa = require('../index');
 
 describe("Mfa Users init", function () {
     it("should fail without compliant user storage", function () {

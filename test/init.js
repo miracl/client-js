@@ -1,23 +1,5 @@
-// Mock local storage
-global.LocalStorage = function () {
-    this.storage = {};
-};
-
-global.LocalStorage.prototype.setItem = function (key, value) {
-    this.storage[key] = value || '';
-};
-
-global.LocalStorage.prototype.getItem = function (key) {
-    return this.storage[key] ? this.storage[key] : null;
-};
-
-global.LocalStorage.prototype.removeItem = function (key) {
-    delete this.storage[key];
-};
-
-global.LocalStorage.prototype.clear = function (key) {
-    this.storage = {};
-};
+// In memory storage for users
+var storage = require("./storage.js");
 
 // Load the crypto library
 global.CTX = require("@miracl/crypto-js");
@@ -31,7 +13,7 @@ global.testData = {
             customerId: "customerId",
             seed: "hexSeed",
             defaultPinLength: 4,
-            userStorage: new LocalStorage()
+            userStorage: new storage()
         };
     },
     settings: function () {
