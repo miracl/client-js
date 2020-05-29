@@ -219,6 +219,42 @@ describe("Mfa Client fetchStatus", function() {
     });
 });
 
+describe("Mfa Client pushAuth", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(testData.init());
+    });
+
+    it("should make a request to the pushauth endpoint", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(null, { webOTT: "test" });
+
+        mfa.pushAuth("test@example.com", function (err, data) {
+            expect(data).to.exist;
+            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/pushauth");
+            expect(data.webOTT).to.equal("test");
+        });
+    });
+
+    it("should fail when the request fails", function () {
+        var requestStub = sinon.stub(mfa, "request").yields(new Error("Error"), null);
+
+        mfa.pushAuth("test@example.com", function (err, data) {
+            expect(err).to.exist;
+        });
+    });
+
+    it("should return an error without an user ID", function () {
+        mfa.pushAuth(null, function (err, data) {
+            expect(err).to.exist;
+        });
+    });
+
+    afterEach(function() {
+        mfa.request.restore && mfa.request.restore();
+    });
+});
+
 describe("Mfa Client request", function() {
     var mfa, server, requests = [];
 
