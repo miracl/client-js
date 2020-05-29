@@ -1105,7 +1105,7 @@ var Mfa = Mfa || {};
      * Remove an identity
      * @param {string} userId - The ID of the user
      */
-    Users.prototype.delete = function (userId) {
+    Users.prototype.remove = function (userId) {
         var self = this, i;
 
         if (!self.exists(userId)) {

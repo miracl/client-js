@@ -469,6 +469,6 @@ describe("Mfa Client register", function () {
         mfa._getSecret1.restore && mfa._getSecret1.restore();
         mfa._getSecret2.restore && mfa._getSecret2.restore();
         mfa._createIdentity.restore && mfa._createIdentity.restore();
-        mfa.users.delete("test@example.com");
+        mfa.users.remove("test@example.com");
     });
 });

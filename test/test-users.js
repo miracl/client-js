@@ -208,7 +208,7 @@ describe("Mfa Users list", function () {
     });
 });
 
-describe("Mfa Users delete", function () {
+describe("Mfa Users remove", function () {
     var mfa, config;
 
     beforeEach(function () {
@@ -248,7 +248,7 @@ describe("Mfa Users delete", function () {
 
         var storeSpy = sinon.spy(mfa.users, "store");
 
-        mfa.users.delete("test@example.com");
+        mfa.users.remove("test@example.com");
         expect(mfa.users.exists("test@example.com")).to.be.false;
         expect(storeSpy.calledOnce).to.be.true;
     });
@@ -256,21 +256,21 @@ describe("Mfa Users delete", function () {
     it("should do nothing with non existing user", function () {
         var storeSpy = sinon.spy(mfa.users, "store");
 
-        mfa.users.delete("missing@example.com");
+        mfa.users.remove("missing@example.com");
         expect(storeSpy.callCount).to.equal(0);
     });
 
-    it("should not delete user for another customer", function () {
+    it("should not remove user for another customer", function () {
         var storeSpy = sinon.spy(mfa.users, "store");
 
-        mfa.users.delete("another.customer@example.com");
+        mfa.users.remove("another.customer@example.com");
         expect(storeSpy.callCount).to.equal(0);
     });
 
-    it("should not delete user with the same id for another customer", function () {
+    it("should not remove user with the same id for another customer", function () {
         var storeSpy = sinon.spy(mfa.users, "store");
 
-        mfa.users.delete("test@example.com");
+        mfa.users.remove("test@example.com");
         expect(mfa.users.exists("test@example.com")).to.be.false;
         expect(storeSpy.calledOnce).to.be.true;
 
