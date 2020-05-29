@@ -1,1 +1,1 @@
-module.exports = require("./lib/mfa");
+module.exports = require("./src/mfa");
