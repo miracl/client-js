@@ -23,7 +23,8 @@
     "test": "mocha",
     "cover": "istanbul cover _mocha",
     "lint": "eslint .",
-    "watch": "nodemon --exec 'npm run build' --watch src --watch lib --ext js"
+    "watch": "nodemon --exec 'npm run build' --watch src --watch lib --ext js",
+    "docs": "documentation build src/mfa.js -f md -o reference.md --markdown-toc false --shallow"
   },
   "repository": {
     "type": "git",
@@ -43,6 +44,7 @@
   "devDependencies": {
     "chai": "^3.5.0",
     "coveralls": "^3.0.2",
+    "documentation": "^13.0.2",
     "eslint": "^5.16.0",
     "istanbul": "^0.4.5",
     "mocha": "^7.2.0",
