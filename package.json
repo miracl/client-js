@@ -4,22 +4,11 @@
   "description": "Headless MFA client library",
   "main": "./src/mfa.js",
   "type": "module",
-  "config": {
-    "cryptoPath": "node_modules/@miracl/crypto-js/src/",
-    "cryptoSrc": "aes.js big.js ctx.js ecdh.js ecp.js ecp2.js ff.js fp.js fp2.js fp4.js fp12.js gcm.js hash256.js hash384.js hash512.js mpin.js newhope.js nhs.js pair.js rand.js rom_curve.js rom_field.js rsa.js sha3.js uint64.js",
-    "cryptoTmp": "../../../../.tmp/crypto.js",
-    "cryptoTmpFile": ".tmp/crypto.js",
-    "libMfa": "src/mfa.js",
-    "buildOut": "dist/mfa.js",
-    "buildMin": "dist/mfa.min.js"
-  },
   "scripts": {
-    "cleanDir": "rm -rf dist .tmp",
-    "makeDir": "mkdir .tmp dist",
-    "concatCrypto": "cd $npm_package_config_cryptoPath && cat $npm_package_config_cryptoSrc > $npm_package_config_cryptoTmp",
-    "concatSrc": "cat $npm_package_config_cryptoTmpFile $npm_package_config_libMfa > $npm_package_config_buildOut",
-    "uglify": "uglifyjs $npm_package_config_buildOut --comments -o $npm_package_config_buildMin",
-    "build": "npm run cleanDir && npm run makeDir && npm run concatCrypto && npm run concatSrc && npm run uglify",
+    "clean": "rm -rf dist",
+    "rollup": "rollup -c rollup.config.js",
+    "minify": "uglifyjs dist/mfa.js --comments -o dist/mfa.min.js",
+    "build": "npm run clean && npm run rollup && npm run minify",
     "dist": "npm run build",
     "test": "mocha",
     "cover": "istanbul cover _mocha",
@@ -50,6 +39,7 @@
     "@miracl/crypto-js": "git+https://gitlab.corp.miracl.com/mfa/pkg/crypto-js.git"
   },
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "^8.4.0",
     "chai": "^3.5.0",
     "coveralls": "^3.0.2",
     "documentation": "^13.0.2",
@@ -57,6 +47,7 @@
     "istanbul": "^0.4.5",
     "mocha": "^8.0.1",
     "nodemon": "^2.0.4",
+    "rollup": "^2.21.0",
     "sinon": "^2.1.0",
     "uglify-js": "^2.8.22"
   }
