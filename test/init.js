@@ -1,8 +1,5 @@
 // In memory storage for users
-var storage = require("./storage.js");
-
-// Load the crypto library
-global.CTX = require("@miracl/crypto-js");
+import storage from "./storage.js";
 
 // Reusable test data
 global.testData = {

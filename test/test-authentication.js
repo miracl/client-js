@@ -1,6 +1,7 @@
-var expect = require("chai").expect;
-var sinon = require("sinon");
-var Mfa = require("../index");
+import Mfa from "../src/mfa.js";
+import sinon from "sinon";
+import chai from "chai";
+const expect = chai.expect;
 
 describe("Mfa Client _getPass1", function () {
     var mfa;

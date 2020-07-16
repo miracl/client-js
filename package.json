@@ -2,7 +2,8 @@
   "name": "@miracl/client-js",
   "version": "4.4.0",
   "description": "Headless MFA client library",
-  "main": "index.js",
+  "main": "./src/mfa.js",
+  "type": "module",
   "config": {
     "cryptoPath": "node_modules/@miracl/crypto-js/src/",
     "cryptoSrc": "aes.js big.js ctx.js ecdh.js ecp.js ecp2.js ff.js fp.js fp2.js fp4.js fp12.js gcm.js hash256.js hash384.js hash512.js mpin.js newhope.js nhs.js pair.js rand.js rom_curve.js rom_field.js rsa.js sha3.js uint64.js",

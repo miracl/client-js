@@ -1,5 +1,5 @@
 // Mock in-memory user storage
-var UserStorage = function () {
+export default function UserStorage() {
     this.storage = {};
 };
 
@@ -18,5 +18,3 @@ UserStorage.prototype.removeItem = function (key) {
 UserStorage.prototype.clear = function (key) {
     this.storage = {};
 };
-
-module.exports = UserStorage;
