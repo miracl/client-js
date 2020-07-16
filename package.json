@@ -26,6 +26,13 @@
     "watch": "nodemon --exec 'npm run build' --watch src --watch lib --ext js",
     "docs": "documentation build src/mfa.js -f md -o reference.md --markdown-toc false --shallow"
   },
+  "mocha": {
+    "recursive": true,
+    "timeout": 5000,
+    "require": [
+      "test/init.js"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "git+https://gitlab.corp.miracl.com/mfa/pkg/client-js.git"
@@ -47,7 +54,7 @@
     "documentation": "^13.0.2",
     "eslint": "^5.16.0",
     "istanbul": "^0.4.5",
-    "mocha": "^7.2.0",
+    "mocha": "^8.0.1",
     "nodemon": "^2.0.4",
     "sinon": "^2.1.0",
     "uglify-js": "^2.8.22"
