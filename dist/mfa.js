@@ -24010,6 +24010,13 @@ Mfa.prototype.authenticate = function (userId, userPin, callback) {
     this._authentication(userId, userPin, ["oidc"], callback);
 };
 
+/**
+ * Authenticate the user and receive an authorization code as a result
+ *
+ * @param {string} userId - The ID of the user
+ * @param {string} userPin - The PIN of the identity
+ * @param {function(Error, Object)} callback
+ */
 Mfa.prototype.fetchAuthCode = function (userId, userPin, callback) {
     this._authentication(userId, userPin, ["authcode"], callback);
 };
@@ -24227,6 +24234,14 @@ Mfa.prototype._renewSecret = function (userId, userPin, sec1Data, callback) {
     });
 };
 
+/**
+ * Register an identity capable of signing
+ *
+ * @param {string} userId - The ID of the user
+ * @param {string} userPin - The PIN of the identity used for authentication
+ * @param {string} dvsPin - The PIN that will be used for the new identity
+ * @param {function(Error, Object)} callback
+ */
 Mfa.prototype.registerDvs = function (userId, userPin, dvsPin, callback) {
     var self = this;
 
@@ -24354,6 +24369,15 @@ Mfa.prototype._getSignMpinId = function (mpinId, publicKey) {
     return self._bytesToHex(mpinIdBytes);
 };
 
+/**
+ * Create a cryptographic signature of a given message
+ *
+ * @param {string} userId - The ID of the user
+ * @param {string} userPin - The PIN of the identity used for authentication
+ * @param {string} message - The message that will be signed
+ * @param {number} timestamp - The creation timestamp of the message
+ * @param {function(Error, Object)} callback
+ */
 Mfa.prototype.signMessage = function (userId, userPin, message, timestamp, callback) {
     var self = this,
         messageBytes = self._hexToBytes(message),
