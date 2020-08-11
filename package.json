@@ -3,6 +3,10 @@
   "version": "5.0.0",
   "description": "Headless MFA client library",
   "main": "./src/mfa.js",
+  "exports": {
+    "import": "./src/mfa.js",
+    "require": "./cjs/mfa.cjs"
+  },
   "type": "module",
   "scripts": {
     "clean": "rm -rf dist",
