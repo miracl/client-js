@@ -278,22 +278,22 @@ Mfa.prototype.register = function (userId, registrationCode, pinCallback, callba
 
     self._init(function (err) {
         if (err) {
-            callback(err, null);
+            return callback(err, null);
         }
 
         self._registration(userId, registrationCode, function (err, regData) {
             if (err) {
-                callback(err, null);
+                return callback(err, null);
             }
 
             self._getSecret1(userId, regData, function (err, sec1Data) {
                 if (err) {
-                    callback(err, null);
+                    return callback(err, null);
                 }
 
                 self._getSecret2(sec1Data, function (err, sec2Data) {
                     if (err) {
-                        callback(err, null);
+                        return callback(err, null);
                     }
 
                     var pinLength,
@@ -524,7 +524,11 @@ Mfa.prototype._authentication = function (userId, userPin, scope, callback) {
         return callback(new IdentityError("Missing identity"), null);
     }
 
-    self._init(function () {
+    self._init(function (err) {
+        if (err) {
+            return callback(err, null);
+        }
+
         self._getPass1(userId, userPin, scope, X, SEC, function (err, pass1Data) {
             if (err) {
                 return callback(err, null);
