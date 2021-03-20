@@ -41,16 +41,19 @@ export default function Mfa(options) {
         throw new Error("Missing options");
     }
 
-    if (!options.server) {
-        throw new Error("Missing server address");
-    }
-
     if (!options.customerId) {
         throw new Error("Missing customer ID");
     }
 
     if (!options.userStorage) {
         throw new Error("Missing user storage object");
+    }
+
+    if (!options.server) {
+        options.server = "https://api.mpin.io";
+    } else {
+        // remove trailing slash from url, if there is one
+        options.server = options.server.replace(/\/$/, "");
     }
 
     // Ensure that default PIN lenght is between 4 and 6
@@ -111,8 +114,7 @@ Mfa.prototype._seedRNG = function (seedHex) {
 Mfa.prototype._init = function (callback) {
     var self = this, settingsUrl;
 
-    settingsUrl = self.options.client.server.replace(/\/?$/, "/");
-    settingsUrl += "rps/v2/clientSettings";
+    settingsUrl = self.options.client.server + "/rps/v2/clientSettings";
 
     if (self.options.client.clientId) {
         settingsUrl += "?cid=" + self.options.client.clientId;

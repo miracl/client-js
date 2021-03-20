@@ -10,14 +10,6 @@ describe("Mfa Client", function() {
         }).to.throw("Missing options");
     });
 
-    it("should throw Error w/o init server", function () {
-        expect(function () {
-            var config = testData.init();
-            delete config["server"];
-            var mfa = new Mfa(config);
-        }).to.throw("Missing server address");
-    });
-
     it("should throw Error w/o customer", function () {
         expect(function () {
             var config = testData.init();
@@ -37,6 +29,13 @@ describe("Mfa Client", function() {
     it("should return Instance of Mfa", function () {
         var mfa = new Mfa(testData.init());
         expect(mfa).to.be.an.instanceof(Mfa);
+    });
+
+    it("should set default server address if there is none", function () {
+        var config = testData.init();
+        delete config["server"];
+        var mfa = new Mfa(config);
+        expect(mfa.options.server).to.equal("https://api.mpin.io");
     });
 
     it("should set default PIN length to 4 if there is none", function () {
