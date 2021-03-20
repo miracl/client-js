@@ -602,7 +602,7 @@ Mfa.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback) {
         U: self._bytesToHex(U)
     };
 
-    self.request({ url: self.options.settings.mpinAuthServerURL + "/pass1", type: "POST", data: requestData }, callback);
+    self.request({ url: self.options.settings.pass1URL, type: "POST", data: requestData }, callback);
 };
 
 /**
@@ -651,7 +651,7 @@ Mfa.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
         requestData.WID = self.accessId;
     }
 
-    self.request({ url: self.options.settings.mpinAuthServerURL + "/pass2", type: "POST", data: requestData}, callback);
+    self.request({ url: self.options.settings.pass2URL, type: "POST", data: requestData}, callback);
 };
 
 Mfa.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
