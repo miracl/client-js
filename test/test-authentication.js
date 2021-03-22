@@ -8,7 +8,7 @@ describe("Mfa Client _getPass1", function () {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
     });
 
     it("shoud make a request for first pass", function (done) {
@@ -67,7 +67,7 @@ describe("Mfa Client _getPass2", function () {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
     });
 
     it("shoud make a request for second pass", function (done) {
@@ -141,7 +141,7 @@ describe("Mfa Client _finishAuthentication", function () {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
     });
 
     it("should call error callback when request fails", function (done) {
@@ -205,7 +205,7 @@ describe("Mfa Client _renewSecret", function () {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
     });
 
     it("should renew the identity secret", function (done) {

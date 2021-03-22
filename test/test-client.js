@@ -42,28 +42,28 @@ describe("Mfa Client", function() {
         var config = testData.init();
         delete config["defaultPinLength"];
         var mfa = new Mfa(config);
-        expect(mfa.options.client.defaultPinLength).to.equal(4);
+        expect(mfa.options.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to 4 if less than 4", function () {
         var config = testData.init();
         config.defaultPinLength = 3;
         var mfa = new Mfa(config);
-        expect(mfa.options.client.defaultPinLength).to.equal(4);
+        expect(mfa.options.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to 4 if more than 6", function () {
         var config = testData.init();
         config.defaultPinLength = 7;
         var mfa = new Mfa(config);
-        expect(mfa.options.client.defaultPinLength).to.equal(4);
+        expect(mfa.options.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to provided value within range", function () {
         var config = testData.init();
         config.defaultPinLength = 5;
         var mfa = new Mfa(config);
-        expect(mfa.options.client.defaultPinLength).to.equal(5);
+        expect(mfa.options.defaultPinLength).to.equal(5);
     });
 });
 
@@ -88,7 +88,7 @@ describe("Mfa Client _init", function() {
         mfa._init(function (err, success) {
             expect(err).to.be.null;
             expect(success).to.exist;
-            expect(mfa.options.settings).to.deep.equal(testData.settings());
+            expect(mfa.clientSettings).to.deep.equal(testData.settings());
             done();
         });
     });

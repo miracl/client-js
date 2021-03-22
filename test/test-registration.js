@@ -39,7 +39,7 @@ describe("Mfa Client _registration", function() {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
     });
 
     it("should return error, when register request fail", function(done) {
@@ -108,7 +108,7 @@ describe("Mfa Client _getSecret1", function() {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
         spy = sinon.spy();
     });
 
@@ -163,7 +163,7 @@ describe("Mfa Client _getSecret2", function() {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
     });
 
     it("should return error, when signature2 request fails", function(done) {
@@ -186,7 +186,7 @@ describe("Mfa Client _addShares", function () {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
     });
 
     it("should throw error on crypto failure", function () {
@@ -211,7 +211,7 @@ describe("Mfa Client _extractPin", function () {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
     });
 
     it("should throw error on crypto failure", function () {
@@ -386,7 +386,7 @@ describe("Mfa Client register", function () {
 
     it("should fire successful callback, when _registration passed successful", function (done) {
         sinon.stub(mfa, "_init").yields(null);
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
         sinon.stub(mfa, "_registration").yields(null);
         sinon.stub(mfa, "_getSecret1").yields(null);
         sinon.stub(mfa, "_getSecret2").yields(null);

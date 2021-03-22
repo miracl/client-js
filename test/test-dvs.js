@@ -108,7 +108,7 @@ describe("Mfa Client _getDvsSecret1", function () {
 
     before(function () {
         mfa = new Mfa(testData.init());
-        mfa.options.settings = testData.settings();
+        mfa.clientSettings = testData.settings();
     });
 
     it("should call error callback when request fails", function (done) {

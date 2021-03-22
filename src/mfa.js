@@ -31,8 +31,8 @@ function createErrorType(name, params) {
  * @param {string} options.server - Server address https://api.mpin.io
  * @param {string} options.customerId - Customer ID
  * @param {string} options.seed - Hex encoded random number generator seed
- * @param {Object} options.userStorage - Storage for saving user data
  * @param {string} options.deviceName - Name of Device
+ * @param {Object} options.userStorage - Storage for saving user data
  */
 export default function Mfa(options) {
     var self = this;
@@ -61,18 +61,19 @@ export default function Mfa(options) {
         options.defaultPinLength = 4;
     }
 
+    self.options = options;
+
     // Initialize RNG
     self.rng = new (self.crypto().RAND)();
     self.rng.clean();
 
     self.users = new Users(options.userStorage, options.customerId, "mfa");
     self.dvsUsers = new Users(options.userStorage, options.customerId, "dvs");
-
-    self.options = {};
-    self.options.client = options;
 }
 
 Mfa.prototype.options = {};
+
+Mfa.prototype.clientSettings = {};
 
 Mfa.prototype.session = {};
 
@@ -105,7 +106,7 @@ Mfa.prototype._seedRNG = function (seedHex) {
     var self = this,
         entropyBytes;
 
-    seedHex = seedHex + self.options.client.seed;
+    seedHex = seedHex + self.options.seed;
 
     entropyBytes = self._hexToBytes(seedHex);
     self.rng.seed(entropyBytes.length, entropyBytes);
@@ -114,14 +115,14 @@ Mfa.prototype._seedRNG = function (seedHex) {
 Mfa.prototype._init = function (callback) {
     var self = this, settingsUrl;
 
-    settingsUrl = self.options.client.server + "/rps/v2/clientSettings";
+    settingsUrl = self.options.server + "/rps/v2/clientSettings";
 
     self.request({ url: settingsUrl }, function (err, settingsData) {
         if (err) {
             return callback(err, null);
         }
 
-        self.options.settings = settingsData;
+        self.clientSettings = settingsData;
         self._seedRNG(settingsData.seedValue);
 
         callback(null, true);
@@ -148,7 +149,7 @@ Mfa.prototype.fetchAccessId = function (userId, callback) {
         reqData;
 
     reqData = {
-        url: self.options.client.authurl,
+        url: self.options.authurl,
         type: "POST",
         data: {
             prerollid: userId
@@ -216,7 +217,7 @@ Mfa.prototype.pushAuth = function (userId, callback) {
     }
 
     reqData = {
-        url: self.options.client.authurl.replace("/authorize", "/pushauth"),
+        url: self.options.authurl.replace("/authorize", "/pushauth"),
         type: "POST",
         data: {
             prerollid: userId
@@ -245,7 +246,7 @@ Mfa.prototype.verify = function (userId, clientId, callback) {
     var self = this,
         reqData = {};
 
-    reqData.url = self.options.client.server + "/verification";
+    reqData.url = self.options.server + "/verification";
     reqData.type = "POST";
     reqData.data = {
         userId: userId,
@@ -297,7 +298,7 @@ Mfa.prototype.register = function (userId, registrationCode, pinCallback, callba
 
                     pinLength = self.users.get(userId, "pinLength");
                     if (!pinLength) {
-                        pinLength = self.options.client.defaultPinLength;
+                        pinLength = self.options.defaultPinLength;
                     }
 
                     // should be called to continue the flow
@@ -317,7 +318,7 @@ Mfa.prototype._registration = function (userId, registrationCode, callback) {
     var self = this,
         regData = {};
 
-    regData.url = self.options.settings.registerURL;
+    regData.url = self.clientSettings.registerURL;
     regData.type = "PUT";
     regData.data = {
         userId: userId,
@@ -346,8 +347,8 @@ Mfa.prototype._registration = function (userId, registrationCode, callback) {
 Mfa.prototype._getDeviceName = function () {
     var self = this;
 
-    if (self.options.client.deviceName) {
-        return self.options.client.deviceName;
+    if (self.options.deviceName) {
+        return self.options.deviceName;
     }
 
     return "Browser";
@@ -357,7 +358,7 @@ Mfa.prototype._getSecret1 = function (userId, regData, callback) {
     var self = this,
         cs1Url;
 
-    cs1Url = self.options.settings.signatureURL + "/";
+    cs1Url = self.clientSettings.signatureURL + "/";
     cs1Url += self.users.get(userId, "mpinId");
     cs1Url += "?regOTT=" + regData.regOTT;
 
@@ -598,7 +599,7 @@ Mfa.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback) {
         U: self._bytesToHex(U)
     };
 
-    self.request({ url: self.options.settings.pass1URL, type: "POST", data: requestData }, callback);
+    self.request({ url: self.clientSettings.pass1URL, type: "POST", data: requestData }, callback);
 };
 
 /**
@@ -647,7 +648,7 @@ Mfa.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
         requestData.WID = self.accessId;
     }
 
-    self.request({ url: self.options.settings.pass2URL, type: "POST", data: requestData}, callback);
+    self.request({ url: self.clientSettings.pass2URL, type: "POST", data: requestData}, callback);
 };
 
 Mfa.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
@@ -663,7 +664,7 @@ Mfa.prototype._finishAuthentication = function (userId, userPin, scope, authOTT,
     isDvsAuth = scope.indexOf("dvs-auth") !== -1;
     userStorage = isDvsAuth ? self.dvsUsers : self.users;
 
-    self.request({ url: self.options.settings.authenticateURL, type: "POST", data: requestData }, function (err, data) {
+    self.request({ url: self.clientSettings.authenticateURL, type: "POST", data: requestData }, function (err, data) {
         if (err) {
             // Revoked identity
             if (err.status === 410) {
@@ -755,7 +756,7 @@ Mfa.prototype._getDvsSecret1 = function (keypair, dvsRegisterToken, callback) {
         dvsRegisterToken: dvsRegisterToken
     };
 
-    cs1Url = self.options.settings.dvsRegURL;
+    cs1Url = self.clientSettings.dvsRegURL;
 
     self.request({ url: cs1Url, type: "POST", data: reqData }, callback);
 };
@@ -968,7 +969,7 @@ Mfa.prototype.request = function (options, callback) {
 
     request.open(type, url, true);
 
-    request.setRequestHeader("X-MIRACL-CID", self.options.client.customerId);
+    request.setRequestHeader("X-MIRACL-CID", self.options.customerId);
 
     // Set authorization header if provided
     if (options.authorization) {
