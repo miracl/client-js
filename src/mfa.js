@@ -39,6 +39,7 @@ function createErrorType(name, params) {
  * @param {string} options.oidc.response_type - OIDC response type. Only 'code' is supported
  * @param {string} options.oidc.scope - OIDC scope. Must include 'openid'
  * @param {string} options.oidc.state - OIDC state
+ * @param {bool}   options.cors - Enable CORS requests if set to 'true'
  */
 export default function Mfa(options) {
     var self = this;
@@ -985,6 +986,11 @@ Mfa.prototype.request = function (options, callback) {
             }
         }
     };
+
+
+    if (self.options.cors) {
+        url += (url.indexOf("?") !== -1 ? "&" : "?") + "project_id=" + self.options.customerId;
+    }
 
     request.open(type, url, true);
 
