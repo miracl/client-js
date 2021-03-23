@@ -10,7 +10,10 @@ global.testData = {
             customerId: "customerId",
             seed: "hexSeed",
             defaultPinLength: 4,
-            userStorage: new storage()
+            userStorage: new storage(),
+            oidc: {
+                client_id: "testClientID"
+            }
         };
     },
     settings: function () {

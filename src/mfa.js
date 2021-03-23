@@ -33,6 +33,12 @@ function createErrorType(name, params) {
  * @param {string} options.seed - Hex encoded random number generator seed
  * @param {string} options.deviceName - Name of Device
  * @param {Object} options.userStorage - Storage for saving user data
+ * @param {Object} options.oidc - Parameters for initializing an OIDC auth session
+ * @param {string} options.oidc.client_id - OIDC client ID
+ * @param {string} options.oidc.redirect_uri - OIDC redirect URI
+ * @param {string} options.oidc.response_type - OIDC response type. Only 'code' is supported
+ * @param {string} options.oidc.scope - OIDC scope. Must include 'openid'
+ * @param {string} options.oidc.state - OIDC state
  */
 export default function Mfa(options) {
     var self = this;
@@ -149,7 +155,7 @@ Mfa.prototype.fetchAccessId = function (userId, callback) {
         reqData;
 
     reqData = {
-        url: self.options.authurl,
+        url: self.options.server + "/authorize?" + self._urlEncode(self.options.oidc),
         type: "POST",
         data: {
             prerollid: userId
@@ -217,7 +223,7 @@ Mfa.prototype.pushAuth = function (userId, callback) {
     }
 
     reqData = {
-        url: self.options.authurl.replace("/authorize", "/pushauth"),
+        url: self.options.server + "/pushauth?" + self._urlEncode(self.options.oidc),
         type: "POST",
         data: {
             prerollid: userId
@@ -919,6 +925,19 @@ Mfa.prototype._bytesToHex = function (b) {
     }
 
     return s;
+};
+
+Mfa.prototype._urlEncode = function (obj) {
+    var str = [],
+        p;
+
+    for (p in obj) {
+        if (obj.hasOwnProperty(p)) {
+            str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+        }
+    }
+
+    return str.join("&");
 };
 
 /**

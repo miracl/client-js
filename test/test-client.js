@@ -217,7 +217,7 @@ describe("Mfa Client pushAuth", function () {
 
         mfa.pushAuth("test@example.com", function (err, data) {
             expect(data).to.exist;
-            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/pushauth");
+            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/pushauth?client_id=testClientID");
             expect(data.webOTT).to.equal("test");
         });
     });
