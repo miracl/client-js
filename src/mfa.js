@@ -116,10 +116,6 @@ Mfa.prototype._init = function (callback) {
 
     settingsUrl = self.options.client.server + "/rps/v2/clientSettings";
 
-    if (self.options.client.clientId) {
-        settingsUrl += "?cid=" + self.options.client.clientId;
-    }
-
     self.request({ url: settingsUrl }, function (err, settingsData) {
         if (err) {
             return callback(err, null);

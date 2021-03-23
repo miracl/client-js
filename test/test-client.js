@@ -93,18 +93,6 @@ describe("Mfa Client _init", function() {
         });
     });
 
-    it("should pass client ID as param if there is one", function (done) {
-        mfa.options.client.clientId = "test";
-        var requestStub = sinon.stub(mfa, "request").yields(null, { success: true });
-
-        mfa._init(function (err) {
-            expect(err).to.be.null;
-            expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/clientSettings?cid=test");
-            done();
-        });
-    });
-
     afterEach(function() {
         mfa.request.restore && mfa.request.restore();
     });
