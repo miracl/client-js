@@ -159,7 +159,8 @@ Mfa.prototype.fetchAccessId = function (userId, callback) {
         url: self.options.server + "/authorize?" + self._urlEncode(self.options.oidc),
         type: "POST",
         data: {
-            prerollid: userId
+            prerollId: userId,
+            registerOnly: self.options.registerOnly ? true : false
         }
     };
 
@@ -227,7 +228,7 @@ Mfa.prototype.pushAuth = function (userId, callback) {
         url: self.options.server + "/pushauth?" + self._urlEncode(self.options.oidc),
         type: "POST",
         data: {
-            prerollid: userId
+            prerollId: userId
         }
     };
 
