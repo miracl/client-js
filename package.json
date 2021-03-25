@@ -1,6 +1,6 @@
 {
   "name": "@miracl/client-js",
-  "version": "5.0.1",
+  "version": "5.1.0",
   "description": "Headless MFA client library",
   "main": "./src/mfa.js",
   "exports": {
