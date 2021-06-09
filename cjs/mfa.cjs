@@ -24229,7 +24229,7 @@ Mfa.prototype._finishAuthentication = function (userId, userPin, scope, authOTT,
 Mfa.prototype._renewSecret = function (userId, userPin, sec1Data, callback) {
     var self = this;
 
-    self._getSecret2(userId, sec1Data, function (err, sec2Data) {
+    self._getSecret2(sec1Data, function (err, sec2Data) {
         if (err) {
             return callback(err, null);
         }
