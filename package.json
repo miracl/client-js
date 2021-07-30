@@ -15,7 +15,7 @@
     "build": "npm run clean && npm run rollup && npm run minify",
     "dist": "npm run build",
     "test": "mocha",
-    "cover": "istanbul cover _mocha",
+    "cover": "c8 -r text -r html npm run test",
     "lint": "eslint .",
     "watch": "nodemon --exec 'npm run build' --watch src --watch lib --ext js",
     "docs": "documentation build src/* -f md -o reference.md --markdown-toc false --shallow"
@@ -44,11 +44,10 @@
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^8.4.0",
+    "c8": "^7.7.3",
     "chai": "^3.5.0",
-    "coveralls": "^3.0.2",
     "documentation": "^13.0.2",
     "eslint": "^5.16.0",
-    "istanbul": "^0.4.5",
     "mocha": "^8.0.1",
     "nodemon": "^2.0.4",
     "rollup": "^2.21.0",
