@@ -268,6 +268,40 @@ Mfa.prototype.sendVerificationEmail = function (userId, callback) {
 };
 
 /**
+ * Finish the verification process
+ *
+ * @param {string} verificationURI - The URI received in the email containing the verification code
+ * @param {function(Error, Object)} callback
+ */
+Mfa.prototype.getActivationToken = function (verificationURI, callback) {
+    var self = this,
+        reqData = {},
+        params;
+
+    params = self._parseUriParams(verificationURI);
+
+    reqData.url = self.options.server + "/verification/confirmation";
+    reqData.type = "POST";
+    reqData.data = {
+        userId: params["user_id"],
+        code: params["code"],
+        clientId: params["client_id"],
+        redirectUri: params["redirect_uri"],
+        state: params["state"],
+        stage: params["stage"],
+    };
+
+    self.request(reqData, function (err, data) {
+        if (err) {
+            return callback(err, data);
+        }
+
+        data.userId = params["user_id"];
+        callback(null, data);
+    });
+};
+
+/**
  * Create an identity for the specified user ID
  *
  * @param {string} userId - The ID of the user
@@ -941,6 +975,25 @@ Mfa.prototype._urlEncode = function (obj) {
     }
 
     return str.join("&");
+};
+
+Mfa.prototype._parseUriParams = function (uri) {
+    var query = uri.split("?").pop(),
+        queryArr = query.split("&"),
+        params = {},
+        pairArr,
+        i;
+
+    if (!query.length || !queryArr.length) {
+        return params;
+    }
+
+    for (i = 0; i < queryArr.length; i++) {
+        pairArr = queryArr[i].split("=");
+        params[pairArr[0]] = decodeURIComponent(pairArr[1].replace(/\+/g, " "));
+    }
+
+    return params;
 };
 
 /**

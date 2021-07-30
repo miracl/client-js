@@ -34,6 +34,29 @@ describe("Mfa Client sendVerificationEmail", function () {
     });
 });
 
+describe("Mfa Client getActivationToken", function () {
+    var mfa;
+
+    before(function () {
+        mfa = new Mfa(testData.init());
+    });
+
+    it("should invoke the callback data containing the activation token if request succeeds", function (done) {
+        sinon.stub(mfa, "request").yields(null, { actToken: "testActToken" });
+
+        mfa.getActivationToken("http://example.com/verification/confirmation?code=test", function(err, data) {
+            expect(err).to.be.null;
+            expect(data).to.exist;
+            expect(data.actToken).to.equal("testActToken");
+            done();
+        });
+    });
+
+    afterEach(function() {
+        mfa.request.restore && mfa.request.restore();
+    });
+});
+
 describe("Mfa Client _registration", function() {
     var mfa;
 
