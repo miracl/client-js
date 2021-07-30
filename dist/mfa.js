@@ -23561,10 +23561,10 @@ function createErrorType(name, params) {
 /**
  * @class
  * @param {Object} options
- * @param {string} options.server - Server address https://api.mpin.io
- * @param {string} options.customerId - Customer ID
+ * @param {string} options.server - Server address, defaults to https://api.mpin.io
+ * @param {string} options.projectId - MIRACL Trust project ID
  * @param {string} options.seed - Hex encoded random number generator seed
- * @param {string} options.deviceName - Name of Device
+ * @param {string} options.deviceName - Name of the current device
  * @param {Object} options.userStorage - Storage for saving user data
  * @param {Object} options.oidc - Parameters for initializing an OIDC auth session
  * @param {string} options.oidc.client_id - OIDC client ID
@@ -23581,8 +23581,8 @@ function Mfa(options) {
         throw new Error("Missing options");
     }
 
-    if (!options.customerId) {
-        throw new Error("Missing customer ID");
+    if (!options.projectId) {
+        throw new Error("Missing project ID");
     }
 
     if (!options.userStorage) {
@@ -23607,8 +23607,8 @@ function Mfa(options) {
     self.rng = new (self.crypto().RAND)();
     self.rng.clean();
 
-    self.users = new Users(options.userStorage, options.customerId, "mfa");
-    self.dvsUsers = new Users(options.userStorage, options.customerId, "dvs");
+    self.users = new Users(options.userStorage, options.projectId, "mfa");
+    self.dvsUsers = new Users(options.userStorage, options.projectId, "dvs");
 }
 
 Mfa.prototype.options = {};
@@ -23749,7 +23749,7 @@ Mfa.prototype.fetchStatus = function (callback) {
  * @param {string} userId - The ID of the user that will be authenticating
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.pushAuth = function (userId, callback) {
+Mfa.prototype.sendPushNotificationForAuth = function (userId, callback) {
     var self = this,
         reqData;
 
@@ -23783,7 +23783,7 @@ Mfa.prototype.pushAuth = function (userId, callback) {
  * @param {string} clientId - The OIDC client ID for the application
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.verify = function (userId, clientId, callback) {
+Mfa.prototype.sendVerificationEmail = function (userId, callback) {
     var self = this,
         reqData = {};
 
@@ -23791,7 +23791,8 @@ Mfa.prototype.verify = function (userId, clientId, callback) {
     reqData.type = "POST";
     reqData.data = {
         userId: userId,
-        clientId: clientId,
+        clientId: self.options.oidc.client_id,
+        redirectURI: self.options.oidc.redirect_uri,
         accessId: self.accessId,
         deviceName: self._getDeviceName()
     };
@@ -24024,7 +24025,7 @@ Mfa.prototype.authenticate = function (userId, userPin, callback) {
  * @param {string} userPin - The PIN of the identity
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.fetchAuthCode = function (userId, userPin, callback) {
+Mfa.prototype.generateAuthCode = function (userId, userPin, callback) {
     this._authentication(userId, userPin, ["authcode"], callback);
 };
 
@@ -24035,7 +24036,7 @@ Mfa.prototype.fetchAuthCode = function (userId, userPin, callback) {
  * @param {string} userPin - The PIN of the identity
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.fetchOTP = function (userId, userPin, callback) {
+Mfa.prototype.generateOTP = function (userId, userPin, callback) {
     this._authentication(userId, userPin, ["otp"], callback);
 };
 
@@ -24046,7 +24047,7 @@ Mfa.prototype.fetchOTP = function (userId, userPin, callback) {
  * @param {string} userPin - The PIN of the identity
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.fetchRegistrationCode = function (userId, userPin, callback) {
+Mfa.prototype.generateQuickCode = function (userId, userPin, callback) {
     this._authentication(userId, userPin, ["reg-code"], callback);
 };
 
@@ -24253,7 +24254,7 @@ Mfa.prototype._renewSecret = function (userId, userPin, sec1Data, callback) {
  * @param {string} dvsPin - The PIN that will be used for the new identity
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.registerDvs = function (userId, userPin, dvsPin, callback) {
+Mfa.prototype.signingRegister = function (userId, userPin, dvsPin, callback) {
     var self = this;
 
     self._authentication(userId, userPin, ["dvs-reg"], function (err, data) {
@@ -24389,7 +24390,7 @@ Mfa.prototype._getSignMpinId = function (mpinId, publicKey) {
  * @param {number} timestamp - The creation timestamp of the message
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.signMessage = function (userId, userPin, message, timestamp, callback) {
+Mfa.prototype.sign = function (userId, userPin, message, timestamp, callback) {
     var self = this,
         messageBytes = self._hexToBytes(message),
         mpinIdHex = self._getSignMpinId(self.dvsUsers.get(userId, "mpinId"), self.dvsUsers.get(userId, "publicKey")),
@@ -24523,12 +24524,12 @@ Mfa.prototype.request = function (options, callback) {
 
 
     if (self.options.cors) {
-        url += (url.indexOf("?") !== -1 ? "&" : "?") + "project_id=" + self.options.customerId;
+        url += (url.indexOf("?") !== -1 ? "&" : "?") + "project_id=" + self.options.projectId;
     }
 
     request.open(type, url, true);
 
-    request.setRequestHeader("X-MIRACL-CID", self.options.customerId);
+    request.setRequestHeader("X-MIRACL-CID", self.options.projectId);
 
     // Set authorization header if provided
     if (options.authorization) {

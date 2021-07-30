@@ -5,9 +5,8 @@ import storage from "./storage.js";
 global.testData = {
     init: function () {
         return {
-            authurl: "http://server.com/authorize",
             server: "http://server.com",
-            customerId: "customerId",
+            projectId: "projectID",
             seed: "hexSeed",
             defaultPinLength: 4,
             userStorage: new storage(),

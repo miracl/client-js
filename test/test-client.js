@@ -10,12 +10,12 @@ describe("Mfa Client", function() {
         }).to.throw("Missing options");
     });
 
-    it("should throw Error w/o customer", function () {
+    it("should throw Error w/o project ID", function () {
         expect(function () {
             var config = testData.init();
-            delete config["customerId"];
+            delete config["projectId"];
             var mfa = new Mfa(config);
-        }).to.throw("Missing customer ID");
+        }).to.throw("Missing project ID");
     });
 
     it("should throw Error w/o user storage", function () {
@@ -26,7 +26,7 @@ describe("Mfa Client", function() {
         }).to.throw("Missing user storage object");
     });
 
-    it("should return Instance of Mfa", function () {
+    it("should return instance of Mfa", function () {
         var mfa = new Mfa(testData.init());
         expect(mfa).to.be.an.instanceof(Mfa);
     });
@@ -205,7 +205,7 @@ describe("Mfa Client fetchStatus", function() {
     });
 });
 
-describe("Mfa Client pushAuth", function () {
+describe("Mfa Client sendPushNotificationForAuth", function () {
     var mfa;
 
     before(function () {
@@ -215,7 +215,7 @@ describe("Mfa Client pushAuth", function () {
     it("should make a request to the pushauth endpoint", function () {
         var requestStub = sinon.stub(mfa, "request").yields(null, { webOTT: "test" });
 
-        mfa.pushAuth("test@example.com", function (err, data) {
+        mfa.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(data).to.exist;
             expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/pushauth?client_id=testClientID");
             expect(data.webOTT).to.equal("test");
@@ -225,13 +225,13 @@ describe("Mfa Client pushAuth", function () {
     it("should fail when the request fails", function () {
         var requestStub = sinon.stub(mfa, "request").yields(new Error("Error"), null);
 
-        mfa.pushAuth("test@example.com", function (err, data) {
+        mfa.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(err).to.exist;
         });
     });
 
     it("should return an error without an user ID", function () {
-        mfa.pushAuth(null, function (err, data) {
+        mfa.sendPushNotificationForAuth(null, function (err, data) {
             expect(err).to.exist;
         });
     });

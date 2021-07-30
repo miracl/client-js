@@ -397,7 +397,7 @@ describe("Mfa Client authenticate", function () {
     });
 });
 
-describe("Mfa Client fetchOTP", function () {
+describe("Mfa Client generateOTP", function () {
     var mfa;
 
     before(function () {
@@ -411,7 +411,7 @@ describe("Mfa Client fetchOTP", function () {
     it("should call _authentication with scope 'otp'", function (done) {
         var authenticationStub = sinon.stub(mfa, "_authentication").yields(null, { success: true });
 
-        mfa.fetchOTP("test@example.com", "1234", function (err, data) {
+        mfa.generateOTP("test@example.com", "1234", function (err, data) {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
@@ -423,7 +423,7 @@ describe("Mfa Client fetchOTP", function () {
     });
 });
 
-describe("Mfa Client fetchRegistrationCode", function () {
+describe("Mfa Client generateQuickCode", function () {
     var mfa;
 
     before(function () {
@@ -437,7 +437,7 @@ describe("Mfa Client fetchRegistrationCode", function () {
     it("should call _authentication with scope 'reg-code'", function (done) {
         var authenticationStub = sinon.stub(mfa, "_authentication").yields(null, { success: true });
 
-        mfa.fetchRegistrationCode("test@example.com", "1234", function (err, data) {
+        mfa.generateQuickCode("test@example.com", "1234", function (err, data) {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
@@ -449,7 +449,7 @@ describe("Mfa Client fetchRegistrationCode", function () {
     });
 });
 
-describe("Mfa Client fetchAuthCode", function () {
+describe("Mfa Client generateAuthCode", function () {
     var mfa;
 
     before(function () {
@@ -463,7 +463,7 @@ describe("Mfa Client fetchAuthCode", function () {
     it("should call _authentication with scope 'authcode'", function (done) {
         var authenticationStub = sinon.stub(mfa, "_authentication").yields(null, { success: true });
 
-        mfa.fetchAuthCode("test@example.com", "1234", function (err, data) {
+        mfa.generateAuthCode("test@example.com", "1234", function (err, data) {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;

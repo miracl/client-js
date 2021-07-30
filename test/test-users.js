@@ -23,7 +23,7 @@ describe("Mfa Users loadData", function () {
         config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"customerId",
+                "customerId":"projectID",
                 "state":"ACTIVATED",
                 "mpinId":"exampleMpinId"
             }
@@ -39,21 +39,21 @@ describe("Mfa Users loadData", function () {
         config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId": "test1@example.com",
-                "customerId": "customerId",
+                "customerId": "projectID",
                 "state": "ACTIVATED",
                 "mpinId": "exampleMpinId1",
                 "lastUsed": 30
             },
             {
                 "userId": "test2@example.com",
-                "customerId": "customerId",
+                "customerId": "projectID",
                 "state": "ACTIVATED",
                 "mpinId": "exampleMpinId2",
                 "lastUsed": 29
             },
             {
                 "userId": "test3@example.com",
-                "customerId": "customerId",
+                "customerId": "projectID",
                 "state": "ACTIVATED",
                 "mpinId": "exampleMpinId3",
                 "lastUsed": 31
@@ -97,7 +97,7 @@ describe("Mfa Users write", function () {
     it("should update only identities for the current customer", function () {
         var otherCustomerData = {
             userId: "test@example.com",
-            customerId: "anotherCustomerId",
+            customerId: "anotherProjectID",
             state: "ACTIVATED",
             mpinId: "exampleMpinId"
         };
@@ -142,13 +142,13 @@ describe("Mfa Users exists", function () {
         config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"customerId",
+                "customerId":"projectID",
                 "state":"ACTIVATED",
                 "mpinId":"exampleMpinId"
             },
             {
                 "userId":"another.customer@example.com",
-                "customerId":"anotherCustomerId",
+                "customerId":"anotherProjectID",
                 "state":"ACTIVATED",
                 "mpinId":"anotherExampleMpinId"
             }
@@ -177,19 +177,19 @@ describe("Mfa Users list", function () {
         config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"customerId",
+                "customerId":"projectID",
                 "state":"ACTIVATED",
                 "mpinId":"exampleMpinId"
             },
             {
                 "userId":"test2@example.com",
-                "customerId":"customerId",
+                "customerId":"projectID",
                 "state":"ACTIVATED",
                 "mpinId":"exampleMpinId2"
             },
             {
                 "userId":"another.customer@example.com",
-                "customerId":"anotherCustomerId",
+                "customerId":"anotherProjectID",
                 "state":"ACTIVATED",
                 "mpinId":"anotherExampleMpinId"
             }
@@ -217,21 +217,21 @@ describe("Mfa Users remove", function () {
         config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"customerId",
+                "customerId":"projectID",
                 "state":"ACTIVATED",
                 "mpinId":"exampleMpinId",
                 "csHex":"testCsHex"
             },
             {
                 "userId":"another.customer@example.com",
-                "customerId":"anotherCustomerId",
+                "customerId":"anotherProjectID",
                 "state":"ACTIVATED",
                 "mpinId":"anotherExampleMpinId",
                 "csHex":"anotherTestCsHex"
             },
             {
                 "userId":"test@example.com",
-                "customerId":"anotherCustomerId",
+                "customerId":"anotherProjectID",
                 "state":"ACTIVATED",
                 "mpinId":"exampleMpinId2",
                 "csHex":"testCsHex2"
@@ -278,7 +278,7 @@ describe("Mfa Users remove", function () {
         var userStorageData = JSON.parse(config.userStorage.getItem("mfa"));
 
         expect(userStorageData[1].userId).to.equal("test@example.com");
-        expect(userStorageData[1].customerId).to.equal("anotherCustomerId");
+        expect(userStorageData[1].customerId).to.equal("anotherProjectID");
     });
 
     afterEach(function () {
@@ -294,13 +294,13 @@ describe("Mfa Users get", function () {
         config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"customerId",
+                "customerId":"projectID",
                 "state":"ACTIVATED",
                 "mpinId":"exampleMpinId"
             },
             {
                 "userId":"another.customer@example.com",
-                "customerId":"anotherCustomerId",
+                "customerId":"anotherProjectID",
                 "state":"ACTIVATED",
                 "mpinId":"anotherExampleMpinId"
             }
@@ -322,7 +322,7 @@ describe("Mfa Users get", function () {
 
     it("should fetch all user data if a property is not requested", function () {
         var userData = mfa.users.get("test@example.com");
-        expect(userData.customerId).to.equal("customerId");
+        expect(userData.customerId).to.equal("projectID");
         expect(userData.mpinId).to.equal("exampleMpinId");
         expect(userData.state).to.equal("ACTIVATED");
         expect(userData.userId).to.equal("test@example.com");
@@ -337,7 +337,7 @@ describe("Mfa Users updateLastUsed", function () {
         config.userStorage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"customerId",
+                "customerId":"projectID",
                 "state":"ACTIVATED",
                 "mpinId":"exampleMpinId"
             }
@@ -376,7 +376,7 @@ describe("Mfa Users store", function () {
 
         var userData = JSON.parse(config.userStorage.getItem("mfa"))[0];
 
-        expect(userData.customerId).to.equal("customerId");
+        expect(userData.customerId).to.equal("projectID");
         expect(userData.mpinId).to.equal("exampleMpinId");
         expect(userData.state).to.equal("ACTIVATED");
         expect(userData.userId).to.equal("test@example.com");

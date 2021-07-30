@@ -3,7 +3,7 @@ import sinon from "sinon";
 import chai from "chai";
 const expect = chai.expect;
 
-describe("Mfa Client registerDvs", function () {
+describe("Mfa Client signingRegister", function () {
     var mfa;
 
     before(function () {
@@ -14,7 +14,7 @@ describe("Mfa Client registerDvs", function () {
         var authenticationStub = sinon.stub(mfa, "_authentication").yields(null, true);
         var renewDvsSecretStub = sinon.stub(mfa, "_renewDvsSecret").yields(null, true);
 
-        mfa.registerDvs("test@example.com", "1234", "1234", function (err, result) {
+        mfa.signingRegister("test@example.com", "1234", "1234", function (err, result) {
             expect(err).to.be.null;
             expect(authenticationStub.calledOnce).to.be.true;
             expect(renewDvsSecretStub.calledOnce).to.be.true;
@@ -25,7 +25,7 @@ describe("Mfa Client registerDvs", function () {
     it("should fail if authentication fails", function (done) {
         sinon.stub(mfa, "_authentication").yields({ error: true });
 
-        mfa.registerDvs("test@example.com", "1234", "1234", function (err, result) {
+        mfa.signingRegister("test@example.com", "1234", "1234", function (err, result) {
             expect(err).to.exist;
             done();
         });
@@ -317,7 +317,7 @@ describe("Mfa Client _createSigningIdentity", function () {
     })
 });
 
-describe("Mfa Client signMessage", function () {
+describe("Mfa Client sign", function () {
     var mfa;
 
     before(function () {
@@ -328,7 +328,7 @@ describe("Mfa Client signMessage", function () {
         sinon.stub(mfa.crypto().MPIN, "CLIENT").returns(0);
         var authenticationStub = sinon.stub(mfa, "_authentication").yields(null, true);
 
-        mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (err, result) {
+        mfa.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.be.null;
             expect(result.u).to.equal("");
             expect(result.v).to.equal("");
@@ -341,7 +341,7 @@ describe("Mfa Client signMessage", function () {
     it("should throw error on crypto failure", function (done) {
         sinon.stub(mfa.crypto().MPIN, "CLIENT").returns(-1);
 
-        mfa.signMessage("test@example.com", "1234", "message", "timestamp", function (err, result) {
+        mfa.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.exist;
             expect(err.name).to.equal("CryptoError");
             done();

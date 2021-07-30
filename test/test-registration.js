@@ -3,7 +3,7 @@ import sinon from "sinon";
 import chai from "chai";
 const expect = chai.expect;
 
-describe("Mfa Client verify", function () {
+describe("Mfa Client sendVerificationEmail", function () {
     var mfa;
 
     before(function () {
@@ -13,7 +13,7 @@ describe("Mfa Client verify", function () {
     it("should return error when verification request fails", function (done) {
         sinon.stub(mfa, "request").yields({ error: true }, null);
 
-        mfa.verify("test@example.com", "clientID", function (err) {
+        mfa.sendVerificationEmail("test@example.com", function (err) {
             expect(err).to.exist;
             done();
         });
@@ -22,7 +22,7 @@ describe("Mfa Client verify", function () {
     it("should call success callback when verification request succeeds", function (done) {
         sinon.stub(mfa, "request").yields(null, { success: true });
 
-        mfa.verify("test@example.com", "clientID", function (err, data) {
+        mfa.sendVerificationEmail("test@example.com", function (err, data) {
             expect(err).to.be.null;
             expect(data).to.exist;
             done();
