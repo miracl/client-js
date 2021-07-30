@@ -5,42 +5,35 @@
 
 ## Installation
 
-```bash
-$ git clone
-$ cd project_folder
-$ npm install
-$ npm run build
+```sh
+npm install
+npm run build
 ```
 
 ## Running Tests
 
 Install development dependencies:
 
-```bash
-$ npm install
-```
-
-Then:
-
-```bash
-$ npm test
+```sh
+npm install
+npm test
 ```
 
 ## Available options
 
-```
-var mfaOptions = {
-	server: "serverUrl", // required
-	customerId: "customerId", // required
+```js
+var options = {
+	projectId: "projectId", // required
 	seed: "hexEncodedRandomNumberGeneratorSeed", // required
 	userStorage: localStorage, // required
 	deviceName: "Name of Device"
 }
-var mfa = new Mfa(mfaOptions);
+
+var client = new Mfa(options);
 ```
 
 ## Build in Docker image
 
-```
+```sh
 docker run -v $PWD:/src -w /src node:alpine npm run build
 ```
