@@ -1,24 +1,24 @@
-import Mfa from "../src/mfa.js";
+import Client from "../src/client.js";
 import sinon from "sinon";
 import chai from "chai";
 const expect = chai.expect;
 
-describe("Mfa Users init", function () {
+describe("Users init", function () {
     it("should fail without compliant user storage", function () {
         expect(function () {
             var config = testData.init();
             config.userStorage = {};
-            var mfa = new Mfa(config);
+            var client = new Client(config);
         }).to.throw("Invalid user storage object");
     });
 });
 
-describe("Mfa Users loadData", function () {
+describe("Users loadData", function () {
     it("should load user storage data", function () {
         var config = testData.init();
-        var mfa = new Mfa(config);
+        var client = new Client(config);
 
-        expect(mfa.users.exists("test@example.com")).to.be.false;
+        expect(client.users.exists("test@example.com")).to.be.false;
 
         config.userStorage.setItem("mfa", JSON.stringify([
             {
@@ -28,9 +28,9 @@ describe("Mfa Users loadData", function () {
                 "mpinId":"exampleMpinId"
             }
         ]));
-        mfa.users.loadData();
+        client.users.loadData();
 
-        expect(mfa.users.exists("test@example.com")).to.be.true;
+        expect(client.users.exists("test@example.com")).to.be.true;
     });
 
     it("should sort identities by last used timestamp", function () {
@@ -60,38 +60,38 @@ describe("Mfa Users loadData", function () {
             }
         ]));
 
-        var mfa = new Mfa(config);
+        var client = new Client(config);
 
-        expect(mfa.users.data[0].userId).to.equal("test2@example.com");
-        expect(mfa.users.data[1].userId).to.equal("test1@example.com");
-        expect(mfa.users.data[2].userId).to.equal("test3@example.com");
+        expect(client.users.data[0].userId).to.equal("test2@example.com");
+        expect(client.users.data[1].userId).to.equal("test1@example.com");
+        expect(client.users.data[2].userId).to.equal("test3@example.com");
     });
 });
 
-describe("Mfa Users write", function () {
-    var mfa;
+describe("Users write", function () {
+    var client;
 
     before(function () {
-        mfa = new Mfa(testData.init());
+        client = new Client(testData.init());
     });
 
     it("should add new user data", function () {
-        mfa.users.write("test@example.com", {
+        client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
-        expect(mfa.users.exists("test@example.com")).to.be.true;
+        expect(client.users.exists("test@example.com")).to.be.true;
     });
 
     it("should update user data", function () {
-        mfa.users.write("test@example.com", {
+        client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
-        expect(mfa.users.exists("test@example.com")).to.be.true;
+        expect(client.users.exists("test@example.com")).to.be.true;
 
-        mfa.users.write("test@example.com", { state: "REVOKED" });
-        expect(mfa.users.get("test@example.com", "state")).to.equal("REVOKED");
+        client.users.write("test@example.com", { state: "REVOKED" });
+        expect(client.users.get("test@example.com", "state")).to.equal("REVOKED");
     });
 
     it("should update only identities for the current customer", function () {
@@ -101,41 +101,41 @@ describe("Mfa Users write", function () {
             state: "ACTIVATED",
             mpinId: "exampleMpinId"
         };
-        mfa.users.data = [otherCustomerData];
+        client.users.data = [otherCustomerData];
 
-        mfa.users.write("test@example.com", { state: "REVOKED" });
+        client.users.write("test@example.com", { state: "REVOKED" });
 
-        expect(mfa.users.data[0]).to.deep.equal(otherCustomerData);
+        expect(client.users.data[0]).to.deep.equal(otherCustomerData);
     });
 
     it("should not store sensitive data", function () {
-        mfa.users.write("test@example.com", {
+        client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED",
             csHex: "testCsHex",
             regOTT: "testRegOTT"
         });
 
-        expect(mfa.users.get("test@example.com", "csHex")).to.equal("");
-        expect(mfa.users.get("test@example.com", "regOTT")).to.equal("");
+        expect(client.users.get("test@example.com", "csHex")).to.equal("");
+        expect(client.users.get("test@example.com", "regOTT")).to.equal("");
     });
 
     it("should add a created timestamp for new identity", function () {
         var beforeCreate = Math.floor(Date.now() / 1000);
 
-        mfa.users.write("timestamp@example.com", {
+        client.users.write("timestamp@example.com", {
             mpinId: "timestampMpinId",
             state: "ACTIVATED"
         });
 
-        expect(mfa.users.get("timestamp@example.com", "created")).to.exist;
-        expect(mfa.users.get("timestamp@example.com", "created")).to.be.at.least(beforeCreate);
-        expect(mfa.users.get("timestamp@example.com", "created")).to.be.at.most(Math.ceil(Date.now() / 1000));
+        expect(client.users.get("timestamp@example.com", "created")).to.exist;
+        expect(client.users.get("timestamp@example.com", "created")).to.be.at.least(beforeCreate);
+        expect(client.users.get("timestamp@example.com", "created")).to.be.at.most(Math.ceil(Date.now() / 1000));
     });
 });
 
-describe("Mfa Users exists", function () {
-    var mfa;
+describe("Users exists", function () {
+    var client;
 
     before(function () {
         var config = testData.init();
@@ -153,24 +153,24 @@ describe("Mfa Users exists", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(config);
+        client = new Client(config);
     });
 
     it("should return true for existing user", function () {
-        expect(mfa.users.exists("test@example.com")).to.be.true;
+        expect(client.users.exists("test@example.com")).to.be.true;
     });
 
     it("should return false for missing user", function () {
-        expect(mfa.users.exists("missing@example.com")).to.be.false;
+        expect(client.users.exists("missing@example.com")).to.be.false;
     });
 
     it("should check only identities for the current customer", function () {
-        expect(mfa.users.exists("another.customer@example.com")).to.be.false;
+        expect(client.users.exists("another.customer@example.com")).to.be.false;
     });
 });
 
-describe("Mfa Users list", function () {
-    var mfa;
+describe("Users list", function () {
+    var client;
 
     before(function () {
         var config = testData.init();
@@ -194,23 +194,23 @@ describe("Mfa Users list", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(config);
+        client = new Client(config);
     });
 
     it("should return a list of users", function () {
-        var list = mfa.users.list();
+        var list = client.users.list();
         expect(list["test@example.com"]).to.equal("ACTIVATED");
         expect(list["test2@example.com"]).to.equal("ACTIVATED");
     });
 
     it("should list only identities for the current customer", function () {
-        var list = mfa.users.list();
+        var list = client.users.list();
         expect(list["another.customer@example.com"]).to.be.undefined;
     });
 });
 
-describe("Mfa Users remove", function () {
-    var mfa, config;
+describe("Users remove", function () {
+    var client, config;
 
     beforeEach(function () {
         config = testData.init()
@@ -237,42 +237,42 @@ describe("Mfa Users remove", function () {
                 "csHex":"testCsHex2"
             },
         ]));
-        mfa = new Mfa(config);
+        client = new Client(config);
     });
 
     it("should remove an user", function () {
-        mfa.users.write("test@example.com", {
+        client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
-        expect(mfa.users.exists("test@example.com")).to.be.true;
+        expect(client.users.exists("test@example.com")).to.be.true;
 
-        var storeSpy = sinon.spy(mfa.users, "store");
+        var storeSpy = sinon.spy(client.users, "store");
 
-        mfa.users.remove("test@example.com");
-        expect(mfa.users.exists("test@example.com")).to.be.false;
+        client.users.remove("test@example.com");
+        expect(client.users.exists("test@example.com")).to.be.false;
         expect(storeSpy.calledOnce).to.be.true;
     });
 
     it("should do nothing with non existing user", function () {
-        var storeSpy = sinon.spy(mfa.users, "store");
+        var storeSpy = sinon.spy(client.users, "store");
 
-        mfa.users.remove("missing@example.com");
+        client.users.remove("missing@example.com");
         expect(storeSpy.callCount).to.equal(0);
     });
 
     it("should not remove user for another customer", function () {
-        var storeSpy = sinon.spy(mfa.users, "store");
+        var storeSpy = sinon.spy(client.users, "store");
 
-        mfa.users.remove("another.customer@example.com");
+        client.users.remove("another.customer@example.com");
         expect(storeSpy.callCount).to.equal(0);
     });
 
     it("should not remove user with the same id for another customer", function () {
-        var storeSpy = sinon.spy(mfa.users, "store");
+        var storeSpy = sinon.spy(client.users, "store");
 
-        mfa.users.remove("test@example.com");
-        expect(mfa.users.exists("test@example.com")).to.be.false;
+        client.users.remove("test@example.com");
+        expect(client.users.exists("test@example.com")).to.be.false;
         expect(storeSpy.calledOnce).to.be.true;
 
         var userStorageData = JSON.parse(config.userStorage.getItem("mfa"));
@@ -282,12 +282,12 @@ describe("Mfa Users remove", function () {
     });
 
     afterEach(function () {
-        mfa.users.store.restore && mfa.users.store.restore();
+        client.users.store.restore && client.users.store.restore();
     })
 });
 
-describe("Mfa Users get", function () {
-    var mfa;
+describe("Users get", function () {
+    var client;
 
     before(function () {
         var config = testData.init();
@@ -305,23 +305,23 @@ describe("Mfa Users get", function () {
                 "mpinId":"anotherExampleMpinId"
             }
         ]));
-        mfa = new Mfa(config);
+        client = new Client(config);
     });
 
     it("should fetch a property of the user", function () {
-        expect(mfa.users.get("test@example.com", "mpinId")).to.equal("exampleMpinId");
+        expect(client.users.get("test@example.com", "mpinId")).to.equal("exampleMpinId");
     });
 
     it("should return undefined for missing user", function () {
-        expect(mfa.users.get("missing@example.com", "mpinId")).to.be.undefined;
+        expect(client.users.get("missing@example.com", "mpinId")).to.be.undefined;
     });
 
     it("should check only identities for the current customer", function () {
-        expect(mfa.users.get("another.customer@example.com", "mpinId")).to.be.undefined;
+        expect(client.users.get("another.customer@example.com", "mpinId")).to.be.undefined;
     });
 
     it("should fetch all user data if a property is not requested", function () {
-        var userData = mfa.users.get("test@example.com");
+        var userData = client.users.get("test@example.com");
         expect(userData.customerId).to.equal("projectID");
         expect(userData.mpinId).to.equal("exampleMpinId");
         expect(userData.state).to.equal("ACTIVATED");
@@ -329,8 +329,8 @@ describe("Mfa Users get", function () {
     });
 });
 
-describe("Mfa Users updateLastUsed", function () {
-    var mfa, config;
+describe("Users updateLastUsed", function () {
+    var client, config;
 
     beforeEach(function () {
         config = testData.init();
@@ -342,37 +342,37 @@ describe("Mfa Users updateLastUsed", function () {
                 "mpinId":"exampleMpinId"
             }
         ]));
-        mfa = new Mfa(config);
+        client = new Client(config);
     });
 
     it("should set last used timestamp", function () {
         var currentTime = new Date().getTime();
-        mfa.users.updateLastUsed("test@example.com");
-        expect(mfa.users.get("test@example.com", "lastUsed")).to.be.least(currentTime);
+        client.users.updateLastUsed("test@example.com");
+        expect(client.users.get("test@example.com", "lastUsed")).to.be.least(currentTime);
     });
 
     it("should write updated data to user storage", function () {
         var currentTime = new Date().getTime();
-        mfa.users.updateLastUsed("test@example.com");
+        client.users.updateLastUsed("test@example.com");
         expect(JSON.parse(config.userStorage.getItem("mfa"))[0].lastUsed).to.be.least(currentTime);
     });
 });
 
-describe("Mfa Users store", function () {
-    var mfa, config;
+describe("Users store", function () {
+    var client, config;
 
     before(function () {
         config = testData.init();
-        mfa = new Mfa(config);
+        client = new Client(config);
     });
 
     it("should write identity data to user storage", function () {
-        mfa.users.write("test@example.com", {
+        client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "ACTIVATED"
         });
 
-        mfa.users.store();
+        client.users.store();
 
         var userData = JSON.parse(config.userStorage.getItem("mfa"))[0];
 

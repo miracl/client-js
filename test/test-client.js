@@ -1,12 +1,12 @@
-import Mfa from "../src/mfa.js";
+import Client from "../src/client.js";
 import sinon from "sinon";
 import chai from "chai";
 const expect = chai.expect;
 
-describe("Mfa Client", function() {
+describe("Client", function() {
     it("should throw Error w/o options", function () {
         expect(function () {
-            var mfa = new Mfa();
+            var client = new Client();
         }).to.throw("Missing options");
     });
 
@@ -14,7 +14,7 @@ describe("Mfa Client", function() {
         expect(function () {
             var config = testData.init();
             delete config["projectId"];
-            var mfa = new Mfa(config);
+            var client = new Client(config);
         }).to.throw("Missing project ID");
     });
 
@@ -22,61 +22,61 @@ describe("Mfa Client", function() {
         expect(function () {
             var config = testData.init();
             delete config["userStorage"];
-            var mfa = new Mfa(config);
+            var client = new Client(config);
         }).to.throw("Missing user storage object");
     });
 
-    it("should return instance of Mfa", function () {
-        var mfa = new Mfa(testData.init());
-        expect(mfa).to.be.an.instanceof(Mfa);
+    it("should return client instance", function () {
+        var client = new Client(testData.init());
+        expect(client).to.be.an.instanceof(Client);
     });
 
     it("should set default server address if there is none", function () {
         var config = testData.init();
         delete config["server"];
-        var mfa = new Mfa(config);
-        expect(mfa.options.server).to.equal("https://api.mpin.io");
+        var client = new Client(config);
+        expect(client.options.server).to.equal("https://api.mpin.io");
     });
 
     it("should set default PIN length to 4 if there is none", function () {
         var config = testData.init();
         delete config["defaultPinLength"];
-        var mfa = new Mfa(config);
-        expect(mfa.options.defaultPinLength).to.equal(4);
+        var client = new Client(config);
+        expect(client.options.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to 4 if less than 4", function () {
         var config = testData.init();
         config.defaultPinLength = 3;
-        var mfa = new Mfa(config);
-        expect(mfa.options.defaultPinLength).to.equal(4);
+        var client = new Client(config);
+        expect(client.options.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to 4 if more than 6", function () {
         var config = testData.init();
         config.defaultPinLength = 7;
-        var mfa = new Mfa(config);
-        expect(mfa.options.defaultPinLength).to.equal(4);
+        var client = new Client(config);
+        expect(client.options.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to provided value within range", function () {
         var config = testData.init();
         config.defaultPinLength = 5;
-        var mfa = new Mfa(config);
-        expect(mfa.options.defaultPinLength).to.equal(5);
+        var client = new Client(config);
+        expect(client.options.defaultPinLength).to.equal(5);
     });
 });
 
-describe("Mfa Client _init", function() {
-    var mfa;
+describe("Client _init", function() {
+    var client;
 
     before(function () {
-        mfa = new Mfa(testData.init());
+        client = new Client(testData.init());
     });
 
     it("should fire callback with error when settings can't be fetched", function (done) {
-        sinon.stub(mfa, "request").yields({ error: true }, null);
-        mfa._init(function (err) {
+        sinon.stub(client, "request").yields({ error: true }, null);
+        client._init(function (err) {
             expect(err).to.exist;
             expect(err.error).to.be.true;
             done();
@@ -84,38 +84,38 @@ describe("Mfa Client _init", function() {
     });
 
     it("should fire successCb after fetching settings", function (done) {
-        sinon.stub(mfa, "request").yields(null, testData.settings());
-        mfa._init(function (err, success) {
+        sinon.stub(client, "request").yields(null, testData.settings());
+        client._init(function (err, success) {
             expect(err).to.be.null;
             expect(success).to.exist;
-            expect(mfa.clientSettings).to.deep.equal(testData.settings());
+            expect(client.clientSettings).to.deep.equal(testData.settings());
             done();
         });
     });
 
     afterEach(function() {
-        mfa.request.restore && mfa.request.restore();
+        client.request.restore && client.request.restore();
     });
 });
 
-describe("Mfa Client setAccessId", function () {
-    var mfa;
+describe("Client setAccessId", function () {
+    var client;
 
     before(function () {
-        mfa = new Mfa(testData.init());
+        client = new Client(testData.init());
     });
 
     it("should set access id", function () {
-        mfa.setAccessId("test");
-        expect(mfa.accessId).to.equal("test");
+        client.setAccessId("test");
+        expect(client.accessId).to.equal("test");
     });
 });
 
-describe("Mfa Client fetchAccessId", function () {
-    var mfa, sessionInfo;
+describe("Client fetchAccessId", function () {
+    var client, sessionInfo;
 
     before(function () {
-        mfa = new Mfa(testData.init());
+        client = new Client(testData.init());
 
         sessionInfo = {
             webOTT: 1,
@@ -125,97 +125,97 @@ describe("Mfa Client fetchAccessId", function () {
     });
 
     it("should make a request for access ID", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(null, sessionInfo);
+        var requestStub = sinon.stub(client, "request").yields(null, sessionInfo);
 
-        mfa.fetchAccessId("test@example.com", function (err, data) {
+        client.fetchAccessId("test@example.com", function (err, data) {
             expect(data).to.deep.equal(sessionInfo);
         });
     });
 
     it("should fail when request fails", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(new Error("Error"), null);
+        var requestStub = sinon.stub(client, "request").yields(new Error("Error"), null);
 
-        mfa.fetchAccessId("test@example.com", function (err, data) {
+        client.fetchAccessId("test@example.com", function (err, data) {
             expect(err).to.exist;
         });
     });
 
     it("should fail if response doesn't have all session data", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(null, {});
+        var requestStub = sinon.stub(client, "request").yields(null, {});
 
-        mfa.fetchAccessId("test@example.com", function (err, data) {
+        client.fetchAccessId("test@example.com", function (err, data) {
             expect(err).to.exist;
         });
     });
 
     it("should store session info", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(null, sessionInfo);
+        var requestStub = sinon.stub(client, "request").yields(null, sessionInfo);
 
-        mfa.fetchAccessId("test@example.com", function (err, data) {
-            expect(mfa.session).to.deep.equal(sessionInfo);
+        client.fetchAccessId("test@example.com", function (err, data) {
+            expect(client.session).to.deep.equal(sessionInfo);
         });
     });
 
     it("should set the access ID", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(null, sessionInfo);
+        var requestStub = sinon.stub(client, "request").yields(null, sessionInfo);
 
-        mfa.fetchAccessId("test@example.com", function (err, data) {
-            expect(mfa.accessId).to.equal("accessID");
+        client.fetchAccessId("test@example.com", function (err, data) {
+            expect(client.accessId).to.equal("accessID");
         });
     });
 
     afterEach(function() {
-        mfa.request.restore && mfa.request.restore();
+        client.request.restore && client.request.restore();
     });
 });
 
-describe("Mfa Client fetchStatus", function() {
-    var mfa;
+describe("Client fetchStatus", function() {
+    var client;
 
     before(function () {
-        mfa = new Mfa(testData.init());
+        client = new Client(testData.init());
     });
 
     it("should make a request for session status", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(null, { status: "new" });
+        var requestStub = sinon.stub(client, "request").yields(null, { status: "new" });
 
-        mfa.fetchStatus(function (err, data) {
+        client.fetchStatus(function (err, data) {
             expect(data.status).to.equal("new");
         });
     });
 
     it("should fail when request fails", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(new Error("Error"), null);
+        var requestStub = sinon.stub(client, "request").yields(new Error("Error"), null);
 
-        mfa.fetchStatus(function (err, data) {
+        client.fetchStatus(function (err, data) {
             expect(err).to.exist;
         });
     });
 
     it("should fail if response doesn't have expected data", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(null, {});
+        var requestStub = sinon.stub(client, "request").yields(null, {});
 
-        mfa.fetchStatus(function (err, data) {
+        client.fetchStatus(function (err, data) {
             expect(err).to.exist;
         });
     });
 
     afterEach(function() {
-        mfa.request.restore && mfa.request.restore();
+        client.request.restore && client.request.restore();
     });
 });
 
-describe("Mfa Client sendPushNotificationForAuth", function () {
-    var mfa;
+describe("Client sendPushNotificationForAuth", function () {
+    var client;
 
     before(function () {
-        mfa = new Mfa(testData.init());
+        client = new Client(testData.init());
     });
 
     it("should make a request to the pushauth endpoint", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(null, { webOTT: "test" });
+        var requestStub = sinon.stub(client, "request").yields(null, { webOTT: "test" });
 
-        mfa.sendPushNotificationForAuth("test@example.com", function (err, data) {
+        client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(data).to.exist;
             expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/pushauth?client_id=testClientID");
             expect(data.webOTT).to.equal("test");
@@ -223,29 +223,29 @@ describe("Mfa Client sendPushNotificationForAuth", function () {
     });
 
     it("should fail when the request fails", function () {
-        var requestStub = sinon.stub(mfa, "request").yields(new Error("Error"), null);
+        var requestStub = sinon.stub(client, "request").yields(new Error("Error"), null);
 
-        mfa.sendPushNotificationForAuth("test@example.com", function (err, data) {
+        client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(err).to.exist;
         });
     });
 
     it("should return an error without an user ID", function () {
-        mfa.sendPushNotificationForAuth(null, function (err, data) {
+        client.sendPushNotificationForAuth(null, function (err, data) {
             expect(err).to.exist;
         });
     });
 
     afterEach(function() {
-        mfa.request.restore && mfa.request.restore();
+        client.request.restore && client.request.restore();
     });
 });
 
-describe("Mfa Client request", function() {
-    var mfa, server, requests = [];
+describe("Client request", function() {
+    var client, server, requests = [];
 
     before(function () {
-        mfa = new Mfa(testData.init());
+        client = new Client(testData.init());
 
         var xhr = global.XMLHttpRequest = sinon.useFakeXMLHttpRequest();
         xhr.onCreate = function (xhr) {
@@ -255,17 +255,17 @@ describe("Mfa Client request", function() {
 
     it("should throw error missing callback", function () {
         expect(function () {
-            mfa.request({ url: "reqUrl" });
+            client.request({ url: "reqUrl" });
         }).to.throw("Bad or missing callback");
 
         expect(function () {
-            mfa.request({ url: "reqUrl" }, "string");
+            client.request({ url: "reqUrl" }, "string");
         }).to.throw("Bad or missing callback");
     });
 
     it("should throw error missing URL", function () {
         expect(function () {
-            mfa.request({}, function () {});
+            client.request({}, function () {});
         }).to.throw("Missing URL for request");
     });
 
@@ -273,7 +273,7 @@ describe("Mfa Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        mfa.request({
+        client.request({
             url: "/test-json-get"
         }, callback);
 
@@ -288,7 +288,7 @@ describe("Mfa Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        mfa.request({
+        client.request({
             url: "/test-json-get"
         }, callback);
 
@@ -303,7 +303,7 @@ describe("Mfa Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        mfa.request({
+        client.request({
             url: "/test-json-get",
             type: "POST",
             data: { test: 1}
@@ -319,7 +319,7 @@ describe("Mfa Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        mfa.request({
+        client.request({
             url: "/test-auth",
             authorization: "Bearer test"
         }, callback);
@@ -336,7 +336,7 @@ describe("Mfa Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        mfa.request({
+        client.request({
             url: "/test-error"
         }, callback);
 
@@ -352,7 +352,7 @@ describe("Mfa Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        mfa.request({
+        client.request({
             url: "/test-abort"
         }, callback);
 

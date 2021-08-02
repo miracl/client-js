@@ -1,12 +1,12 @@
 /**
- * User management utility. Initialized by {@link Mfa}
+ * User management utility. Initialized by {@link Client}
  * @class
  *
  * @param {Object} storage
- * @param {string} customerId
+ * @param {string} projectId
  * @param {string} storageKey
  */
-export default function Users(storage, customerId, storageKey) {
+export default function Users(storage, projectId, storageKey) {
     var self = this;
 
     if (typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
@@ -14,7 +14,7 @@ export default function Users(storage, customerId, storageKey) {
     }
 
     self.storage = storage;
-    self.customerId = customerId;
+    self.customerId = projectId;
     self.storageKey = storageKey ? storageKey : "mfa";
 
     self.loadData();

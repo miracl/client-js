@@ -41,7 +41,7 @@ function createErrorType(name, params) {
  * @param {string} options.oidc.state - OIDC state
  * @param {bool}   options.cors - Enable CORS requests if set to 'true'
  */
-export default function Mfa(options) {
+export default function Client(options) {
     var self = this;
 
     if (!options) {
@@ -78,13 +78,13 @@ export default function Mfa(options) {
     self.dvsUsers = new Users(options.userStorage, options.projectId, "dvs");
 }
 
-Mfa.prototype.options = {};
+Client.prototype.options = {};
 
-Mfa.prototype.clientSettings = {};
+Client.prototype.clientSettings = {};
 
-Mfa.prototype.session = {};
+Client.prototype.session = {};
 
-Mfa.prototype.crypto = function (curve) {
+Client.prototype.crypto = function (curve) {
     // Set to default curve if not provided
     if (!curve) {
         curve = "BN254CX";
@@ -109,7 +109,7 @@ Mfa.prototype.crypto = function (curve) {
  * Seed the Random Number Generator (RNG)
  * @private
  */
-Mfa.prototype._seedRNG = function (seedHex) {
+Client.prototype._seedRNG = function (seedHex) {
     var self = this,
         entropyBytes;
 
@@ -119,7 +119,7 @@ Mfa.prototype._seedRNG = function (seedHex) {
     self.rng.seed(entropyBytes.length, entropyBytes);
 };
 
-Mfa.prototype._init = function (callback) {
+Client.prototype._init = function (callback) {
     var self = this, settingsUrl;
 
     settingsUrl = self.options.server + "/rps/v2/clientSettings";
@@ -141,7 +141,7 @@ Mfa.prototype._init = function (callback) {
  *
  * @param {string} accessId
  */
-Mfa.prototype.setAccessId = function (accessId) {
+Client.prototype.setAccessId = function (accessId) {
     this.accessId = accessId;
 };
 
@@ -151,7 +151,7 @@ Mfa.prototype.setAccessId = function (accessId) {
  * @param {string} userId - The ID of the user that will be authenticating (not required)
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.fetchAccessId = function (userId, callback) {
+Client.prototype.fetchAccessId = function (userId, callback) {
     var self = this,
         reqData;
 
@@ -185,7 +185,7 @@ Mfa.prototype.fetchAccessId = function (userId, callback) {
  *
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.fetchStatus = function (callback) {
+Client.prototype.fetchStatus = function (callback) {
     var self = this,
         reqData;
 
@@ -216,7 +216,7 @@ Mfa.prototype.fetchStatus = function (callback) {
  * @param {string} userId - The ID of the user that will be authenticating
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.sendPushNotificationForAuth = function (userId, callback) {
+Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
     var self = this,
         reqData;
 
@@ -250,7 +250,7 @@ Mfa.prototype.sendPushNotificationForAuth = function (userId, callback) {
  * @param {string} clientId - The OIDC client ID for the application
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.sendVerificationEmail = function (userId, callback) {
+Client.prototype.sendVerificationEmail = function (userId, callback) {
     var self = this,
         reqData = {};
 
@@ -273,7 +273,7 @@ Mfa.prototype.sendVerificationEmail = function (userId, callback) {
  * @param {string} verificationURI - The URI received in the email containing the verification code
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.getActivationToken = function (verificationURI, callback) {
+Client.prototype.getActivationToken = function (verificationURI, callback) {
     var self = this,
         reqData = {},
         params;
@@ -309,7 +309,7 @@ Mfa.prototype.getActivationToken = function (verificationURI, callback) {
  * @param {function} pinCallback - Called when the PIN code needs to be entered
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.register = function (userId, registrationCode, pinCallback, callback) {
+Client.prototype.register = function (userId, registrationCode, pinCallback, callback) {
     var self = this;
 
     if (!userId) {
@@ -357,7 +357,7 @@ Mfa.prototype.register = function (userId, registrationCode, pinCallback, callba
     });
 };
 
-Mfa.prototype._registration = function (userId, registrationCode, callback) {
+Client.prototype._registration = function (userId, registrationCode, callback) {
     var self = this,
         regData = {};
 
@@ -387,7 +387,7 @@ Mfa.prototype._registration = function (userId, registrationCode, callback) {
     });
 };
 
-Mfa.prototype._getDeviceName = function () {
+Client.prototype._getDeviceName = function () {
     var self = this;
 
     if (self.options.deviceName) {
@@ -397,7 +397,7 @@ Mfa.prototype._getDeviceName = function () {
     return "Browser";
 };
 
-Mfa.prototype._getSecret1 = function (userId, regData, callback) {
+Client.prototype._getSecret1 = function (userId, regData, callback) {
     var self = this,
         cs1Url;
 
@@ -420,13 +420,13 @@ Mfa.prototype._getSecret1 = function (userId, regData, callback) {
     });
 };
 
-Mfa.prototype._getSecret2 = function (sec1Data, callback) {
+Client.prototype._getSecret2 = function (sec1Data, callback) {
     var self = this;
 
     self.request({ url: sec1Data.cs2url }, callback);
 };
 
-Mfa.prototype._createIdentity = function (userId, userPin, sec1Data, sec2Data, callback) {
+Client.prototype._createIdentity = function (userId, userPin, sec1Data, sec2Data, callback) {
     var self = this,
         userData,
         mpinId,
@@ -465,7 +465,7 @@ Mfa.prototype._createIdentity = function (userId, userPin, sec1Data, sec2Data, c
  * Returns a hex encoded sum of the shares
  * @private
  */
-Mfa.prototype._addShares = function (share1Hex, share2Hex, curve) {
+Client.prototype._addShares = function (share1Hex, share2Hex, curve) {
     var self = this,
         share1Bytes = [],
         share2Bytes = [],
@@ -491,7 +491,7 @@ Mfa.prototype._addShares = function (share1Hex, share2Hex, curve) {
  * Returns a hex encoded M-Pin Token
  * @private
  */
-Mfa.prototype._extractPin = function (mpinIdHex, PIN, clientSecretHex, curve) {
+Client.prototype._extractPin = function (mpinIdHex, PIN, clientSecretHex, curve) {
     var self = this,
         clientSecretBytes = [],
         mpinIdBytes = [],
@@ -515,7 +515,7 @@ Mfa.prototype._extractPin = function (mpinIdHex, PIN, clientSecretHex, curve) {
  * @param {string} userPin - The PIN of the identity
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.authenticate = function (userId, userPin, callback) {
+Client.prototype.authenticate = function (userId, userPin, callback) {
     this._authentication(userId, userPin, ["oidc"], callback);
 };
 
@@ -526,7 +526,7 @@ Mfa.prototype.authenticate = function (userId, userPin, callback) {
  * @param {string} userPin - The PIN of the identity
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.generateAuthCode = function (userId, userPin, callback) {
+Client.prototype.generateAuthCode = function (userId, userPin, callback) {
     this._authentication(userId, userPin, ["authcode"], callback);
 };
 
@@ -537,7 +537,7 @@ Mfa.prototype.generateAuthCode = function (userId, userPin, callback) {
  * @param {string} userPin - The PIN of the identity
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.generateOTP = function (userId, userPin, callback) {
+Client.prototype.generateOTP = function (userId, userPin, callback) {
     this._authentication(userId, userPin, ["otp"], callback);
 };
 
@@ -548,11 +548,11 @@ Mfa.prototype.generateOTP = function (userId, userPin, callback) {
  * @param {string} userPin - The PIN of the identity
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.generateQuickCode = function (userId, userPin, callback) {
+Client.prototype.generateQuickCode = function (userId, userPin, callback) {
     this._authentication(userId, userPin, ["reg-code"], callback);
 };
 
-Mfa.prototype._authentication = function (userId, userPin, scope, callback) {
+Client.prototype._authentication = function (userId, userPin, scope, callback) {
     var self = this,
         userStorage,
         SEC = [],
@@ -605,7 +605,7 @@ Mfa.prototype._authentication = function (userId, userPin, scope, callback) {
  * }
  * @private
  */
-Mfa.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback) {
+Client.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback) {
     var self = this,
         U = [],
         UT = [],
@@ -660,7 +660,7 @@ Mfa.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback) {
  * }
  * @private
  */
-Mfa.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
+Client.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
     var self = this,
         userStorage,
         curve,
@@ -694,7 +694,7 @@ Mfa.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
     self.request({ url: self.clientSettings.pass2URL, type: "POST", data: requestData}, callback);
 };
 
-Mfa.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
+Client.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
     var self = this,
         requestData,
         userStorage,
@@ -729,7 +729,7 @@ Mfa.prototype._finishAuthentication = function (userId, userPin, scope, authOTT,
     });
 };
 
-Mfa.prototype._renewSecret = function (userId, userPin, sec1Data, callback) {
+Client.prototype._renewSecret = function (userId, userPin, sec1Data, callback) {
     var self = this;
 
     self._getSecret2(sec1Data, function (err, sec2Data) {
@@ -755,7 +755,7 @@ Mfa.prototype._renewSecret = function (userId, userPin, sec1Data, callback) {
  * @param {string} dvsPin - The PIN that will be used for the new identity
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.signingRegister = function (userId, userPin, dvsPin, callback) {
+Client.prototype.signingRegister = function (userId, userPin, dvsPin, callback) {
     var self = this;
 
     self._authentication(userId, userPin, ["dvs-reg"], function (err, data) {
@@ -767,7 +767,7 @@ Mfa.prototype.signingRegister = function (userId, userPin, dvsPin, callback) {
     });
 };
 
-Mfa.prototype._renewDvsSecret = function (userId, userPin, dvsRegister, callback) {
+Client.prototype._renewDvsSecret = function (userId, userPin, dvsRegister, callback) {
     var self = this,
         keypair;
 
@@ -788,7 +788,7 @@ Mfa.prototype._renewDvsSecret = function (userId, userPin, dvsRegister, callback
     });
 };
 
-Mfa.prototype._getDvsSecret1 = function (keypair, dvsRegisterToken, callback) {
+Client.prototype._getDvsSecret1 = function (keypair, dvsRegisterToken, callback) {
     var self = this,
         cs1Url,
         reqData;
@@ -804,7 +804,7 @@ Mfa.prototype._getDvsSecret1 = function (keypair, dvsRegisterToken, callback) {
     self.request({ url: cs1Url, type: "POST", data: reqData }, callback);
 };
 
-Mfa.prototype._generateSignKeypair = function (curve) {
+Client.prototype._generateSignKeypair = function (curve) {
     var self = this,
         privateKeyBytes = [],
         publicKeyBytes = [],
@@ -818,7 +818,7 @@ Mfa.prototype._generateSignKeypair = function (curve) {
     return { publicKey: self._bytesToHex(publicKeyBytes), privateKey: self._bytesToHex(privateKeyBytes) };
 };
 
-Mfa.prototype._createSigningIdentity = function (userId, userPin, sec1Data, sec2Data, keypair, callback) {
+Client.prototype._createSigningIdentity = function (userId, userPin, sec1Data, sec2Data, keypair, callback) {
     var self = this,
         csHex,
         token,
@@ -851,7 +851,7 @@ Mfa.prototype._createSigningIdentity = function (userId, userPin, sec1Data, sec2
  * Compute client secret for key escrow less scheme
  * @private
  */
-Mfa.prototype._generateSignClientSecret = function (privateKeyHex, clientSecretHex, curve) {
+Client.prototype._generateSignClientSecret = function (privateKeyHex, clientSecretHex, curve) {
     var self = this,
         privateKeyBytes = self._hexToBytes(privateKeyHex),
         clientSecretBytes = self._hexToBytes(clientSecretHex),
@@ -865,7 +865,7 @@ Mfa.prototype._generateSignClientSecret = function (privateKeyHex, clientSecretH
     return self._bytesToHex(clientSecretBytes);
 };
 
-Mfa.prototype._getSignMpinId = function (mpinId, publicKey) {
+Client.prototype._getSignMpinId = function (mpinId, publicKey) {
     var self = this,
         mpinIdBytes = self._hexToBytes(mpinId),
         publicKeyBytes = self._hexToBytes(publicKey),
@@ -891,7 +891,7 @@ Mfa.prototype._getSignMpinId = function (mpinId, publicKey) {
  * @param {number} timestamp - The creation timestamp of the message
  * @param {function(Error, Object)} callback
  */
-Mfa.prototype.sign = function (userId, userPin, message, timestamp, callback) {
+Client.prototype.sign = function (userId, userPin, message, timestamp, callback) {
     var self = this,
         messageBytes = self._hexToBytes(message),
         mpinIdHex = self._getSignMpinId(self.dvsUsers.get(userId, "mpinId"), self.dvsUsers.get(userId, "publicKey")),
@@ -933,7 +933,7 @@ Mfa.prototype.sign = function (userId, userPin, message, timestamp, callback) {
  * Convert a hex representation of a Point to a bytes array
  * @private
  */
-Mfa.prototype._hexToBytes = function (hexValue) {
+Client.prototype._hexToBytes = function (hexValue) {
     var len, byteValue, i;
 
     if (!hexValue) {
@@ -950,7 +950,7 @@ Mfa.prototype._hexToBytes = function (hexValue) {
     return byteValue;
 };
 
-Mfa.prototype._bytesToHex = function (b) {
+Client.prototype._bytesToHex = function (b) {
     var s = "",
         len = b.length,
         ch, i;
@@ -964,7 +964,7 @@ Mfa.prototype._bytesToHex = function (b) {
     return s;
 };
 
-Mfa.prototype._urlEncode = function (obj) {
+Client.prototype._urlEncode = function (obj) {
     var str = [],
         p;
 
@@ -977,7 +977,7 @@ Mfa.prototype._urlEncode = function (obj) {
     return str.join("&");
 };
 
-Mfa.prototype._parseUriParams = function (uri) {
+Client.prototype._parseUriParams = function (uri) {
     var query = uri.split("?").pop(),
         queryArr = query.split("&"),
         params = {},
@@ -1000,7 +1000,7 @@ Mfa.prototype._parseUriParams = function (uri) {
  * Make an HTTP request
  * @private
  */
-Mfa.prototype.request = function (options, callback) {
+Client.prototype.request = function (options, callback) {
     var self = this, url, type, request;
 
     if (typeof callback !== "function") {

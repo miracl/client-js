@@ -1,16 +1,16 @@
 import resolve from "@rollup/plugin-node-resolve";
 
 export default {
-    input: "src/mfa.js",
+    input: "src/client.js",
     output: [
         {
             dir: "dist",
             format: "iife",
             indent: false,
-            name: "Mfa"
+            name: "MIRACLTrust"
         },
         {
-            file: "cjs/mfa.cjs",
+            file: "cjs/client.cjs",
             format: "cjs"
         }
     ],

@@ -2,16 +2,16 @@
   "name": "@miracl/client-js",
   "version": "5.1.1",
   "description": "Headless MFA client library",
-  "main": "./src/mfa.js",
+  "main": "./src/client.js",
   "exports": {
-    "import": "./src/mfa.js",
-    "require": "./cjs/mfa.cjs"
+    "import": "./src/client.js",
+    "require": "./cjs/client.cjs"
   },
   "type": "module",
   "scripts": {
     "clean": "rm -rf dist",
     "rollup": "rollup -c rollup.config.js",
-    "minify": "uglifyjs dist/mfa.js --comments -o dist/mfa.min.js",
+    "minify": "uglifyjs dist/client.js --comments -o dist/client.min.js",
     "build": "npm run clean && npm run rollup && npm run minify",
     "dist": "npm run build",
     "test": "mocha",
