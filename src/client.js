@@ -305,11 +305,11 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
  * Create an identity for the specified user ID
  *
  * @param {string} userId - The ID of the user
- * @param {string} registrationCode - The code received from the verification process
+ * @param {string} activationToken - The code received from the verification process
  * @param {function} pinCallback - Called when the PIN code needs to be entered
  * @param {function(Error, Object)} callback
  */
-Client.prototype.register = function (userId, registrationCode, pinCallback, callback) {
+Client.prototype.register = function (userId, activationToken, pinCallback, callback) {
     var self = this;
 
     if (!userId) {
@@ -321,7 +321,7 @@ Client.prototype.register = function (userId, registrationCode, pinCallback, cal
             return callback(err, null);
         }
 
-        self._registration(userId, registrationCode, function (err, regData) {
+        self._registration(userId, activationToken, function (err, regData) {
             if (err) {
                 return callback(err, null);
             }
@@ -357,7 +357,7 @@ Client.prototype.register = function (userId, registrationCode, pinCallback, cal
     });
 };
 
-Client.prototype._registration = function (userId, registrationCode, callback) {
+Client.prototype._registration = function (userId, activationToken, callback) {
     var self = this,
         regData = {};
 
@@ -368,12 +368,12 @@ Client.prototype._registration = function (userId, registrationCode, callback) {
         wid: self.accessId,
         mobile: 0,
         deviceName: self._getDeviceName(),
-        activateCode: registrationCode
+        activateCode: activationToken
     };
 
     self._request(regData, function (err, data) {
         if (err) {
-            if (registrationCode && err.status === 403) {
+            if (activationToken && err.status === 403) {
                 return callback(new InvalidRegCodeError("Invalid registration code"), null);
             } else {
                 return callback(err, null);
