@@ -107,7 +107,7 @@ describe("Client setAccessId", function () {
 
     it("should set access id", function () {
         client.setAccessId("test");
-        expect(client.accessId).to.equal("test");
+        expect(client.session.accessId).to.equal("test");
     });
 });
 
@@ -120,7 +120,8 @@ describe("Client fetchAccessId", function () {
         sessionInfo = {
             webOTT: 1,
             accessURL: "https://example.com/access",
-            qrURL: "https://example.com#accessID"
+            qrURL: "https://example.com#accessID",
+            accessId: "accessID",
         };
     });
 
@@ -160,7 +161,7 @@ describe("Client fetchAccessId", function () {
         var requestStub = sinon.stub(client, "_request").yields(null, sessionInfo);
 
         client.fetchAccessId("test@example.com", function (err, data) {
-            expect(client.accessId).to.equal("accessID");
+            expect(client.session.accessId).to.equal("accessID");
         });
     });
 

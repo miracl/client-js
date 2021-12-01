@@ -142,7 +142,7 @@ Client.prototype._init = function (callback) {
  * @param {string} accessId
  */
 Client.prototype.setAccessId = function (accessId) {
-    this.accessId = accessId;
+    this.session.accessId = accessId;
 };
 
 /**
@@ -169,13 +169,12 @@ Client.prototype.fetchAccessId = function (userId, callback) {
             return callback(error, null);
         }
 
-        if (!res.webOTT || !res.accessURL || !res.qrURL) {
+        if (!res.webOTT || !res.accessURL || !res.qrURL || !res.accessId) {
             return callback(new Error("Missing initial request params"), null);
         }
 
         self.session = res;
 
-        self.setAccessId(res.qrURL.split("#").pop());
         callback(null, res);
     });
 };
@@ -260,7 +259,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         userId: userId,
         clientId: self.options.oidc.client_id,
         redirectURI: self.options.oidc.redirect_uri,
-        accessId: self.accessId,
+        accessId: self.session.accessId,
         deviceName: self._getDeviceName()
     };
 
@@ -365,7 +364,6 @@ Client.prototype._registration = function (userId, activationToken, callback) {
     regData.type = "PUT";
     regData.data = {
         userId: userId,
-        wid: self.accessId,
         mobile: 0,
         deviceName: self._getDeviceName(),
         activateCode: activationToken
@@ -682,14 +680,9 @@ Client.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
 
     requestData = {
         mpin_id: userStorage.get(userId, "mpinId"),
+        WID: self.session.accessId,
         V: self._bytesToHex(SEC)
     };
-
-    if (scope.indexOf("otp") !== -1) {
-        requestData.WID = "0";
-    } else {
-        requestData.WID = self.accessId;
-    }
 
     self._request({ url: self.clientSettings.pass2URL, type: "POST", data: requestData}, callback);
 };
