@@ -75,7 +75,7 @@ describe("Client _init", function() {
     });
 
     it("should fire callback with error when settings can't be fetched", function (done) {
-        sinon.stub(client, "request").yields({ error: true }, null);
+        sinon.stub(client, "_request").yields({ error: true }, null);
         client._init(function (err) {
             expect(err).to.exist;
             expect(err.error).to.be.true;
@@ -84,7 +84,7 @@ describe("Client _init", function() {
     });
 
     it("should fire successCb after fetching settings", function (done) {
-        sinon.stub(client, "request").yields(null, testData.settings());
+        sinon.stub(client, "_request").yields(null, testData.settings());
         client._init(function (err, success) {
             expect(err).to.be.null;
             expect(success).to.exist;
@@ -94,7 +94,7 @@ describe("Client _init", function() {
     });
 
     afterEach(function() {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
     });
 });
 
@@ -125,7 +125,7 @@ describe("Client fetchAccessId", function () {
     });
 
     it("should make a request for access ID", function () {
-        var requestStub = sinon.stub(client, "request").yields(null, sessionInfo);
+        var requestStub = sinon.stub(client, "_request").yields(null, sessionInfo);
 
         client.fetchAccessId("test@example.com", function (err, data) {
             expect(data).to.deep.equal(sessionInfo);
@@ -133,7 +133,7 @@ describe("Client fetchAccessId", function () {
     });
 
     it("should fail when request fails", function () {
-        var requestStub = sinon.stub(client, "request").yields(new Error("Error"), null);
+        var requestStub = sinon.stub(client, "_request").yields(new Error("Error"), null);
 
         client.fetchAccessId("test@example.com", function (err, data) {
             expect(err).to.exist;
@@ -141,7 +141,7 @@ describe("Client fetchAccessId", function () {
     });
 
     it("should fail if response doesn't have all session data", function () {
-        var requestStub = sinon.stub(client, "request").yields(null, {});
+        var requestStub = sinon.stub(client, "_request").yields(null, {});
 
         client.fetchAccessId("test@example.com", function (err, data) {
             expect(err).to.exist;
@@ -149,7 +149,7 @@ describe("Client fetchAccessId", function () {
     });
 
     it("should store session info", function () {
-        var requestStub = sinon.stub(client, "request").yields(null, sessionInfo);
+        var requestStub = sinon.stub(client, "_request").yields(null, sessionInfo);
 
         client.fetchAccessId("test@example.com", function (err, data) {
             expect(client.session).to.deep.equal(sessionInfo);
@@ -157,7 +157,7 @@ describe("Client fetchAccessId", function () {
     });
 
     it("should set the access ID", function () {
-        var requestStub = sinon.stub(client, "request").yields(null, sessionInfo);
+        var requestStub = sinon.stub(client, "_request").yields(null, sessionInfo);
 
         client.fetchAccessId("test@example.com", function (err, data) {
             expect(client.accessId).to.equal("accessID");
@@ -165,7 +165,7 @@ describe("Client fetchAccessId", function () {
     });
 
     afterEach(function() {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
     });
 });
 
@@ -177,7 +177,7 @@ describe("Client fetchStatus", function() {
     });
 
     it("should make a request for session status", function () {
-        var requestStub = sinon.stub(client, "request").yields(null, { status: "new" });
+        var requestStub = sinon.stub(client, "_request").yields(null, { status: "new" });
 
         client.fetchStatus(function (err, data) {
             expect(data.status).to.equal("new");
@@ -185,7 +185,7 @@ describe("Client fetchStatus", function() {
     });
 
     it("should fail when request fails", function () {
-        var requestStub = sinon.stub(client, "request").yields(new Error("Error"), null);
+        var requestStub = sinon.stub(client, "_request").yields(new Error("Error"), null);
 
         client.fetchStatus(function (err, data) {
             expect(err).to.exist;
@@ -193,7 +193,7 @@ describe("Client fetchStatus", function() {
     });
 
     it("should fail if response doesn't have expected data", function () {
-        var requestStub = sinon.stub(client, "request").yields(null, {});
+        var requestStub = sinon.stub(client, "_request").yields(null, {});
 
         client.fetchStatus(function (err, data) {
             expect(err).to.exist;
@@ -201,7 +201,7 @@ describe("Client fetchStatus", function() {
     });
 
     afterEach(function() {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
     });
 });
 
@@ -213,7 +213,7 @@ describe("Client sendPushNotificationForAuth", function () {
     });
 
     it("should make a request to the pushauth endpoint", function () {
-        var requestStub = sinon.stub(client, "request").yields(null, { webOTT: "test" });
+        var requestStub = sinon.stub(client, "_request").yields(null, { webOTT: "test" });
 
         client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(data).to.exist;
@@ -223,7 +223,7 @@ describe("Client sendPushNotificationForAuth", function () {
     });
 
     it("should fail when the request fails", function () {
-        var requestStub = sinon.stub(client, "request").yields(new Error("Error"), null);
+        var requestStub = sinon.stub(client, "_request").yields(new Error("Error"), null);
 
         client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(err).to.exist;
@@ -237,7 +237,7 @@ describe("Client sendPushNotificationForAuth", function () {
     });
 
     afterEach(function() {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
     });
 });
 
@@ -255,17 +255,17 @@ describe("Client request", function() {
 
     it("should throw error missing callback", function () {
         expect(function () {
-            client.request({ url: "reqUrl" });
+            client._request({ url: "reqUrl" });
         }).to.throw("Bad or missing callback");
 
         expect(function () {
-            client.request({ url: "reqUrl" }, "string");
+            client._request({ url: "reqUrl" }, "string");
         }).to.throw("Bad or missing callback");
     });
 
     it("should throw error missing URL", function () {
         expect(function () {
-            client.request({}, function () {});
+            client._request({}, function () {});
         }).to.throw("Missing URL for request");
     });
 
@@ -273,7 +273,7 @@ describe("Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        client.request({
+        client._request({
             url: "/test-json-get"
         }, callback);
 
@@ -288,7 +288,7 @@ describe("Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        client.request({
+        client._request({
             url: "/test-json-get"
         }, callback);
 
@@ -303,7 +303,7 @@ describe("Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        client.request({
+        client._request({
             url: "/test-json-get",
             type: "POST",
             data: { test: 1}
@@ -319,7 +319,7 @@ describe("Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        client.request({
+        client._request({
             url: "/test-auth",
             authorization: "Bearer test"
         }, callback);
@@ -336,7 +336,7 @@ describe("Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        client.request({
+        client._request({
             url: "/test-error"
         }, callback);
 
@@ -352,7 +352,7 @@ describe("Client request", function() {
         requests = [];
 
         var callback = sinon.spy();
-        client.request({
+        client._request({
             url: "/test-abort"
         }, callback);
 

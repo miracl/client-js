@@ -71,7 +71,7 @@ export default function Client(options) {
     self.options = options;
 
     // Initialize RNG
-    self.rng = new (self.crypto().RAND)();
+    self.rng = new (self._crypto().RAND)();
     self.rng.clean();
 
     self.users = new Users(options.userStorage, options.projectId, "mfa");
@@ -84,7 +84,7 @@ Client.prototype.clientSettings = {};
 
 Client.prototype.session = {};
 
-Client.prototype.crypto = function (curve) {
+Client.prototype._crypto = function (curve) {
     // Set to default curve if not provided
     if (!curve) {
         curve = "BN254CX";
@@ -124,7 +124,7 @@ Client.prototype._init = function (callback) {
 
     settingsUrl = self.options.server + "/rps/v2/clientSettings";
 
-    self.request({ url: settingsUrl }, function (err, settingsData) {
+    self._request({ url: settingsUrl }, function (err, settingsData) {
         if (err) {
             return callback(err, null);
         }
@@ -164,7 +164,7 @@ Client.prototype.fetchAccessId = function (userId, callback) {
         }
     };
 
-    self.request(reqData, function (error, res) {
+    self._request(reqData, function (error, res) {
         if (error) {
             return callback(error, null);
         }
@@ -197,7 +197,7 @@ Client.prototype.fetchStatus = function (callback) {
         }
     };
 
-    self.request(reqData, function (error, data) {
+    self._request(reqData, function (error, data) {
         if (error) {
             return callback(error, null);
         }
@@ -232,7 +232,7 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
         }
     };
 
-    self.request(reqData, function (err, result) {
+    self._request(reqData, function (err, result) {
         if (err) {
             return callback(err, null);
         }
@@ -264,7 +264,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         deviceName: self._getDeviceName()
     };
 
-    self.request(reqData, callback);
+    self._request(reqData, callback);
 };
 
 /**
@@ -291,7 +291,7 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
         stage: params["stage"],
     };
 
-    self.request(reqData, function (err, data) {
+    self._request(reqData, function (err, data) {
         if (err) {
             return callback(err, data);
         }
@@ -371,7 +371,7 @@ Client.prototype._registration = function (userId, registrationCode, callback) {
         activateCode: registrationCode
     };
 
-    self.request(regData, function (err, data) {
+    self._request(regData, function (err, data) {
         if (err) {
             if (registrationCode && err.status === 403) {
                 return callback(new InvalidRegCodeError("Invalid registration code"), null);
@@ -405,7 +405,7 @@ Client.prototype._getSecret1 = function (userId, regData, callback) {
     cs1Url += self.users.get(userId, "mpinId");
     cs1Url += "?regOTT=" + regData.regOTT;
 
-    self.request({ url: cs1Url }, function (err, sec1Data) {
+    self._request({ url: cs1Url }, function (err, sec1Data) {
         if (err) {
             if (err.status === 401) {
                 return callback(new NotVerifiedError("Identity not verified"), null);
@@ -423,7 +423,7 @@ Client.prototype._getSecret1 = function (userId, regData, callback) {
 Client.prototype._getSecret2 = function (sec1Data, callback) {
     var self = this;
 
-    self.request({ url: sec1Data.cs2url }, callback);
+    self._request({ url: sec1Data.cs2url }, callback);
 };
 
 Client.prototype._createIdentity = function (userId, userPin, sec1Data, sec2Data, callback) {
@@ -475,7 +475,7 @@ Client.prototype._addShares = function (share1Hex, share2Hex, curve) {
     share1Bytes = self._hexToBytes(share1Hex);
     share2Bytes = self._hexToBytes(share2Hex);
 
-    errorCode = self.crypto(curve).MPIN.RECOMBINE_G1(share1Bytes, share2Bytes, sumBytes);
+    errorCode = self._crypto(curve).MPIN.RECOMBINE_G1(share1Bytes, share2Bytes, sumBytes);
     if (errorCode !== 0) {
         throw new CryptoError("Could not combine the client secret shares", errorCode);
     }
@@ -500,7 +500,7 @@ Client.prototype._extractPin = function (mpinIdHex, PIN, clientSecretHex, curve)
     clientSecretBytes = self._hexToBytes(clientSecretHex);
     mpinIdBytes = self._hexToBytes(mpinIdHex);
 
-    errorCode = self.crypto(curve).MPIN.EXTRACT_PIN(self.crypto(curve).MPIN.SHA256, mpinIdBytes, PIN, clientSecretBytes);
+    errorCode = self._crypto(curve).MPIN.EXTRACT_PIN(self._crypto(curve).MPIN.SHA256, mpinIdBytes, PIN, clientSecretBytes);
     if (errorCode !== 0) {
         throw new CryptoError("Could not extract PIN from client secret", errorCode);
     }
@@ -628,7 +628,7 @@ Client.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback)
         mpinIdHex = self._getSignMpinId(userStorage.get(userId, "mpinId"), userStorage.get(userId, "publicKey"));
     }
 
-    errorCode = self.crypto(curve).MPIN.CLIENT_1(self.crypto(curve).MPIN.SHA256, 0, self._hexToBytes(mpinIdHex), self.rng, X, userPin, self._hexToBytes(tokenHex), SEC, U, UT, self._hexToBytes(0));
+    errorCode = self._crypto(curve).MPIN.CLIENT_1(self._crypto(curve).MPIN.SHA256, 0, self._hexToBytes(mpinIdHex), self.rng, X, userPin, self._hexToBytes(tokenHex), SEC, U, UT, self._hexToBytes(0));
     if (errorCode !== 0) {
         return callback(new CryptoError("Could not calculate pass 1 request data", errorCode), null);
     }
@@ -642,7 +642,7 @@ Client.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback)
         U: self._bytesToHex(U)
     };
 
-    self.request({ url: self.clientSettings.pass1URL, type: "POST", data: requestData }, callback);
+    self._request({ url: self.clientSettings.pass1URL, type: "POST", data: requestData }, callback);
 };
 
 /**
@@ -675,7 +675,7 @@ Client.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
     yBytes = self._hexToBytes(yHex);
 
     // Compute V
-    errorCode = self.crypto(curve).MPIN.CLIENT_2(X, yBytes, SEC);
+    errorCode = self._crypto(curve).MPIN.CLIENT_2(X, yBytes, SEC);
     if (errorCode !== 0) {
         return callback(new CryptoError("Could not calculate pass 2 request data", errorCode), null);
     }
@@ -691,7 +691,7 @@ Client.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
         requestData.WID = self.accessId;
     }
 
-    self.request({ url: self.clientSettings.pass2URL, type: "POST", data: requestData}, callback);
+    self._request({ url: self.clientSettings.pass2URL, type: "POST", data: requestData}, callback);
 };
 
 Client.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
@@ -707,7 +707,7 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
     isDvsAuth = scope.indexOf("dvs-auth") !== -1;
     userStorage = isDvsAuth ? self.dvsUsers : self.users;
 
-    self.request({ url: self.clientSettings.authenticateURL, type: "POST", data: requestData }, function (err, data) {
+    self._request({ url: self.clientSettings.authenticateURL, type: "POST", data: requestData }, function (err, data) {
         if (err) {
             // Revoked identity
             if (err.status === 410) {
@@ -801,7 +801,7 @@ Client.prototype._getDvsSecret1 = function (keypair, dvsRegisterToken, callback)
 
     cs1Url = self.clientSettings.dvsRegURL;
 
-    self.request({ url: cs1Url, type: "POST", data: reqData }, callback);
+    self._request({ url: cs1Url, type: "POST", data: reqData }, callback);
 };
 
 Client.prototype._generateSignKeypair = function (curve) {
@@ -810,7 +810,7 @@ Client.prototype._generateSignKeypair = function (curve) {
         publicKeyBytes = [],
         errorCode;
 
-    errorCode = self.crypto(curve).MPIN.GET_DVS_KEYPAIR(self.rng, privateKeyBytes, publicKeyBytes);
+    errorCode = self._crypto(curve).MPIN.GET_DVS_KEYPAIR(self.rng, privateKeyBytes, publicKeyBytes);
     if (errorCode != 0) {
         throw new CryptoError("Could not generate key pair", errorCode);
     }
@@ -857,7 +857,7 @@ Client.prototype._generateSignClientSecret = function (privateKeyHex, clientSecr
         clientSecretBytes = self._hexToBytes(clientSecretHex),
         errorCode;
 
-    errorCode = self.crypto(curve).MPIN.GET_G1_MULTIPLE(null, 0, privateKeyBytes, clientSecretBytes, clientSecretBytes);
+    errorCode = self._crypto(curve).MPIN.GET_G1_MULTIPLE(null, 0, privateKeyBytes, clientSecretBytes, clientSecretBytes);
     if (errorCode != 0) {
         throw new CryptoError("Could not combine private key with client secret", errorCode);
     }
@@ -906,7 +906,7 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         errorCode,
         signatureData;
 
-    errorCode = self.crypto(curve).MPIN.CLIENT(self.crypto(curve).MPIN.SHA256, 0, mpinIdBytes, self.rng, X, userPin, tokenBytes, SEC, U, null, null, timestamp, Y1, messageBytes);
+    errorCode = self._crypto(curve).MPIN.CLIENT(self._crypto(curve).MPIN.SHA256, 0, mpinIdBytes, self.rng, X, userPin, tokenBytes, SEC, U, null, null, timestamp, Y1, messageBytes);
     if (errorCode != 0) {
         callback(new CryptoError("Could not sign message", errorCode), null);
     }
@@ -1000,7 +1000,7 @@ Client.prototype._parseUriParams = function (uri) {
  * Make an HTTP request
  * @private
  */
-Client.prototype.request = function (options, callback) {
+Client.prototype._request = function (options, callback) {
     var self = this, url, type, request;
 
     if (typeof callback !== "function") {

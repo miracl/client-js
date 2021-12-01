@@ -11,7 +11,7 @@ describe("Client sendVerificationEmail", function () {
     });
 
     it("should return error when verification request fails", function (done) {
-        sinon.stub(client, "request").yields({ error: true }, null);
+        sinon.stub(client, "_request").yields({ error: true }, null);
 
         client.sendVerificationEmail("test@example.com", function (err) {
             expect(err).to.exist;
@@ -20,7 +20,7 @@ describe("Client sendVerificationEmail", function () {
     });
 
     it("should call success callback when verification request succeeds", function (done) {
-        sinon.stub(client, "request").yields(null, { success: true });
+        sinon.stub(client, "_request").yields(null, { success: true });
 
         client.sendVerificationEmail("test@example.com", function (err, data) {
             expect(err).to.be.null;
@@ -30,7 +30,7 @@ describe("Client sendVerificationEmail", function () {
     });
 
     afterEach(function() {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
     });
 });
 
@@ -42,7 +42,7 @@ describe("Client getActivationToken", function () {
     });
 
     it("should invoke the callback data containing the activation token if request succeeds", function (done) {
-        sinon.stub(client, "request").yields(null, { actToken: "testActToken" });
+        sinon.stub(client, "_request").yields(null, { actToken: "testActToken" });
 
         client.getActivationToken("http://example.com/verification/confirmation?code=test", function(err, data) {
             expect(err).to.be.null;
@@ -53,7 +53,7 @@ describe("Client getActivationToken", function () {
     });
 
     afterEach(function() {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
     });
 });
 
@@ -66,7 +66,7 @@ describe("Client _registration", function() {
     });
 
     it("should return error, when register request fail", function(done) {
-        sinon.stub(client, "request").yields({ error: true }, null);
+        sinon.stub(client, "_request").yields({ error: true }, null);
 
         client._registration("test@example.com", null, function(err) {
             expect(err).to.exist;
@@ -76,7 +76,7 @@ describe("Client _registration", function() {
 
     it("should return error when registration code is not valid", function (done) {
         sinon.stub(client, "_init").yields(null, true);
-        sinon.stub(client, "request").yields({ status: 403 }, null);
+        sinon.stub(client, "_request").yields({ status: 403 }, null);
 
         client._registration("test@example.com", "123456", function callback(err) {
             expect(err).to.exist;
@@ -86,7 +86,7 @@ describe("Client _registration", function() {
     });
 
     it("should store started user", function(done) {
-        sinon.stub(client, "request").yields(null, { success: true, active: false });
+        sinon.stub(client, "_request").yields(null, { success: true, active: false });
 
         client._registration("test@example.com", null, function(err, data) {
             expect(client.users.exists("test@example.com")).to.be.true;
@@ -96,7 +96,7 @@ describe("Client _registration", function() {
     });
 
     it("should store activated user", function(done) {
-        sinon.stub(client, "request").yields(null, { success: true, active: true });
+        sinon.stub(client, "_request").yields(null, { success: true, active: true });
 
         client._registration("test@example.com", null, function(err, data) {
             expect(client.users.exists("test@example.com")).to.be.true;
@@ -106,7 +106,7 @@ describe("Client _registration", function() {
     });
 
     afterEach(function() {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
     });
 });
 
@@ -136,7 +136,7 @@ describe("Client _getSecret1", function() {
     });
 
     it("should fire callback with error when request returns 401 & error should be NotVerifiedError", function (done) {
-        sinon.stub(client, "request").yields({ status: 401 }, null);
+        sinon.stub(client, "_request").yields({ status: 401 }, null);
 
         client._getSecret1("test@example.com", { regOTT: 1 }, function callback(err) {
             expect(err).to.exist;
@@ -146,7 +146,7 @@ describe("Client _getSecret1", function() {
     });
 
     it("should fire callback with error when request returns 404 & error should be VerificationExpiredError", function (done) {
-        sinon.stub(client, "request").yields({ status: 404 }, null);
+        sinon.stub(client, "_request").yields({ status: 404 }, null);
 
         client._getSecret1("test@example.com", { regOTT: 1 }, function callback(err) {
             expect(err).to.exist;
@@ -156,7 +156,7 @@ describe("Client _getSecret1", function() {
     });
 
     it("should fire callback with error when request returns any error", function (done) {
-        sinon.stub(client, "request").yields({}, null);
+        sinon.stub(client, "_request").yields({}, null);
 
         client._getSecret1("test@example.com", { regOTT: 1 }, function callback(err) {
             expect(err).to.exist;
@@ -165,7 +165,7 @@ describe("Client _getSecret1", function() {
     });
 
     it("should fire successful callback when request doesn't return error", function (done) {
-        sinon.stub(client, "request").yields(null, {});
+        sinon.stub(client, "_request").yields(null, {});
 
         client._getSecret1("test@example.com", { regOTT: 1 }, function callback(err, data) {
             if (err) {
@@ -177,7 +177,7 @@ describe("Client _getSecret1", function() {
     });
 
     afterEach(function() {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
     });
 });
 
@@ -190,7 +190,7 @@ describe("Client _getSecret2", function() {
     });
 
     it("should return error, when signature2 request fails", function(done) {
-        sinon.stub(client, "request").yields({}, null);
+        sinon.stub(client, "_request").yields({}, null);
 
         client._getSecret2({}, function(err) {
             expect(err).to.exist;
@@ -199,7 +199,7 @@ describe("Client _getSecret2", function() {
     });
 
     afterEach(function() {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
         client._addShares.restore && client._addShares.restore();
     });
 });
@@ -213,19 +213,19 @@ describe("Client _addShares", function () {
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(client.crypto().MPIN, "RECOMBINE_G1").returns(-1);
+        sinon.stub(client._crypto().MPIN, "RECOMBINE_G1").returns(-1);
         expect(function () {
             client._addShares("test", "test");
         }).to.throw("CryptoError");
     });
 
     it("should return combined client secret", function () {
-        sinon.stub(client.crypto().MPIN, "RECOMBINE_G1").returns(0);
+        sinon.stub(client._crypto().MPIN, "RECOMBINE_G1").returns(0);
         expect(client._addShares("test", "test")).to.equal("");
     });
 
     afterEach(function () {
-        client.crypto().MPIN.RECOMBINE_G1.restore && client.crypto().MPIN.RECOMBINE_G1.restore();
+        client._crypto().MPIN.RECOMBINE_G1.restore && client._crypto().MPIN.RECOMBINE_G1.restore();
     });
 });
 
@@ -238,19 +238,19 @@ describe("Client _extractPin", function () {
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(client.crypto().MPIN, "EXTRACT_PIN").returns(-1);
+        sinon.stub(client._crypto().MPIN, "EXTRACT_PIN").returns(-1);
         expect(function () {
             client._extractPin("test", "1234", "hex")
         }).to.throw("CryptoError");
     });
 
     it("should return combined client secret", function () {
-        sinon.stub(client.crypto().MPIN, "EXTRACT_PIN").returns(0);
+        sinon.stub(client._crypto().MPIN, "EXTRACT_PIN").returns(0);
         expect(client._extractPin("test", "1234", "hex")).to.equal("0000");
     });
 
     afterEach(function () {
-        client.crypto().MPIN.EXTRACT_PIN.restore && client.crypto().MPIN.EXTRACT_PIN.restore();
+        client._crypto().MPIN.EXTRACT_PIN.restore && client._crypto().MPIN.EXTRACT_PIN.restore();
     });
 });
 

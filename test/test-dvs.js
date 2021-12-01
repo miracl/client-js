@@ -112,7 +112,7 @@ describe("Client _getDvsSecret1", function () {
     });
 
     it("should call error callback when request fails", function (done) {
-        sinon.stub(client, "request").yields({}, null);
+        sinon.stub(client, "_request").yields({}, null);
 
         client._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err, data) {
             expect(err).to.exist;
@@ -121,7 +121,7 @@ describe("Client _getDvsSecret1", function () {
     });
 
     it("should call success callback with data", function (done) {
-        sinon.stub(client, "request").yields(null, { success: true });
+        sinon.stub(client, "_request").yields(null, { success: true });
 
         client._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err, cs1Data) {
             expect(err).to.be.null;
@@ -133,7 +133,7 @@ describe("Client _getDvsSecret1", function () {
     });
 
     it("should make request to dvs register endpoint", function (done) {
-        var requestStub = sinon.stub(client, "request").yields(null, { success: true });
+        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
 
         client._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
             expect(err).to.be.null;
@@ -144,7 +144,7 @@ describe("Client _getDvsSecret1", function () {
     });
 
     it("should make request with public key and device name", function (done) {
-        var requestStub = sinon.stub(client, "request").yields(null, { success: true });
+        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
         sinon.stub(client, "_getDeviceName").returns("device");
 
         client._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
@@ -156,7 +156,7 @@ describe("Client _getDvsSecret1", function () {
     });
 
     afterEach(function () {
-        client.request.restore && client.request.restore();
+        client._request.restore && client._request.restore();
     });
 });
 
@@ -174,13 +174,13 @@ describe("Client _generateSignKeypair", function () {
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(client.crypto().MPIN, "GET_DVS_KEYPAIR").returns(-1);
+        sinon.stub(client._crypto().MPIN, "GET_DVS_KEYPAIR").returns(-1);
 
         expect(function () {
             client._generateSignKeypair();
         }).to.throw("CryptoError");
 
-        client.crypto().MPIN.GET_DVS_KEYPAIR.restore();
+        client._crypto().MPIN.GET_DVS_KEYPAIR.restore();
     });
 });
 
@@ -192,21 +192,21 @@ describe("Client _generateSignClientSecret", function () {
     });
 
     it("should return the modified client secret", function () {
-        sinon.stub(client.crypto().MPIN, "GET_G1_MULTIPLE").returns(0);
+        sinon.stub(client._crypto().MPIN, "GET_G1_MULTIPLE").returns(0);
 
         expect(client._generateSignClientSecret("privateKey", "0f")).to.equal("0f");
 
-        client.crypto().MPIN.GET_G1_MULTIPLE.restore();
+        client._crypto().MPIN.GET_G1_MULTIPLE.restore();
     });
 
     it("should throw error on crypto failure", function () {
-        sinon.stub(client.crypto().MPIN, "GET_G1_MULTIPLE").returns(-1);
+        sinon.stub(client._crypto().MPIN, "GET_G1_MULTIPLE").returns(-1);
 
         expect(function () {
             client._generateSignClientSecret("privateKey", "secret");
         }).to.throw("CryptoError");
 
-        client.crypto().MPIN.GET_G1_MULTIPLE.restore();
+        client._crypto().MPIN.GET_G1_MULTIPLE.restore();
     });
 });
 
@@ -325,7 +325,7 @@ describe("Client sign", function () {
     });
 
     it("should return U and V", function (done) {
-        sinon.stub(client.crypto().MPIN, "CLIENT").returns(0);
+        sinon.stub(client._crypto().MPIN, "CLIENT").returns(0);
         var authenticationStub = sinon.stub(client, "_authentication").yields(null, true);
 
         client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
@@ -339,7 +339,7 @@ describe("Client sign", function () {
     });
 
     it("should throw error on crypto failure", function (done) {
-        sinon.stub(client.crypto().MPIN, "CLIENT").returns(-1);
+        sinon.stub(client._crypto().MPIN, "CLIENT").returns(-1);
 
         client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.exist;
@@ -349,6 +349,6 @@ describe("Client sign", function () {
     });
 
     afterEach(function () {
-        client.crypto().MPIN.CLIENT.restore();
+        client._crypto().MPIN.CLIENT.restore();
     });
 });
