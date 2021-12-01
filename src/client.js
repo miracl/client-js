@@ -525,7 +525,15 @@ Client.prototype.authenticate = function (userId, userPin, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.generateAuthCode = function (userId, userPin, callback) {
-    this._authentication(userId, userPin, ["authcode"], callback);
+    var self = this;
+
+    self.fetchAccessId(userId, function (err) {
+        if (err) {
+            return callback(err, null);
+        }
+
+        self._authentication(userId, userPin, ["authcode"], callback);
+    });
 };
 
 /**

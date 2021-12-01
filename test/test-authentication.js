@@ -461,16 +461,19 @@ describe("Client generateAuthCode", function () {
     });
 
     it("should call _authentication with scope 'authcode'", function (done) {
+        var fetchAccessIdStub = sinon.stub(client, "fetchAccessId").yields(null, { success: true });
         var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
 
         client.generateAuthCode("test@example.com", "1234", function (err, data) {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
+            expect(fetchAccessIdStub.calledOnce).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
             expect(authenticationStub.firstCall.args[2]).to.deep.equal(["authcode"]);
             done();
         });
 
+        fetchAccessIdStub.restore();
         authenticationStub.restore();
     });
 });
