@@ -18,7 +18,7 @@
     "cover": "c8 -r text -r html npm run test",
     "lint": "eslint .",
     "watch": "nodemon --exec 'npm run build' --watch src --watch lib --ext js",
-    "docs": "documentation build src/* -f md -o reference.md --markdown-toc false --shallow"
+    "docs": "documentation build src/* -f md -o reference.md --markdown-toc false --shallow --config documentation.yml"
   },
   "mocha": {
     "recursive": true,
