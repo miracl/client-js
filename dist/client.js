@@ -23613,8 +23613,6 @@ function Client(options) {
 
 Client.prototype.options = {};
 
-Client.prototype.clientSettings = {};
-
 Client.prototype.session = {};
 
 Client.prototype._crypto = function (curve) {
@@ -23650,23 +23648,6 @@ Client.prototype._seedRNG = function (seedHex) {
 
     entropyBytes = self._hexToBytes(seedHex);
     self.rng.seed(entropyBytes.length, entropyBytes);
-};
-
-Client.prototype._init = function (callback) {
-    var self = this, settingsUrl;
-
-    settingsUrl = self.options.server + "/rps/v2/clientSettings";
-
-    self._request({ url: settingsUrl }, function (err, settingsData) {
-        if (err) {
-            return callback(err, null);
-        }
-
-        self.clientSettings = settingsData;
-        self._seedRNG(settingsData.seedValue);
-
-        callback(null, true);
-    });
 };
 
 /**
@@ -23722,7 +23703,7 @@ Client.prototype.fetchStatus = function (callback) {
         reqData;
 
     reqData = {
-        url: self.session.accessURL,
+        url: self.options.server + "/rps/v2/access",
         type: "POST",
         data: {
             webOTT: self.session.webOTT
@@ -23847,42 +23828,36 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
         throw new Error("Missing user ID");
     }
 
-    self._init(function (err) {
+    self._registration(userId, activationToken, function (err, regData) {
         if (err) {
             return callback(err, null);
         }
 
-        self._registration(userId, activationToken, function (err, regData) {
+        self._getSecret1(userId, regData, function (err, sec1Data) {
             if (err) {
                 return callback(err, null);
             }
 
-            self._getSecret1(userId, regData, function (err, sec1Data) {
+            self._getSecret2(sec1Data, function (err, sec2Data) {
                 if (err) {
                     return callback(err, null);
                 }
 
-                self._getSecret2(sec1Data, function (err, sec2Data) {
-                    if (err) {
-                        return callback(err, null);
-                    }
+                var pinLength,
+                    passPin;
 
-                    var pinLength,
-                        passPin;
+                pinLength = self.users.get(userId, "pinLength");
+                if (!pinLength) {
+                    pinLength = self.options.defaultPinLength;
+                }
 
-                    pinLength = self.users.get(userId, "pinLength");
-                    if (!pinLength) {
-                        pinLength = self.options.defaultPinLength;
-                    }
+                // should be called to continue the flow
+                // after a PIN was provided
+                passPin = function (userPin) {
+                    self._createIdentity(userId, userPin, sec1Data, sec2Data, callback);
+                };
 
-                    // should be called to continue the flow
-                    // after a PIN was provided
-                    passPin = function (userPin) {
-                        self._createIdentity(userId, userPin, sec1Data, sec2Data, callback);
-                    };
-
-                    pinCallback(passPin, pinLength);
-                });
+                pinCallback(passPin, pinLength);
             });
         });
     });
@@ -23892,7 +23867,7 @@ Client.prototype._registration = function (userId, activationToken, callback) {
     var self = this,
         regData = {};
 
-    regData.url = self.clientSettings.registerURL;
+    regData.url = self.options.server + "/rps/v2/user";
     regData.type = "PUT";
     regData.data = {
         userId: userId,
@@ -23931,7 +23906,7 @@ Client.prototype._getSecret1 = function (userId, regData, callback) {
     var self = this,
         cs1Url;
 
-    cs1Url = self.clientSettings.signatureURL + "/";
+    cs1Url = self.options.server + "/rps/v2/signature/";
     cs1Url += self.users.get(userId, "mpinId");
     cs1Url += "?regOTT=" + regData.regOTT;
 
@@ -24102,23 +24077,17 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
         return callback(new IdentityError("Missing identity"), null);
     }
 
-    self._init(function (err) {
+    self._getPass1(userId, userPin, scope, X, SEC, function (err, pass1Data) {
         if (err) {
             return callback(err, null);
         }
 
-        self._getPass1(userId, userPin, scope, X, SEC, function (err, pass1Data) {
+        self._getPass2(userId, scope, pass1Data.y, X, SEC, function (err, pass2Data) {
             if (err) {
                 return callback(err, null);
             }
 
-            self._getPass2(userId, scope, pass1Data.y, X, SEC, function (err, pass2Data) {
-                if (err) {
-                    return callback(err, null);
-                }
-
-                self._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, callback);
-            });
+            self._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, callback);
         });
     });
 };
@@ -24180,7 +24149,7 @@ Client.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback)
         U: self._bytesToHex(U)
     };
 
-    self._request({ url: self.clientSettings.pass1URL, type: "POST", data: requestData }, callback);
+    self._request({ url: self.options.server + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
 };
 
 /**
@@ -24224,7 +24193,7 @@ Client.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
         V: self._bytesToHex(SEC)
     };
 
-    self._request({ url: self.clientSettings.pass2URL, type: "POST", data: requestData}, callback);
+    self._request({ url: self.options.server + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
 };
 
 Client.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
@@ -24240,7 +24209,7 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
     isDvsAuth = scope.indexOf("dvs-auth") !== -1;
     userStorage = isDvsAuth ? self.dvsUsers : self.users;
 
-    self._request({ url: self.clientSettings.authenticateURL, type: "POST", data: requestData }, function (err, data) {
+    self._request({ url: self.options.server + "/rps/v2/authenticate", type: "POST", data: requestData }, function (err, data) {
         if (err) {
             // Revoked identity
             if (err.status === 410) {
@@ -24332,7 +24301,7 @@ Client.prototype._getDvsSecret1 = function (keypair, dvsRegisterToken, callback)
         dvsRegisterToken: dvsRegisterToken
     };
 
-    cs1Url = self.clientSettings.dvsRegURL;
+    cs1Url = self.options.server + "/rps/v2/dvsregister";
 
     self._request({ url: cs1Url, type: "POST", data: reqData }, callback);
 };

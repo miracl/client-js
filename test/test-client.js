@@ -67,37 +67,6 @@ describe("Client", function() {
     });
 });
 
-describe("Client _init", function() {
-    var client;
-
-    before(function () {
-        client = new Client(testData.init());
-    });
-
-    it("should fire callback with error when settings can't be fetched", function (done) {
-        sinon.stub(client, "_request").yields({ error: true }, null);
-        client._init(function (err) {
-            expect(err).to.exist;
-            expect(err.error).to.be.true;
-            done();
-        });
-    });
-
-    it("should fire successCb after fetching settings", function (done) {
-        sinon.stub(client, "_request").yields(null, testData.settings());
-        client._init(function (err, success) {
-            expect(err).to.be.null;
-            expect(success).to.exist;
-            expect(client.clientSettings).to.deep.equal(testData.settings());
-            done();
-        });
-    });
-
-    afterEach(function() {
-        client._request.restore && client._request.restore();
-    });
-});
-
 describe("Client setAccessId", function () {
     var client;
 

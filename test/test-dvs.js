@@ -60,7 +60,6 @@ describe("Client _renewDvsSecret", function () {
     });
 
     it("should return error if _getDvsSecret1 fails", function (done) {
-        sinon.stub(client, "_init").yields(null, true);
         sinon.stub(client, "_getDvsSecret1").yields({ error: true });
 
         client._renewDvsSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
@@ -71,7 +70,6 @@ describe("Client _renewDvsSecret", function () {
     });
 
     it("should return error if _getSecret2 fails", function (done) {
-        sinon.stub(client, "_init").yields(null,true);
         sinon.stub(client, "_getDvsSecret1").yields(null, true);
         sinon.stub(client, "_getSecret2").yields({ error: true }, null);
 
@@ -83,7 +81,6 @@ describe("Client _renewDvsSecret", function () {
     });
 
     it("should return error if createSigningIdentity fails", function (done) {
-        sinon.stub(client, "_init").yields(true);
         sinon.stub(client, "_getDvsSecret1").yields(null, true);
         sinon.stub(client, "_getSecret2").yields(null, true);
         sinon.stub(client, "_createSigningIdentity").yields({ error: true });
@@ -96,7 +93,6 @@ describe("Client _renewDvsSecret", function () {
     });
 
     afterEach(function () {
-        client._init.restore && client._init.restore();
         client._getDvsSecret1.restore && client._getDvsSecret1.restore();
         client._getSecret2.restore && client._getSecret2.restore();
         client._createSigningIdentity.restore && client._createSigningIdentity.restore();
@@ -108,7 +104,6 @@ describe("Client _getDvsSecret1", function () {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
     });
 
     it("should call error callback when request fails", function (done) {
@@ -138,7 +133,7 @@ describe("Client _getDvsSecret1", function () {
         client._getDvsSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
             expect(err).to.be.null;
             expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.firstCall.args[0].url).to.equal("https://api.miracl.net/dvs/register");
+            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/dvsregister");
             done();
         });
     });

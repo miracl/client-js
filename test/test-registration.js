@@ -62,7 +62,6 @@ describe("Client _registration", function() {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
     });
 
     it("should return error, when register request fail", function(done) {
@@ -75,7 +74,6 @@ describe("Client _registration", function() {
     });
 
     it("should return error when registration code is not valid", function (done) {
-        sinon.stub(client, "_init").yields(null, true);
         sinon.stub(client, "_request").yields({ status: 403 }, null);
 
         client._registration("test@example.com", "123456", function callback(err) {
@@ -131,7 +129,6 @@ describe("Client _getSecret1", function() {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
         spy = sinon.spy();
     });
 
@@ -186,7 +183,6 @@ describe("Client _getSecret2", function() {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
     });
 
     it("should return error, when signature2 request fails", function(done) {
@@ -209,7 +205,6 @@ describe("Client _addShares", function () {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
     });
 
     it("should throw error on crypto failure", function () {
@@ -234,7 +229,6 @@ describe("Client _extractPin", function () {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
     });
 
     it("should throw error on crypto failure", function () {
@@ -338,7 +332,6 @@ describe("Client register", function () {
     });
 
     it("should go through the registration flow", function (done) {
-        var initStub = sinon.stub(client, "_init").yields(null);
         var registrationStub = sinon.stub(client, "_registration").yields(null);
         var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
         var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
@@ -348,22 +341,10 @@ describe("Client register", function () {
             passPin("1234");
         }, function (err, data) {
             expect(err).to.be.null;
-            expect(initStub.calledOnce).to.be.true;
             expect(registrationStub.calledOnce).to.be.true;
             expect(getSecret1Stub.calledOnce).to.be.true;
             expect(getSecret2Stub.calledOnce).to.be.true;
             expect(finishRegistrationStub.calledOnce).to.be.true;
-            done();
-        });
-    });
-
-    it("should fire callback with error on error with _init", function (done) {
-        sinon.stub(client, "_init").yields({ error: true });
-
-        client.register("test@example.com", null, function (passPin) {
-            passPin("1234");
-        }, function (err, data) {
-            expect(err).to.exist;
             done();
         });
     });
@@ -409,7 +390,6 @@ describe("Client register", function () {
 
     it("should fire successful callback, when _registration passed successful", function (done) {
         sinon.stub(client, "_init").yields(null);
-        client.clientSettings = testData.settings();
         sinon.stub(client, "_registration").yields(null);
         sinon.stub(client, "_getSecret1").yields(null);
         sinon.stub(client, "_getSecret2").yields(null);
@@ -438,7 +418,6 @@ describe("Client register", function () {
     });
 
     it("should pass provided PIN length to the PIN callback", function (done) {
-        var initStub = sinon.stub(client, "_init").yields(null, true);
         var registrationStub = sinon.stub(client, "_registration").yields(null);
         var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
         var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
@@ -456,7 +435,6 @@ describe("Client register", function () {
     });
 
     it("should pass default PIN length to the PIN callback", function (done) {
-        var initStub = sinon.stub(client, "_init").yields(null, true);
         var registrationStub = sinon.stub(client, "_registration").yields(null);
         var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
         var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
@@ -472,7 +450,6 @@ describe("Client register", function () {
     });
 
     it("should auto confirm when registration code is provided", function (done) {
-        var initStub = sinon.stub(client, "_init").yields(null, true);
         var registrationStub = sinon.stub(client, "_registration").yields(null);
         var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
         var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
@@ -488,7 +465,6 @@ describe("Client register", function () {
     });
 
     afterEach(function () {
-        client._init.restore && client._init.restore();
         client._registration.restore && client._registration.restore();
         client._getSecret1.restore && client._getSecret1.restore();
         client._getSecret2.restore && client._getSecret2.restore();

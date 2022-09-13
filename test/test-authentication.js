@@ -8,7 +8,6 @@ describe("Client _getPass1", function () {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
     });
 
     it("shoud make a request for first pass", function (done) {
@@ -18,7 +17,7 @@ describe("Client _getPass1", function () {
         client._getPass1("test@example.com", "1234", ["oidc"], [], [], function () {
             expect(requestStub.calledOnce).to.be.true;
             expect(requestStub.firstCall.args[0]).to.be.an.object;
-            expect(requestStub.firstCall.args[0].url).to.equal("https://api.miracl.net/rps/pass1");
+            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/pass1");
             expect(requestStub.firstCall.args[0].type).to.equal("POST");
             done();
         });
@@ -67,7 +66,6 @@ describe("Client _getPass2", function () {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
     });
 
     it("shoud make a request for second pass", function (done) {
@@ -77,7 +75,7 @@ describe("Client _getPass2", function () {
         client._getPass2("test@example.com", ["oidc"], "yHex", [], [], function () {
             expect(stub.calledOnce).to.be.true;
             expect(stub.firstCall.args[0]).to.be.an.object;
-            expect(stub.firstCall.args[0].url).to.equal("https://api.miracl.net/rps/pass2");
+            expect(stub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/pass2");
             expect(stub.firstCall.args[0].type).to.equal("POST");
             done();
         });
@@ -141,7 +139,6 @@ describe("Client _finishAuthentication", function () {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
     });
 
     it("should call error callback when request fails", function (done) {
@@ -205,7 +202,6 @@ describe("Client _renewSecret", function () {
 
     before(function () {
         client = new Client(testData.init());
-        client.clientSettings = testData.settings();
     });
 
     it("should renew the identity secret", function (done) {
@@ -281,14 +277,12 @@ describe("Client _authentication", function () {
     });
 
     it("should go through the authentication flow", function (done) {
-        var initStub = sinon.stub(client, "_init").yields(null, true);
         var getPass1Stub = sinon.stub(client, "_getPass1").yields(null, {});
         var getPass2Stub = sinon.stub(client, "_getPass2").yields(null, {});
         var finishAuthenticationStub = sinon.stub(client, "_finishAuthentication").yields(null, true);
 
         client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
             expect(err).to.be.null;
-            expect(initStub.calledOnce).to.be.true;
             expect(getPass1Stub.calledOnce).to.be.true;
             expect(getPass2Stub.calledOnce).to.be.true;
             expect(finishAuthenticationStub.calledOnce).to.be.true;
@@ -297,7 +291,6 @@ describe("Client _authentication", function () {
     });
 
     it("should call callback with error when _getPass1 fails", function (done) {
-        sinon.stub(client, "_init").yields(null, true);
         sinon.stub(client, "_getPass1").yields({ error: true }, null);
 
         client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
@@ -307,7 +300,6 @@ describe("Client _authentication", function () {
     });
 
     it("should call callback with error when _getPass2 fails", function (done) {
-        sinon.stub(client, "_init").yields(null, true);
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields({ error: true }, null);
 
@@ -324,8 +316,7 @@ describe("Client _authentication", function () {
 
         client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
             expect(err).to.be.null;
-            // Called twice for init and authenticate
-            expect(requestStub.callCount).to.equal(2);
+            expect(requestStub.callCount).to.equal(1);
             expect(data).to.exist;
             done();
         });
@@ -334,9 +325,9 @@ describe("Client _authentication", function () {
     it("should call the error callback on authenticate error", function (done) {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
+
         var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
-        requestStub.onFirstCall().yields(null, { success: true });
-        requestStub.onSecondCall().yields({ error: true, status: 400 }, null);
+        requestStub.onFirstCall().yields({ error: true, status: 400 }, null);
 
         client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
             expect(err).to.exist;
@@ -347,9 +338,9 @@ describe("Client _authentication", function () {
     it("should mark the identity as revoked on authenticate error 410", function (done) {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
+
         var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
-        requestStub.onFirstCall().yields(null, { success: true });
-        requestStub.onSecondCall().yields({ error: true, status: 410 }, null);
+        requestStub.onFirstCall().yields({ error: true, status: 410 }, null);
 
         var userWriteSpy = sinon.spy(client.users, "write");
 
@@ -364,7 +355,6 @@ describe("Client _authentication", function () {
 
     afterEach(function () {
         client._request.restore && client._request.restore();
-        client._init.restore && client._init.restore();
         client._getPass1.restore && client._getPass1.restore();
         client._getPass2.restore && client._getPass2.restore();
         client._finishAuthentication.restore && client._finishAuthentication.restore();
