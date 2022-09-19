@@ -23778,7 +23778,6 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
  * Start the verification process for a specified user ID (must be email)
  *
  * @param {string} userId - The email to start verification for
- * @param {string} clientId - The OIDC client ID for the application
  * @param {function(Error, Object)} callback
  */
 Client.prototype.sendVerificationEmail = function (userId, callback) {
@@ -24581,6 +24580,8 @@ Client.prototype._request = function (options, callback) {
     }
 
     request.open(type, url, true);
+
+    request.timeout = 2000;
 
     request.setRequestHeader("X-MIRACL-CID", self.options.projectId);
 

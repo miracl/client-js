@@ -1049,6 +1049,8 @@ Client.prototype._request = function (options, callback) {
 
     request.open(type, url, true);
 
+    request.timeout = 2000;
+
     request.setRequestHeader("X-MIRACL-CID", self.options.projectId);
 
     // Set authorization header if provided
