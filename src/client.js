@@ -40,6 +40,7 @@ function createErrorType(name, params) {
  * @param {string} options.oidc.scope - OIDC scope. Must include 'openid'
  * @param {string} options.oidc.state - OIDC state
  * @param {bool}   options.cors - Enable CORS requests if set to 'true'
+ * @param {number} options.requestTimeout - Time before a HTTP request times out in miliseconds
  */
 export default function Client(options) {
     var self = this;
@@ -66,6 +67,10 @@ export default function Client(options) {
     // Ensure that default PIN lenght is between 4 and 6
     if (!options.defaultPinLength || options.defaultPinLength > 6 || options.defaultPinLength < 4) {
         options.defaultPinLength = 4;
+    }
+
+    if (!options.requestTimeout || isNaN(options.requestTimeout)) {
+        options.requestTimeout = 4000;
     }
 
     self.options = options;
@@ -1018,7 +1023,7 @@ Client.prototype._request = function (options, callback) {
 
     request.open(type, url, true);
 
-    request.timeout = 2000;
+    request.timeout = self.options.requestTimeout;
 
     request.setRequestHeader("X-MIRACL-CID", self.options.projectId);
 
