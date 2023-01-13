@@ -366,7 +366,7 @@ Client.prototype._createMPinID = function (userId, activationToken, callback) {
 
     self._request(regData, function (err, data) {
         if (err) {
-            if (activationToken && err.status === 403) {
+            if (err.status === 403) {
                 return callback(new InvalidRegCodeError("Invalid registration code"), null);
             } else {
                 return callback(err, null);
