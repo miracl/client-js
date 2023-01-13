@@ -23612,7 +23612,6 @@ function Client(options) {
     self.rng.clean();
 
     self.users = new Users(options.userStorage, options.projectId, "mfa");
-    self.dvsUsers = new Users(options.userStorage, options.projectId, "dvs");
 }
 
 Client.prototype.options = {};
@@ -23774,8 +23773,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
     reqData.type = "POST";
     reqData.data = {
         userId: userId,
-        clientId: self.options.oidc.client_id,
-        redirectURI: self.options.oidc.redirect_uri,
+        projectId: self.options.projectId,
         accessId: self.session.accessId,
         deviceName: self._getDeviceName()
     };
@@ -23800,11 +23798,7 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
     reqData.type = "POST";
     reqData.data = {
         userId: params["user_id"],
-        code: params["code"],
-        clientId: params["client_id"],
-        redirectUri: params["redirect_uri"],
-        state: params["state"],
-        stage: params["stage"],
+        code: params["code"]
     };
 
     self._request(reqData, function (err, data) {
@@ -23826,18 +23820,21 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.register = function (userId, activationToken, pinCallback, callback) {
-    var self = this;
+    var self = this,
+        keypair;
 
     if (!userId) {
         throw new Error("Missing user ID");
     }
 
-    self._registration(userId, activationToken, function (err, regData) {
+    keypair = self._generateKeypair("BN254CX");
+
+    self._createMPinID(userId, activationToken, function (err, regData) {
         if (err) {
             return callback(err, null);
         }
 
-        self._getSecret1(userId, regData, function (err, sec1Data) {
+        self._getSecret1(userId, regData, keypair, function (err, sec1Data) {
             if (err) {
                 return callback(err, null);
             }
@@ -23858,7 +23855,7 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
                 // should be called to continue the flow
                 // after a PIN was provided
                 passPin = function (userPin) {
-                    self._createIdentity(userId, userPin, sec1Data, sec2Data, callback);
+                    self._createIdentity(userId, userPin, sec1Data, sec2Data, keypair, callback);
                 };
 
                 pinCallback(passPin, pinLength);
@@ -23867,7 +23864,21 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
     });
 };
 
-Client.prototype._registration = function (userId, activationToken, callback) {
+Client.prototype._generateKeypair = function (curve) {
+    var self = this,
+        privateKeyBytes = [],
+        publicKeyBytes = [],
+        errorCode;
+
+    errorCode = self._crypto(curve).MPIN.GET_DVS_KEYPAIR(self.rng, privateKeyBytes, publicKeyBytes);
+    if (errorCode != 0) {
+        throw new CryptoError("Could not generate key pair", errorCode);
+    }
+
+    return { publicKey: self._bytesToHex(publicKeyBytes), privateKey: self._bytesToHex(privateKeyBytes) };
+};
+
+Client.prototype._createMPinID = function (userId, activationToken, callback) {
     var self = this,
         regData = {};
 
@@ -23882,7 +23893,7 @@ Client.prototype._registration = function (userId, activationToken, callback) {
 
     self._request(regData, function (err, data) {
         if (err) {
-            if (activationToken && err.status === 403) {
+            if (err.status === 403) {
                 return callback(new InvalidRegCodeError("Invalid registration code"), null);
             } else {
                 return callback(err, null);
@@ -23906,13 +23917,14 @@ Client.prototype._getDeviceName = function () {
     return "Browser";
 };
 
-Client.prototype._getSecret1 = function (userId, regData, callback) {
+Client.prototype._getSecret1 = function (userId, regData, keypair, callback) {
     var self = this,
         cs1Url;
 
     cs1Url = self.options.server + "/rps/v2/signature/";
     cs1Url += self.users.get(userId, "mpinId");
     cs1Url += "?regOTT=" + regData.regOTT;
+    cs1Url += "&publicKey=" + keypair.publicKey;
 
     self._request({ url: cs1Url }, function (err, sec1Data) {
         if (err) {
@@ -23935,7 +23947,7 @@ Client.prototype._getSecret2 = function (sec1Data, callback) {
     self._request({ url: sec1Data.cs2url }, callback);
 };
 
-Client.prototype._createIdentity = function (userId, userPin, sec1Data, sec2Data, callback) {
+Client.prototype._createIdentity = function (userId, userPin, sec1Data, sec2Data, keypair, callback) {
     var self = this,
         userData,
         mpinId,
@@ -23950,18 +23962,19 @@ Client.prototype._createIdentity = function (userId, userPin, sec1Data, sec2Data
     }
 
     try {
-        csHex = self._addShares(sec1Data.clientSecretShare, sec2Data.clientSecret, sec1Data.curve);
-        token = self._extractPin(mpinId, userPin, csHex, sec1Data.curve);
+        csHex = self._addShares(keypair.privateKey, sec1Data.dvsClientSecretShare, sec2Data.dvsClientSecret, sec1Data.curve);
+        token = self._extractPin(self._mpinIdWithPublicKey(mpinId, keypair.publicKey), userPin, csHex, sec1Data.curve);
     } catch (err) {
         return callback(err, null);
     }
 
     userData = {
+        mpinId: mpinId,
+        token: token,
         curve: sec1Data.curve,
         dtas: sec1Data.dtas,
-        mpinId: mpinId,
-        state: self.users.states.register,
-        token: token
+        publicKey: keypair.publicKey,
+        state: self.users.states.register
     };
     self.users.write(userId, userData);
 
@@ -23974,22 +23987,29 @@ Client.prototype._createIdentity = function (userId, userPin, sec1Data, sec2Data
  * Returns a hex encoded sum of the shares
  * @private
  */
-Client.prototype._addShares = function (share1Hex, share2Hex, curve) {
+Client.prototype._addShares = function (privateKeyHex, share1Hex, share2Hex, curve) {
     var self = this,
+        privateKeyBytes = [],
         share1Bytes = [],
         share2Bytes = [],
-        sumBytes = [],
+        clientSecretBytes = [],
         errorCode;
 
+    privateKeyBytes = self._hexToBytes(privateKeyHex);
     share1Bytes = self._hexToBytes(share1Hex);
     share2Bytes = self._hexToBytes(share2Hex);
 
-    errorCode = self._crypto(curve).MPIN.RECOMBINE_G1(share1Bytes, share2Bytes, sumBytes);
+    errorCode = self._crypto(curve).MPIN.RECOMBINE_G1(share1Bytes, share2Bytes, clientSecretBytes);
     if (errorCode !== 0) {
         throw new CryptoError("Could not combine the client secret shares", errorCode);
     }
 
-    return self._bytesToHex(sumBytes);
+    errorCode = self._crypto(curve).MPIN.GET_G1_MULTIPLE(null, 0, privateKeyBytes, clientSecretBytes, clientSecretBytes);
+    if (errorCode != 0) {
+        throw new CryptoError("Could not combine private key with client secret", errorCode);
+    }
+
+    return self._bytesToHex(clientSecretBytes);
 };
 
 /**
@@ -24071,13 +24091,10 @@ Client.prototype.generateQuickCode = function (userId, userPin, callback) {
 
 Client.prototype._authentication = function (userId, userPin, scope, callback) {
     var self = this,
-        userStorage,
         SEC = [],
         X = [];
 
-    userStorage = scope.indexOf("dvs-auth") !== -1 ? self.dvsUsers : self.users;
-
-    if (!userStorage.exists(userId)) {
+    if (!self.users.exists(userId)) {
         return callback(new IdentityError("Missing identity"), null);
     }
 
@@ -24120,24 +24137,15 @@ Client.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback)
     var self = this,
         U = [],
         UT = [],
-        userStorage,
         mpinIdHex,
         tokenHex,
         curve,
         errorCode,
         requestData;
 
-    // Choose user storage depending on scope
-    userStorage = scope.indexOf("dvs-auth") !== -1 ? self.dvsUsers : self.users;
-
-    tokenHex = userStorage.get(userId, "token");
-    curve = userStorage.get(userId, "curve");
-
-    if (userStorage === self.users) {
-        mpinIdHex = userStorage.get(userId, "mpinId");
-    } else {
-        mpinIdHex = self._getSignMpinId(userStorage.get(userId, "mpinId"), userStorage.get(userId, "publicKey"));
-    }
+    tokenHex = self.users.get(userId, "token");
+    curve = self.users.get(userId, "curve");
+    mpinIdHex = self._mpinIdWithPublicKey(self.users.get(userId, "mpinId"), self.users.get(userId, "publicKey"));
 
     errorCode = self._crypto(curve).MPIN.CLIENT_1(self._crypto(curve).MPIN.SHA256, 0, self._hexToBytes(mpinIdHex), self.rng, X, userPin, self._hexToBytes(tokenHex), SEC, U, UT, self._hexToBytes(0));
     if (errorCode !== 0) {
@@ -24146,9 +24154,9 @@ Client.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback)
 
     requestData = {
         scope: scope,
-        mpin_id: userStorage.get(userId, "mpinId"),
-        dtas: userStorage.get(userId, "dtas"),
-        publicKey: userStorage.get(userId, "publicKey"),
+        mpin_id: self.users.get(userId, "mpinId"),
+        dtas: self.users.get(userId, "dtas"),
+        publicKey: self.users.get(userId, "publicKey"),
         UT: self._bytesToHex(UT),
         U: self._bytesToHex(U)
     };
@@ -24173,16 +24181,12 @@ Client.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback)
  */
 Client.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
     var self = this,
-        userStorage,
         curve,
         requestData,
         yBytes,
         errorCode;
 
-    userStorage = scope.indexOf("dvs-auth") !== -1 ? self.dvsUsers : self.users;
-
-    curve = userStorage.get(userId, "curve");
-
+    curve = self.users.get(userId, "curve");
     yBytes = self._hexToBytes(yHex);
 
     // Compute V
@@ -24192,7 +24196,7 @@ Client.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
     }
 
     requestData = {
-        mpin_id: userStorage.get(userId, "mpinId"),
+        mpin_id: self.users.get(userId, "mpinId"),
         WID: self.session.accessId,
         V: self._bytesToHex(SEC)
     };
@@ -24202,32 +24206,31 @@ Client.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
 
 Client.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
     var self = this,
-        requestData,
-        userStorage,
-        isDvsAuth;
+        requestData;
 
     requestData = {
-        "authOTT": authOTT
+        "authOTT": authOTT,
+        "wam": "dvs"
     };
-
-    isDvsAuth = scope.indexOf("dvs-auth") !== -1;
-    userStorage = isDvsAuth ? self.dvsUsers : self.users;
 
     self._request({ url: self.options.server + "/rps/v2/authenticate", type: "POST", data: requestData }, function (err, data) {
         if (err) {
             // Revoked identity
             if (err.status === 410) {
-                userStorage.write(userId, { state: userStorage.states.revoked });
+                self.users.write(userId, { state: self.users.states.revoked });
             }
 
             return callback(err, null);
         }
 
-        if (data.renewSecret) {
-            self._renewSecret(userId, userPin, data.renewSecret, callback);
-        } else if (data.dvsRegister && isDvsAuth) {
-            // Renew automatically only if signing
-            self._renewDvsSecret(userId, userPin, data.dvsRegister, callback);
+        if (data.dvsRegister) {
+            self._renewSecret(userId, userPin, data.dvsRegister, function(err) {
+                if (err) {
+                    return callback(err, null);
+                }
+
+                self._authentication(userId, userPin, scope, callback);
+            });
         } else {
             self.users.updateLastUsed(userId);
             callback(null, data);
@@ -24235,51 +24238,13 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
     });
 };
 
-Client.prototype._renewSecret = function (userId, userPin, sec1Data, callback) {
-    var self = this;
-
-    self._getSecret2(sec1Data, function (err, sec2Data) {
-        if (err) {
-            return callback(err, null);
-        }
-
-        self._createIdentity(userId, userPin, sec1Data, sec2Data, function (err) {
-            if (err) {
-                return callback(err, null);
-            }
-
-            self.authenticate(userId, userPin, callback);
-        });
-    });
-};
-
-/**
- * Register an identity capable of signing
- *
- * @param {string} userId - The ID of the user
- * @param {string} userPin - The PIN of the identity used for authentication
- * @param {string} dvsPin - The PIN that will be used for the new identity
- * @param {function(Error, Object)} callback
- */
-Client.prototype.signingRegister = function (userId, userPin, dvsPin, callback) {
-    var self = this;
-
-    self._authentication(userId, userPin, ["dvs-reg"], function (err, data) {
-        if (err) {
-            return callback(err, null);
-        }
-
-        self._renewDvsSecret(userId, dvsPin, data.dvsRegister, callback);
-    });
-};
-
-Client.prototype._renewDvsSecret = function (userId, userPin, dvsRegister, callback) {
+Client.prototype._renewSecret = function (userId, userPin, activationData, callback) {
     var self = this,
         keypair;
 
-    keypair = self._generateSignKeypair(dvsRegister.curve);
+    keypair = self._generateKeypair(activationData.curve);
 
-    self._getDvsSecret1(keypair, dvsRegister.token, function (err, sec1Data) {
+    self._getWaMSecret1(keypair, activationData.token, function (err, sec1Data) {
         if (err) {
             return callback(err, null);
         }
@@ -24289,20 +24254,19 @@ Client.prototype._renewDvsSecret = function (userId, userPin, dvsRegister, callb
                 return callback(err, null);
             }
 
-            self._createSigningIdentity(userId, userPin, sec1Data, sec2Data, keypair, callback);
+            self._createIdentity(userId, userPin, sec1Data, sec2Data, keypair, callback);
         });
     });
 };
 
-Client.prototype._getDvsSecret1 = function (keypair, dvsRegisterToken, callback) {
+Client.prototype._getWaMSecret1 = function (keypair, registerToken, callback) {
     var self = this,
         cs1Url,
         reqData;
 
     reqData = {
         publicKey: keypair.publicKey,
-        deviceName: self._getDeviceName(),
-        dvsRegisterToken: dvsRegisterToken
+        dvsRegisterToken: registerToken
     };
 
     cs1Url = self.options.server + "/rps/v2/dvsregister";
@@ -24310,75 +24274,22 @@ Client.prototype._getDvsSecret1 = function (keypair, dvsRegisterToken, callback)
     self._request({ url: cs1Url, type: "POST", data: reqData }, callback);
 };
 
-Client.prototype._generateSignKeypair = function (curve) {
-    var self = this,
-        privateKeyBytes = [],
-        publicKeyBytes = [],
-        errorCode;
-
-    errorCode = self._crypto(curve).MPIN.GET_DVS_KEYPAIR(self.rng, privateKeyBytes, publicKeyBytes);
-    if (errorCode != 0) {
-        throw new CryptoError("Could not generate key pair", errorCode);
-    }
-
-    return { publicKey: self._bytesToHex(publicKeyBytes), privateKey: self._bytesToHex(privateKeyBytes) };
-};
-
-Client.prototype._createSigningIdentity = function (userId, userPin, sec1Data, sec2Data, keypair, callback) {
-    var self = this,
-        csHex,
-        token,
-        signMpinId,
-        userData;
-
-    try {
-        csHex = self._addShares(sec1Data.dvsClientSecretShare, sec2Data.dvsClientSecret, sec1Data.curve);
-        csHex = self._generateSignClientSecret(keypair.privateKey, csHex, sec1Data.curve);
-        signMpinId = self._getSignMpinId(sec1Data.mpinId, keypair.publicKey);
-        token = self._extractPin(signMpinId, userPin, csHex, sec1Data.curve);
-    } catch (err) {
-        return callback(err, null);
-    }
-
-    userData = {
-        mpinId: sec1Data.mpinId,
-        dtas: sec1Data.dtas,
-        curve: sec1Data.curve,
-        publicKey: keypair.publicKey,
-        token: token,
-        state: self.dvsUsers.states.register
-    };
-    self.dvsUsers.write(userId, userData);
-
-    callback(null, userData);
-};
-
 /**
- * Compute client secret for key escrow less scheme
+ * Returns the public key bytes appended to the MPin ID bytes in hex encoding
  * @private
  */
-Client.prototype._generateSignClientSecret = function (privateKeyHex, clientSecretHex, curve) {
-    var self = this,
-        privateKeyBytes = self._hexToBytes(privateKeyHex),
-        clientSecretBytes = self._hexToBytes(clientSecretHex),
-        errorCode;
-
-    errorCode = self._crypto(curve).MPIN.GET_G1_MULTIPLE(null, 0, privateKeyBytes, clientSecretBytes, clientSecretBytes);
-    if (errorCode != 0) {
-        throw new CryptoError("Could not combine private key with client secret", errorCode);
-    }
-
-    return self._bytesToHex(clientSecretBytes);
-};
-
-Client.prototype._getSignMpinId = function (mpinId, publicKey) {
+Client.prototype._mpinIdWithPublicKey = function (mpinId, publicKey) {
     var self = this,
         mpinIdBytes = self._hexToBytes(mpinId),
         publicKeyBytes = self._hexToBytes(publicKey),
         i;
 
-    if (!mpinIdBytes || !publicKeyBytes) {
+    if (!mpinIdBytes) {
         return;
+    }
+
+    if (!publicKeyBytes) {
+        return mpinId;
     }
 
     for (i = 0; i < publicKeyBytes.length; i++) {
@@ -24400,11 +24311,11 @@ Client.prototype._getSignMpinId = function (mpinId, publicKey) {
 Client.prototype.sign = function (userId, userPin, message, timestamp, callback) {
     var self = this,
         messageBytes = self._hexToBytes(message),
-        mpinIdHex = self._getSignMpinId(self.dvsUsers.get(userId, "mpinId"), self.dvsUsers.get(userId, "publicKey")),
+        mpinIdHex = self._mpinIdWithPublicKey(self.users.get(userId, "mpinId"), self.users.get(userId, "publicKey")),
         mpinIdBytes = self._hexToBytes(mpinIdHex),
-        tokenHex = self.dvsUsers.get(userId, "token"),
+        tokenHex = self.users.get(userId, "token"),
         tokenBytes = self._hexToBytes(tokenHex),
-        curve = self.dvsUsers.get(userId, "curve"),
+        curve = self.users.get(userId, "curve"),
         SEC = [],
         X = [],
         Y1 = [],
@@ -24421,9 +24332,9 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         hash: message,
         u: self._bytesToHex(U),
         v: self._bytesToHex(SEC),
-        mpinId: self.dvsUsers.get(userId, "mpinId"),
-        publicKey: self.dvsUsers.get(userId, "publicKey"),
-        dtas: self.dvsUsers.get(userId, "dtas")
+        mpinId: self.users.get(userId, "mpinId"),
+        publicKey: self.users.get(userId, "publicKey"),
+        dtas: self.users.get(userId, "dtas")
     };
 
     this._authentication(userId, userPin, ["dvs-auth"], function (err) {
