@@ -241,8 +241,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
     reqData.type = "POST";
     reqData.data = {
         userId: userId,
-        clientId: self.options.oidc.client_id,
-        redirectURI: self.options.oidc.redirect_uri,
+        projectId: self.options.projectId,
         accessId: self.session.accessId,
         deviceName: self._getDeviceName()
     };
@@ -267,11 +266,7 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
     reqData.type = "POST";
     reqData.data = {
         userId: params["user_id"],
-        code: params["code"],
-        clientId: params["client_id"],
-        redirectUri: params["redirect_uri"],
-        state: params["state"],
-        stage: params["stage"],
+        code: params["code"]
     };
 
     self._request(reqData, function (err, data) {
