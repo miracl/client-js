@@ -13,9 +13,17 @@ export default function Users(storage, projectId, storageKey) {
         throw new Error("Invalid user storage object");
     }
 
+    if (!projectId) {
+        throw new Error("Project ID must be provided when configuring storage");
+    }
+
+    if (!storageKey) {
+        throw new Error("Storage key must be provided when configuring storage");
+    }
+
     self.storage = storage;
     self.customerId = projectId;
-    self.storageKey = storageKey ? storageKey : "mfa";
+    self.storageKey = storageKey;
 
     self.loadData();
 }
@@ -23,9 +31,7 @@ export default function Users(storage, projectId, storageKey) {
 Users.prototype.data = [],
 
 Users.prototype.states = {
-    invalid: "INVALID",
     start: "STARTED",
-    active: "ACTIVATED",
     register: "REGISTERED",
     revoked: "REVOKED"
 };
