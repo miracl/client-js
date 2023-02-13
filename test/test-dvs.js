@@ -8,6 +8,10 @@ describe("Client sign", function () {
 
     before(function () {
         client = new Client(testData.init());
+        client.users.write("test@example.com", {
+            mpinId: "exampleMpinId",
+            state: "REGISTERED"
+        });
     });
 
     it("should return U and V", function (done) {

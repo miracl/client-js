@@ -297,12 +297,12 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
 
     keypair = self._generateKeypair("BN254CX");
 
-    self._createMPinID(userId, activationToken, function (err, regData) {
+    self._createMPinID(userId, activationToken, function (err, identityData) {
         if (err) {
             return callback(err, null);
         }
 
-        self._getSecret1(userId, regData, keypair, function (err, sec1Data) {
+        self._getSecret1(identityData, keypair, function (err, sec1Data) {
             if (err) {
                 return callback(err, null);
             }
@@ -315,7 +315,7 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
                 var pinLength,
                     passPin;
 
-                pinLength = self.users.get(userId, "pinLength");
+                pinLength = identityData.pinLength;
                 if (!pinLength) {
                     pinLength = self.options.defaultPinLength;
                 }
@@ -323,7 +323,7 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
                 // should be called to continue the flow
                 // after a PIN was provided
                 passPin = function (userPin) {
-                    self._createIdentity(userId, userPin, sec1Data, sec2Data, keypair, callback);
+                    self._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
                 };
 
                 pinCallback(passPin, pinLength);
@@ -368,8 +368,7 @@ Client.prototype._createMPinID = function (userId, activationToken, callback) {
             }
         }
 
-        data.state = (data.active) ? self.users.states.active : self.users.states.start;
-        self.users.write(userId, data);
+        self.users.write(userId, { state: self.users.states.start });
 
         callback(null, data);
     });
@@ -385,13 +384,13 @@ Client.prototype._getDeviceName = function () {
     return "Browser";
 };
 
-Client.prototype._getSecret1 = function (userId, regData, keypair, callback) {
+Client.prototype._getSecret1 = function (identityData, keypair, callback) {
     var self = this,
         cs1Url;
 
     cs1Url = self.options.server + "/rps/v2/signature/";
-    cs1Url += self.users.get(userId, "mpinId");
-    cs1Url += "?regOTT=" + regData.regOTT;
+    cs1Url += identityData.mpinId;
+    cs1Url += "?regOTT=" + identityData.regOTT;
     cs1Url += "&publicKey=" + keypair.publicKey;
 
     self._request({ url: cs1Url }, function (err, sec1Data) {
@@ -415,34 +414,32 @@ Client.prototype._getSecret2 = function (sec1Data, callback) {
     self._request({ url: sec1Data.cs2url }, callback);
 };
 
-Client.prototype._createIdentity = function (userId, userPin, sec1Data, sec2Data, keypair, callback) {
+Client.prototype._createIdentity = function (userId, userPin, identityData, sec1Data, sec2Data, keypair, callback) {
     var self = this,
         userData,
-        mpinId,
         csHex,
         token;
 
-    // TODO: test this
-    if (sec1Data.mpin_id) {
-        mpinId = sec1Data.mpin_id;
-    } else {
-        mpinId = self.users.get(userId, "mpinId");
-    }
-
     try {
         csHex = self._addShares(keypair.privateKey, sec1Data.dvsClientSecretShare, sec2Data.dvsClientSecret, sec1Data.curve);
-        token = self._extractPin(self._mpinIdWithPublicKey(mpinId, keypair.publicKey), userPin, csHex, sec1Data.curve);
+        token = self._extractPin(self._mpinIdWithPublicKey(identityData.mpinId, keypair.publicKey), userPin, csHex, sec1Data.curve);
     } catch (err) {
         return callback(err, null);
     }
 
     userData = {
-        mpinId: mpinId,
+        mpinId: identityData.mpinId,
         token: token,
         curve: sec1Data.curve,
         dtas: sec1Data.dtas,
         publicKey: keypair.publicKey,
-        state: self.users.states.register
+        pinLength: identityData.pinLength,
+        projectId: identityData.projectId,
+        customerId: identityData.projectId,
+        verificationType: identityData.verificationType,
+        state: self.users.states.register,
+        nowTime: identityData.nowTime,
+        updated: Math.floor(Date.now() / 1000)
     };
     self.users.write(userId, userData);
 
@@ -559,6 +556,7 @@ Client.prototype.generateQuickCode = function (userId, userPin, callback) {
 
 Client.prototype._authentication = function (userId, userPin, scope, callback) {
     var self = this,
+        identityData,
         SEC = [],
         X = [];
 
@@ -566,12 +564,14 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
         return callback(new IdentityError("Missing identity"), null);
     }
 
-    self._getPass1(userId, userPin, scope, X, SEC, function (err, pass1Data) {
+    identityData = self.users.get(userId);
+
+    self._getPass1(identityData, userPin, scope, X, SEC, function (err, pass1Data) {
         if (err) {
             return callback(err, null);
         }
 
-        self._getPass2(userId, scope, pass1Data.y, X, SEC, function (err, pass2Data) {
+        self._getPass2(identityData, scope, pass1Data.y, X, SEC, function (err, pass2Data) {
             if (err) {
                 return callback(err, null);
             }
@@ -601,30 +601,38 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
  * }
  * @private
  */
-Client.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback) {
+Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, callback) {
     var self = this,
+        mpinIdHex,
         U = [],
         UT = [],
-        mpinIdHex,
-        tokenHex,
-        curve,
         errorCode,
         requestData;
 
-    tokenHex = self.users.get(userId, "token");
-    curve = self.users.get(userId, "curve");
-    mpinIdHex = self._mpinIdWithPublicKey(self.users.get(userId, "mpinId"), self.users.get(userId, "publicKey"));
+    mpinIdHex = self._mpinIdWithPublicKey(identityData.mpinId, identityData.publicKey);
 
-    errorCode = self._crypto(curve).MPIN.CLIENT_1(self._crypto(curve).MPIN.SHA256, 0, self._hexToBytes(mpinIdHex), self.rng, X, userPin, self._hexToBytes(tokenHex), SEC, U, UT, self._hexToBytes(0));
+    errorCode = self._crypto(identityData.curve).MPIN.CLIENT_1(
+        self._crypto(identityData.curve).MPIN.SHA256,
+        0,
+        self._hexToBytes(mpinIdHex),
+        self.rng,
+        X,
+        userPin,
+        self._hexToBytes(identityData.token),
+        SEC,
+        U,
+        UT,
+        self._hexToBytes(0)
+    );
     if (errorCode !== 0) {
         return callback(new CryptoError("Could not calculate pass 1 request data", errorCode), null);
     }
 
     requestData = {
         scope: scope,
-        mpin_id: self.users.get(userId, "mpinId"),
-        dtas: self.users.get(userId, "dtas"),
-        publicKey: self.users.get(userId, "publicKey"),
+        mpin_id: identityData.mpinId,
+        dtas: identityData.dtas,
+        publicKey: identityData.publicKey,
         UT: self._bytesToHex(UT),
         U: self._bytesToHex(U)
     };
@@ -647,24 +655,19 @@ Client.prototype._getPass1 = function (userId, userPin, scope, X, SEC, callback)
  * }
  * @private
  */
-Client.prototype._getPass2 = function (userId, scope, yHex, X, SEC, callback) {
+Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callback) {
     var self = this,
-        curve,
-        requestData,
-        yBytes,
-        errorCode;
-
-    curve = self.users.get(userId, "curve");
-    yBytes = self._hexToBytes(yHex);
+        errorCode,
+        requestData;
 
     // Compute V
-    errorCode = self._crypto(curve).MPIN.CLIENT_2(X, yBytes, SEC);
+    errorCode = self._crypto(identityData.curve).MPIN.CLIENT_2(X, self._hexToBytes(yHex), SEC);
     if (errorCode !== 0) {
         return callback(new CryptoError("Could not calculate pass 2 request data", errorCode), null);
     }
 
     requestData = {
-        mpin_id: self.users.get(userId, "mpinId"),
+        mpin_id: identityData.mpinId,
         WID: self.session.accessId,
         V: self._bytesToHex(SEC)
     };
@@ -708,8 +711,10 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
 
 Client.prototype._renewSecret = function (userId, userPin, activationData, callback) {
     var self = this,
+        identityData,
         keypair;
 
+    identityData = self.users.get(userId);
     keypair = self._generateKeypair(activationData.curve);
 
     self._getWaMSecret1(keypair, activationData.token, function (err, sec1Data) {
@@ -722,7 +727,7 @@ Client.prototype._renewSecret = function (userId, userPin, activationData, callb
                 return callback(err, null);
             }
 
-            self._createIdentity(userId, userPin, sec1Data, sec2Data, keypair, callback);
+            self._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
         });
     });
 };
@@ -778,12 +783,8 @@ Client.prototype._mpinIdWithPublicKey = function (mpinId, publicKey) {
  */
 Client.prototype.sign = function (userId, userPin, message, timestamp, callback) {
     var self = this,
-        messageBytes = self._hexToBytes(message),
-        mpinIdHex = self._mpinIdWithPublicKey(self.users.get(userId, "mpinId"), self.users.get(userId, "publicKey")),
-        mpinIdBytes = self._hexToBytes(mpinIdHex),
-        tokenHex = self.users.get(userId, "token"),
-        tokenBytes = self._hexToBytes(tokenHex),
-        curve = self.users.get(userId, "curve"),
+        identityData,
+        mpinIdHex,
         SEC = [],
         X = [],
         Y1 = [],
@@ -791,7 +792,29 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         errorCode,
         signatureData;
 
-    errorCode = self._crypto(curve).MPIN.CLIENT(self._crypto(curve).MPIN.SHA256, 0, mpinIdBytes, self.rng, X, userPin, tokenBytes, SEC, U, null, null, timestamp, Y1, messageBytes);
+    if (!self.users.exists(userId)) {
+        return callback(new IdentityError("Missing identity"), null);
+    }
+
+    identityData = self.users.get(userId);
+    mpinIdHex = self._mpinIdWithPublicKey(identityData.mpinId, identityData.publicKey);
+
+    errorCode = self._crypto(identityData.curve).MPIN.CLIENT(
+        self._crypto(identityData.curve).MPIN.SHA256,
+        0,
+        self._hexToBytes(mpinIdHex),
+        self.rng,
+        X,
+        userPin,
+        self._hexToBytes(identityData.token),
+        SEC,
+        U,
+        null,
+        null,
+        timestamp,
+        Y1,
+        self._hexToBytes(message)
+    );
     if (errorCode != 0) {
         callback(new CryptoError("Could not sign message", errorCode), null);
     }
@@ -800,9 +823,9 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         hash: message,
         u: self._bytesToHex(U),
         v: self._bytesToHex(SEC),
-        mpinId: self.users.get(userId, "mpinId"),
-        publicKey: self.users.get(userId, "publicKey"),
-        dtas: self.users.get(userId, "dtas")
+        mpinId: identityData.mpinId,
+        publicKey: identityData.publicKey,
+        dtas: identityData.dtas
     };
 
     this._authentication(userId, userPin, ["dvs-auth"], function (err) {

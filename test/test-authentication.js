@@ -14,7 +14,7 @@ describe("Client _getPass1", function () {
         var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
         sinon.stub(client._crypto().MPIN, "CLIENT_1").returns(0);
 
-        client._getPass1("test@example.com", "1234", ["oidc"], [], [], function () {
+        client._getPass1({}, "1234", ["oidc"], [], [], function () {
             expect(requestStub.calledOnce).to.be.true;
             expect(requestStub.firstCall.args[0]).to.be.an.object;
             expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/pass1");
@@ -27,7 +27,7 @@ describe("Client _getPass1", function () {
         sinon.stub(client, "_request").yields(null, { success: true });
         sinon.stub(client._crypto().MPIN, "CLIENT_1").returns(0);
 
-        client._getPass1("test@example.com", "1234", ["oidc"], [], [], function (err, data) {
+        client._getPass1({}, "1234", ["oidc"], [], [], function (err, data) {
             expect(data).to.exist;
             expect(data.success).to.be.true;
             done();
@@ -38,7 +38,7 @@ describe("Client _getPass1", function () {
         sinon.stub(client, "_request").yields(null, { success: true });
         sinon.stub(client._crypto().MPIN, "CLIENT_1").returns(-14);
 
-        client._getPass1("test@example.com", "1234", ["oidc"], [], [], function (err, data) {
+        client._getPass1({}, "1234", ["oidc"], [], [], function (err, data) {
             expect(err).to.exist;
             expect(err.name).to.equal("CryptoError");
             done();
@@ -49,7 +49,7 @@ describe("Client _getPass1", function () {
         var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
         sinon.stub(client._crypto().MPIN, "CLIENT_1").returns(0);
 
-        client._getPass1("test@example.com", "1234", ["dvs-auth"], [], [], function (err, data) {
+        client._getPass1({}, "1234", ["dvs-auth"], [], [], function (err, data) {
             expect(requestStub.firstCall.args[0].data.scope).to.deep.equal(["dvs-auth"]);
             done();
         });
@@ -72,7 +72,7 @@ describe("Client _getPass2", function () {
         var stub = sinon.stub(client, "_request").yields(null, { success: true });
         sinon.stub(client._crypto().MPIN, "CLIENT_2").returns(0);
 
-        client._getPass2("test@example.com", ["oidc"], "yHex", [], [], function () {
+        client._getPass2({}, ["oidc"], "yHex", [], [], function () {
             expect(stub.calledOnce).to.be.true;
             expect(stub.firstCall.args[0]).to.be.an.object;
             expect(stub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/pass2");
@@ -85,7 +85,7 @@ describe("Client _getPass2", function () {
         sinon.stub(client, "_request").yields(null, { success: true });
         sinon.stub(client._crypto().MPIN, "CLIENT_2").returns(0);
 
-        client._getPass2("test@example.com", ["oidc"], "yHex", [], [], function (err, data) {
+        client._getPass2({}, ["oidc"], "yHex", [], [], function (err, data) {
             expect(data).to.exist;
             expect(data.success).to.be.true;
             done();
@@ -96,7 +96,7 @@ describe("Client _getPass2", function () {
         sinon.stub(client, "_request").yields(null, { success: true });
         sinon.stub(client._crypto().MPIN, "CLIENT_2").returns(-14);
 
-        client._getPass2("test@example.com", ["oidc"], "yHex", [], [], function (err, data) {
+        client._getPass2({}, ["oidc"], "yHex", [], [], function (err, data) {
             expect(err).to.exist;
             expect(err.name).to.equal("CryptoError");
             done();
@@ -107,23 +107,8 @@ describe("Client _getPass2", function () {
         var stub = sinon.stub(client, "_request").yields(null, { success: true });
         sinon.stub(client._crypto().MPIN, "CLIENT_2").returns(0);
 
-        client._getPass2("test@example.com", ["otp"], "yHex", [], [], function (err, data) {
+        client._getPass2({}, ["otp"], "yHex", [], [], function (err, data) {
             expect(stub.calledOnce).to.be.true;
-            done();
-        });
-    });
-
-    it("should handle dvs scope", function (done) {
-        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
-        sinon.stub(client._crypto().MPIN, "CLIENT_2").returns(0);
-
-        client.users.write("test@example.com", {
-            mpinId: "thisIsDvsId",
-            state: "ACTIVATED"
-        });
-
-        client._getPass2("test@example.com", ["dvs-auth"], "yHex", [], [], function (err, data) {
-            expect(requestStub.firstCall.args[0].data.mpin_id).to.equal("thisIsDvsId");
             done();
         });
     });
@@ -313,7 +298,7 @@ describe("Client _authentication", function () {
         client = new Client(testData.init());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
-            state: "ACTIVATED"
+            state: "REGISTERED"
         });
     });
 
@@ -417,7 +402,7 @@ describe("Client authenticate", function () {
         client = new Client(testData.init());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
-            state: "ACTIVATED"
+            state: "REGISTERED"
         });
     });
 
@@ -443,7 +428,7 @@ describe("Client generateOTP", function () {
         client = new Client(testData.init());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
-            state: "ACTIVATED"
+            state: "REGISTERED"
         });
     });
 
@@ -469,7 +454,7 @@ describe("Client generateQuickCode", function () {
         client = new Client(testData.init());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
-            state: "ACTIVATED"
+            state: "REGISTERED"
         });
     });
 
@@ -495,7 +480,7 @@ describe("Client generateAuthCode", function () {
         client = new Client(testData.init());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
-            state: "ACTIVATED"
+            state: "REGISTERED"
         });
     });
 
