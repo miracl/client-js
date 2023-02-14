@@ -107,8 +107,19 @@ describe("Client _createMPinID", function() {
         });
     });
 
+    it("should stop registration for different project", function (done) {
+        sinon.stub(client, "_request").yields(null, { projectId: "anotherProjectID" });
+
+        client._createMPinID("test@example.com", null, function(err, data) {
+            expect(err).to.exist;
+            expect(err.name).to.equal("InvalidRegCodeError");
+            expect(client.users.exists("test@example.com")).to.be.false;
+            done();
+        });
+    });
+
     it("should store started user", function(done) {
-        sinon.stub(client, "_request").yields(null, { success: true });
+        sinon.stub(client, "_request").yields(null, { projectId: "projectID" });
 
         client._createMPinID("test@example.com", null, function(err, data) {
             expect(client.users.exists("test@example.com")).to.be.true;

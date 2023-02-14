@@ -368,6 +368,10 @@ Client.prototype._createMPinID = function (userId, activationToken, callback) {
             }
         }
 
+        if (data.projectId !== self.options.projectId) {
+            return callback(new InvalidRegCodeError("Registration started for different project"), null);
+        }
+
         self.users.write(userId, { state: self.users.states.start });
 
         callback(null, data);
