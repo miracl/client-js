@@ -439,7 +439,6 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
         publicKey: keypair.publicKey,
         pinLength: identityData.pinLength,
         projectId: identityData.projectId,
-        customerId: identityData.projectId,
         verificationType: identityData.verificationType,
         state: self.users.states.register,
         nowTime: identityData.nowTime,

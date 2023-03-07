@@ -23386,7 +23386,7 @@ function Users(storage, projectId, storageKey) {
     }
 
     self.storage = storage;
-    self.customerId = projectId;
+    self.projectId = projectId;
     self.storageKey = storageKey;
 
     self.loadData();
@@ -23427,14 +23427,14 @@ Users.prototype.write = function (userId, userData) {
     if (!self.exists(userId)) {
         self.data.push({
             userId: userId,
-            customerId: self.customerId,
+            projectId: self.projectId,
             state: self.states.invalid,
             created: Math.round(new Date().getTime() / 1000)
         });
     }
 
     for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].userId === userId && self.data[i].customerId === self.customerId) {
+        if (self.data[i].userId === userId && (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId)) {
             for (uKey in userData) {
                 if (userData[uKey]) {
                     self.data[i][uKey] = userData[uKey];
@@ -23479,7 +23479,7 @@ Users.prototype.get = function (userId, userProperty) {
     var self = this, i;
 
     for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].userId === userId && self.data[i].customerId === self.customerId) {
+        if (self.data[i].userId === userId && (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId)) {
             if (userProperty) {
                 // Return requested property
                 return self.data[i][userProperty] || "";
@@ -23499,7 +23499,7 @@ Users.prototype.list = function () {
     var self = this, usersList = {}, i;
 
     for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].customerId === self.customerId) {
+        if (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId) {
             usersList[self.data[i].userId] = self.data[i].state;
         }
     }
@@ -23519,7 +23519,7 @@ Users.prototype.remove = function (userId) {
     }
 
     for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].userId === userId && self.data[i].customerId === self.customerId) {
+        if (self.data[i].userId === userId && (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId)) {
             self.data.splice(i, 1);
         }
     }
@@ -23978,7 +23978,6 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
         publicKey: keypair.publicKey,
         pinLength: identityData.pinLength,
         projectId: identityData.projectId,
-        customerId: identityData.projectId,
         verificationType: identityData.verificationType,
         state: self.users.states.register,
         nowTime: identityData.nowTime,

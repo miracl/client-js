@@ -34,7 +34,7 @@ describe("Users loadData", function () {
         storage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"projectID",
+                "projectId":"projectID",
                 "state":"REGISTERED",
                 "mpinId":"exampleMpinId"
             }
@@ -50,21 +50,21 @@ describe("Users loadData", function () {
         storage.setItem("mfa", JSON.stringify([
             {
                 "userId": "test1@example.com",
-                "customerId": "projectID",
+                "projectId": "projectID",
                 "state": "REGISTERED",
                 "mpinId": "exampleMpinId1",
                 "lastUsed": 30
             },
             {
                 "userId": "test2@example.com",
-                "customerId": "projectID",
+                "projectId": "projectID",
                 "state": "REGISTERED",
                 "mpinId": "exampleMpinId2",
                 "lastUsed": 29
             },
             {
                 "userId": "test3@example.com",
-                "customerId": "projectID",
+                "projectId": "projectID",
                 "state": "REGISTERED",
                 "mpinId": "exampleMpinId3",
                 "lastUsed": 31
@@ -80,10 +80,11 @@ describe("Users loadData", function () {
 });
 
 describe("Users write", function () {
-    var users;
+    var users, storage;
 
     before(function () {
-        users = new Users(new Storage(), "projectID", "mfa");
+        storage = new Storage();
+        users = new Users(storage, "projectID", "mfa");
     });
 
     it("should add new user data", function () {
@@ -105,18 +106,18 @@ describe("Users write", function () {
         expect(users.get("test@example.com", "state")).to.equal("REVOKED");
     });
 
-    it("should update only identities for the current customer", function () {
-        var otherCustomerData = {
+    it("should update only identities for the current project", function () {
+        var otherProjectData = {
             userId: "test@example.com",
-            customerId: "anotherProjectID",
+            projectId: "anotherProjectID",
             state: "REGISTERED",
             mpinId: "exampleMpinId"
         };
-        users.data = [otherCustomerData];
+        users.data = [otherProjectData];
 
         users.write("test@example.com", { state: "REVOKED" });
 
-        expect(users.data[0]).to.deep.equal(otherCustomerData);
+        expect(users.data[0]).to.deep.equal(otherProjectData);
     });
 
     it("should not store sensitive data", function () {
@@ -143,6 +144,24 @@ describe("Users write", function () {
         expect(users.get("timestamp@example.com", "created")).to.be.at.least(beforeCreate);
         expect(users.get("timestamp@example.com", "created")).to.be.at.most(Math.ceil(Date.now() / 1000));
     });
+
+    it("should work with identities stored with customerId", function () {
+        storage.setItem("mfa", JSON.stringify([
+            {
+                "userId":"test@example.com",
+                "customerId":"projectID",
+                "state":"REGISTERED",
+                "mpinId":"exampleMpinId"
+            }
+        ]));
+
+        users.loadData();
+
+        expect(users.get("test@example.com", "state")).to.equal("REGISTERED");
+
+        users.write("test@example.com", { state: "REVOKED" });
+        expect(users.get("test@example.com", "state")).to.equal("REVOKED");
+    });
 });
 
 describe("Users exists", function () {
@@ -153,17 +172,24 @@ describe("Users exists", function () {
         storage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"projectID",
+                "projectId":"projectID",
                 "state":"REGISTERED",
                 "mpinId":"exampleMpinId"
             },
             {
-                "userId":"another.customer@example.com",
-                "customerId":"anotherProjectID",
+                "userId":"another.project@example.com",
+                "projectId":"anotherProjectID",
                 "state":"REGISTERED",
                 "mpinId":"anotherExampleMpinId"
+            },
+            {
+                "userId":"test2@example.com",
+                "customerId":"projectID",
+                "state":"REGISTERED",
+                "mpinId":"exampleMpinId"
             }
         ]));
+
         users = new Users(storage, "projectID", "mfa");
     });
 
@@ -175,8 +201,12 @@ describe("Users exists", function () {
         expect(users.exists("missing@example.com")).to.be.false;
     });
 
-    it("should check only identities for the current customer", function () {
-        expect(users.exists("another.customer@example.com")).to.be.false;
+    it("should check only identities for the current project", function () {
+        expect(users.exists("another.project@example.com")).to.be.false;
+    });
+
+    it("should work with identities stored with customerId", function () {
+        expect(users.exists("test2@example.com")).to.be.true;
     });
 });
 
@@ -185,26 +215,34 @@ describe("Users is", function () {
 
     before(function () {
         var storage = new Storage();
+
         storage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"projectID",
+                "projectId":"projectID",
                 "state":"REGISTERED",
                 "mpinId":"exampleMpinId"
             },
             {
                 "userId":"test2@example.com",
-                "customerId":"projectID",
+                "projectId":"projectID",
                 "state":"STARTED",
                 "mpinId":"anotherExampleMpinId"
             },
             {
                 "userId":"test3@example.com",
-                "customerId":"projectID",
+                "projectId":"projectID",
                 "state":"REVOKED",
                 "mpinId":"thirdExampleMpinId"
+            },
+            {
+                "userId":"test4@example.com",
+                "customerId":"projectID",
+                "state":"REGISTERED",
+                "mpinId":"fourthExampleMpinId"
             }
         ]));
+
         users = new Users(storage, "projectID", "mfa");
     });
 
@@ -213,8 +251,11 @@ describe("Users is", function () {
         expect(users.is("test2@example.com", "STARTED")).to.be.true;
         expect(users.is("test3@example.com", "REVOKED")).to.be.true;
     });
-});
 
+    it("should work with identities stored with customerId", function () {
+        expect(users.is("test4@example.com", "REGISTERED")).to.be.true;
+    });
+});
 
 describe("Users list", function () {
     var users;
@@ -224,19 +265,25 @@ describe("Users list", function () {
         storage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"projectID",
+                "projectId":"projectID",
                 "state":"REGISTERED",
                 "mpinId":"exampleMpinId"
             },
             {
                 "userId":"test2@example.com",
-                "customerId":"projectID",
+                "projectId":"projectID",
                 "state":"REGISTERED",
                 "mpinId":"exampleMpinId2"
             },
             {
-                "userId":"another.customer@example.com",
-                "customerId":"anotherProjectID",
+                "userId":"test3@example.com",
+                "customerId":"projectID",
+                "state":"REGISTERED",
+                "mpinId":"exampleMpinId3"
+            },
+            {
+                "userId":"another.project@example.com",
+                "projectId":"anotherProjectID",
                 "state":"REGISTERED",
                 "mpinId":"anotherExampleMpinId"
             }
@@ -250,9 +297,14 @@ describe("Users list", function () {
         expect(list["test2@example.com"]).to.equal("REGISTERED");
     });
 
-    it("should list only identities for the current customer", function () {
+    it("should list only identities for the current project", function () {
         var list = users.list();
-        expect(list["another.customer@example.com"]).to.be.undefined;
+        expect(list["another.project@example.com"]).to.be.undefined;
+    });
+
+    it("should work with identities stored with customerId", function () {
+        var list = users.list();
+        expect(list["test3@example.com"]).to.equal("REGISTERED");
     });
 });
 
@@ -264,34 +316,30 @@ describe("Users remove", function () {
         storage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"projectID",
-                "state":"REGISTERED",
-                "mpinId":"exampleMpinId",
-                "csHex":"testCsHex"
+                "projectId":"projectID",
+                "state":"REGISTERED"
             },
             {
-                "userId":"another.customer@example.com",
-                "customerId":"anotherProjectID",
-                "state":"REGISTERED",
-                "mpinId":"anotherExampleMpinId",
-                "csHex":"anotherTestCsHex"
+                "userId":"another.project@example.com",
+                "projectId":"anotherProjectID",
+                "state":"REGISTERED"
             },
             {
                 "userId":"test@example.com",
-                "customerId":"anotherProjectID",
-                "state":"REGISTERED",
-                "mpinId":"exampleMpinId2",
-                "csHex":"testCsHex2"
+                "projectId":"anotherProjectID",
+                "state":"REGISTERED"
             },
+            {
+                "userId":"test.customer.id@example.com",
+                "customerId":"projectID",
+                "state":"REGISTERED"
+            }
         ]));
+
         users = new Users(storage, "projectID", "mfa");
     });
 
     it("should remove an user", function () {
-        users.write("test@example.com", {
-            mpinId: "exampleMpinId",
-            state: "REGISTERED"
-        });
         expect(users.exists("test@example.com")).to.be.true;
 
         var storeSpy = sinon.spy(users, "store");
@@ -308,14 +356,14 @@ describe("Users remove", function () {
         expect(storeSpy.callCount).to.equal(0);
     });
 
-    it("should not remove user for another customer", function () {
+    it("should not remove user for another project", function () {
         var storeSpy = sinon.spy(users, "store");
 
-        users.remove("another.customer@example.com");
+        users.remove("another.project@example.com");
         expect(storeSpy.callCount).to.equal(0);
     });
 
-    it("should not remove user with the same id for another customer", function () {
+    it("should not remove user with the same id for another project", function () {
         var storeSpy = sinon.spy(users, "store");
 
         users.remove("test@example.com");
@@ -325,7 +373,13 @@ describe("Users remove", function () {
         var userStorageData = JSON.parse(storage.getItem("mfa"));
 
         expect(userStorageData[1].userId).to.equal("test@example.com");
-        expect(userStorageData[1].customerId).to.equal("anotherProjectID");
+        expect(userStorageData[1].projectId).to.equal("anotherProjectID");
+    });
+
+    it("should work with identities stored with customerId", function () {
+        expect(users.exists("test.customer.id@example.com")).to.be.true;
+        users.remove("test.customer.id@example.com");
+        expect(users.exists("test.customer.id@example.com")).to.be.false;
     });
 
     afterEach(function () {
@@ -341,16 +395,22 @@ describe("Users get", function () {
         storage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"projectID",
+                "projectId":"projectID",
                 "state":"REGISTERED",
                 "mpinId":"exampleMpinId"
             },
             {
-                "userId":"another.customer@example.com",
-                "customerId":"anotherProjectID",
+                "userId":"another.project@example.com",
+                "projectId":"anotherProjectID",
                 "state":"REGISTERED",
                 "mpinId":"anotherExampleMpinId"
-            }
+            },
+            {
+                "userId":"test.customer.id@example.com",
+                "customerId":"projectID",
+                "state":"REGISTERED",
+                "mpinId":"exampleMpinId2"
+            },
         ]));
         users = new Users(storage, "projectID", "mfa");
     });
@@ -363,16 +423,20 @@ describe("Users get", function () {
         expect(users.get("missing@example.com", "mpinId")).to.be.undefined;
     });
 
-    it("should check only identities for the current customer", function () {
-        expect(users.get("another.customer@example.com", "mpinId")).to.be.undefined;
+    it("should check only identities for the current project", function () {
+        expect(users.get("another.project@example.com", "mpinId")).to.be.undefined;
     });
 
     it("should fetch all user data if a property is not requested", function () {
         var userData = users.get("test@example.com");
-        expect(userData.customerId).to.equal("projectID");
+        expect(userData.projectId).to.equal("projectID");
         expect(userData.mpinId).to.equal("exampleMpinId");
         expect(userData.state).to.equal("REGISTERED");
         expect(userData.userId).to.equal("test@example.com");
+    });
+
+    it("should work with identities stored with customerId", function () {
+        expect(users.get("test.customer.id@example.com", "mpinId")).to.equal("exampleMpinId2");
     });
 });
 
@@ -384,7 +448,7 @@ describe("Users updateLastUsed", function () {
         storage.setItem("mfa", JSON.stringify([
             {
                 "userId":"test@example.com",
-                "customerId":"projectID",
+                "projectId":"projectID",
                 "state":"REGISTERED",
                 "mpinId":"exampleMpinId"
             }
@@ -423,7 +487,7 @@ describe("Users store", function () {
 
         var userData = JSON.parse(storage.getItem("mfa"))[0];
 
-        expect(userData.customerId).to.equal("projectID");
+        expect(userData.projectId).to.equal("projectID");
         expect(userData.mpinId).to.equal("exampleMpinId");
         expect(userData.state).to.equal("REGISTERED");
         expect(userData.userId).to.equal("test@example.com");
