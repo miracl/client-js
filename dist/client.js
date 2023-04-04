@@ -24479,7 +24479,13 @@ Client.prototype._request = function (options, callback) {
             callback(null, response);
         } else if (request.readyState === 4) {
             try {
-                description = JSON.parse(request.responseText).error;
+                response = JSON.parse(request.responseText);
+
+                if (typeof response.error === "object") {
+                    description = response.error.info;
+                } else {
+                    description = response.error;
+                }
             } catch (e) {
                 description = request.statusText;
             }
