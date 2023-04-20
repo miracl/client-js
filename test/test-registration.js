@@ -76,8 +76,10 @@ describe("Client _generateKeypair", function () {
         expect(function () {
             client._generateKeypair();
         }).to.throw("CryptoError");
+    });
 
-        client._crypto().MPIN.GET_DVS_KEYPAIR.restore();
+    afterEach(function () {
+        client._crypto().MPIN.GET_DVS_KEYPAIR.restore && client._crypto().MPIN.GET_DVS_KEYPAIR.restore();
     });
 });
 

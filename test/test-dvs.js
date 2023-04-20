@@ -24,8 +24,6 @@ describe("Client sign", function () {
             expect(result.v).to.equal("");
             done();
         });
-
-        client._authentication.restore && client._authentication.restore();
     });
 
     it("should throw error on crypto failure", function (done) {
@@ -39,6 +37,7 @@ describe("Client sign", function () {
     });
 
     afterEach(function () {
-        client._crypto().MPIN.CLIENT.restore();
+        client._authentication.restore && client._authentication.restore();
+        client._crypto().MPIN.CLIENT.restore && client._crypto().MPIN.CLIENT.restore();
     });
 });

@@ -416,8 +416,10 @@ describe("Client authenticate", function () {
             expect(authenticationStub.firstCall.args[2]).to.deep.equal(["oidc"]);
             done();
         });
+    });
 
-        authenticationStub.restore();
+    afterEach(function () {
+        client._authentication.restore && client._authentication.restore();
     });
 });
 
@@ -442,8 +444,10 @@ describe("Client generateOTP", function () {
             expect(authenticationStub.firstCall.args[2]).to.deep.equal(["otp"]);
             done();
         });
+    });
 
-        authenticationStub.restore();
+    afterEach(function () {
+        client._authentication.restore && client._authentication.restore();
     });
 });
 
@@ -468,8 +472,10 @@ describe("Client generateQuickCode", function () {
             expect(authenticationStub.firstCall.args[2]).to.deep.equal(["reg-code"]);
             done();
         });
+    });
 
-        authenticationStub.restore();
+    afterEach(function () {
+        client._authentication.restore && client._authentication.restore();
     });
 });
 
@@ -496,8 +502,10 @@ describe("Client generateAuthCode", function () {
             expect(authenticationStub.firstCall.args[2]).to.deep.equal(["authcode"]);
             done();
         });
+    });
 
-        fetchAccessIdStub.restore();
-        authenticationStub.restore();
+    afterEach(function () {
+        client.fetchAccessId.restore && client.fetchAccessId.restore();
+        client._authentication.restore && client._authentication.restore();
     });
 });
