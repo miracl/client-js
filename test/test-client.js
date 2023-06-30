@@ -335,4 +335,51 @@ describe("Client request", function() {
         expect(callback.firstCall.args[0].message).to.equal("The request was aborted");
         expect(callback.firstCall.args[1]).to.be.null;
     });
+
+    it("should set project ID header", function () {
+        requests = [];
+
+        client._request({
+            url: "/test-project-id-header",
+        }, function () {});
+
+        expect(requests.length).to.equal(1);
+        expect(requests[0].requestHeaders).to.have.property("X-MIRACL-CID");
+        expect(requests[0].requestHeaders["X-MIRACL-CID"]).to.equal("projectID");
+    });
+
+    it("should set client version header", function () {
+        requests = [];
+
+        client._request({
+            url: "/test-client-version-header",
+        }, function () {});
+
+        var expectedVersion = "MIRACL Client.js/" + process.env.npm_package_version;
+
+        expect(requests.length).to.equal(1);
+        expect(requests[0].requestHeaders).to.have.property("X-MIRACL-CLIENT");
+        expect(requests[0].requestHeaders["X-MIRACL-CLIENT"]).to.equal(expectedVersion);
+    });
+
+    it("should set extended client version header", function () {
+        requests = [];
+
+        var extendedVersion = "extended client version";
+
+        var config = testData.init()
+        config.applicationInfo = extendedVersion;
+
+        client = new Client(config);
+
+        client._request({
+            url: "/test-client-version-header",
+        }, function () {});
+
+        var expectedVersion = "MIRACL Client.js/" + process.env.npm_package_version + " " + extendedVersion;
+
+        expect(requests.length).to.equal(1);
+        expect(requests[0].requestHeaders).to.have.property("X-MIRACL-CLIENT");
+        expect(requests[0].requestHeaders["X-MIRACL-CLIENT"]).to.equal(expectedVersion);
+    });
 });

@@ -23580,6 +23580,7 @@ function createErrorType(name, params) {
  * @param {string} options.oidc.state - OIDC state
  * @param {bool}   options.cors - Enable CORS requests if set to 'true'
  * @param {number} options.requestTimeout - Time before a HTTP request times out in miliseconds
+ * @param {string} options.applicationInfo - Sets additional information that will be sent via X-MIRACL-CLIENT HTTP header
  */
 function Client(options) {
     var self = this;
@@ -23611,6 +23612,9 @@ function Client(options) {
     if (!options.requestTimeout || isNaN(options.requestTimeout)) {
         options.requestTimeout = 4000;
     }
+
+    // Set the client name using the current lib version and provided application info
+    options.clientName = "MIRACL Client.js/7.4.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     self.options = options;
 
@@ -24508,6 +24512,7 @@ Client.prototype._request = function (options, callback) {
     request.timeout = self.options.requestTimeout;
 
     request.setRequestHeader("X-MIRACL-CID", self.options.projectId);
+    request.setRequestHeader("X-MIRACL-CLIENT", self.options.clientName);
 
     // Set authorization header if provided
     if (options.authorization) {
