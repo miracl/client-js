@@ -57,32 +57,6 @@ describe("Client getActivationToken", function () {
     });
 });
 
-describe("Client _generateKeypair", function () {
-    var client;
-
-    before(function () {
-        client = new Client(testData.init());
-    });
-
-    it("should return private and public key", function () {
-        var keypair = client._generateKeypair();
-        expect(keypair.privateKey).to.exist;
-        expect(keypair.publicKey).to.exist;
-    });
-
-    it("should throw error on crypto failure", function () {
-        sinon.stub(client._crypto().MPIN, "GET_DVS_KEYPAIR").returns(-1);
-
-        expect(function () {
-            client._generateKeypair();
-        }).to.throw("CryptoError");
-    });
-
-    afterEach(function () {
-        client._crypto().MPIN.GET_DVS_KEYPAIR.restore && client._crypto().MPIN.GET_DVS_KEYPAIR.restore();
-    });
-});
-
 describe("Client _createMPinID", function() {
     var client;
 
@@ -237,77 +211,7 @@ describe("Client _getSecret2", function() {
 
     afterEach(function() {
         client._request.restore && client._request.restore();
-        client._addShares.restore && client._addShares.restore();
-    });
-});
-
-describe("Client _addShares", function () {
-    var client;
-
-    before(function () {
-        client = new Client(testData.init());
-    });
-
-    it("should throw error on RECOMBINE_G1 failure", function () {
-        sinon.stub(client._crypto().MPIN, "RECOMBINE_G1").returns(-1);
-        expect(function () {
-            client._addShares("privateKey", "test", "test");
-        }).to.throw("CryptoError");
-    });
-
-    it("should throw error on GET_G1_MULTIPLE failure", function () {
-        sinon.stub(client._crypto().MPIN, "RECOMBINE_G1").returns(0);
-        sinon.stub(client._crypto().MPIN, "GET_G1_MULTIPLE").returns(-1);
-        expect(function () {
-            client._addShares("privateKey", "test", "test");
-        }).to.throw("CryptoError");
-    });
-
-    it("should return combined client secret", function () {
-        sinon.stub(client._crypto().MPIN, "RECOMBINE_G1").returns(0);
-        sinon.stub(client._crypto().MPIN, "GET_G1_MULTIPLE").returns(0);
-        expect(client._addShares("privateKey", "test", "test")).to.equal("");
-    });
-
-    afterEach(function () {
-        client._crypto().MPIN.RECOMBINE_G1.restore && client._crypto().MPIN.RECOMBINE_G1.restore();
-        client._crypto().MPIN.GET_G1_MULTIPLE.restore && client._crypto().MPIN.GET_G1_MULTIPLE.restore();
-    });
-});
-
-describe("Client _extractPin", function () {
-    var client;
-
-    before(function () {
-        client = new Client(testData.init());
-    });
-
-    it("should throw error on crypto failure", function () {
-        sinon.stub(client._crypto().MPIN, "EXTRACT_PIN").returns(-1);
-        expect(function () {
-            client._extractPin("test", "1234", "hex")
-        }).to.throw("CryptoError");
-    });
-
-    it("should return combined client secret", function () {
-        sinon.stub(client._crypto().MPIN, "EXTRACT_PIN").returns(0);
-        expect(client._extractPin("test", "1234", "hex")).to.equal("0000");
-    });
-
-    afterEach(function () {
-        client._crypto().MPIN.EXTRACT_PIN.restore && client._crypto().MPIN.EXTRACT_PIN.restore();
-    });
-});
-
-describe("Client _mpinIdWithPublicKey", function () {
-    var client;
-
-    before(function () {
-        client = new Client(testData.init());
-    });
-
-    it("should combine the MPIN ID with the public key", function () {
-        expect(client._mpinIdWithPublicKey("0f", "0f")).to.equal("0f0f");
+        client.crypto.addShares.restore && client.crypto.addShares.restore();
     });
 });
 
@@ -323,7 +227,7 @@ describe("Client _createIdentity", function() {
     });
 
     it("should call addShares with CS share 1 and 2", function(done) {
-        var addSharesStub = sinon.stub(client, "_addShares");
+        var addSharesStub = sinon.stub(client.crypto, "addShares");
         var keypair = { privateKey: "privateKey" };
         var share1 = { dvsClientSecretShare: "clientSecretValue1" };
         var share2 = { dvsClientSecret: "clientSecretValue2" };
@@ -338,14 +242,15 @@ describe("Client _createIdentity", function() {
     });
 
     it("should call extractPin with mpinId, PIN", function (done) {
-        var addSharesStub = sinon.stub(client, "_addShares");
-        var extractPinStub = sinon.stub(client, "_extractPin");
+        var addSharesStub = sinon.stub(client.crypto, "addShares");
+        var extractPinStub = sinon.stub(client.crypto, "extractPin");
 
         client._createIdentity("test@example.com", "1234", { mpinId: "0f" }, {}, {}, { publicKey: "0f" }, function (data) {
             expect(addSharesStub.calledOnce).to.be.true;
             expect(extractPinStub.calledOnce).to.be.true;
-            expect(extractPinStub.firstCall.args[0]).to.equal("0f0f");
-            expect(extractPinStub.firstCall.args[1]).to.equal("1234");
+            expect(extractPinStub.firstCall.args[0]).to.equal("0f");
+            expect(extractPinStub.firstCall.args[1]).to.equal("0f");
+            expect(extractPinStub.firstCall.args[2]).to.equal("1234");
             done();
         }, function (err) {
             throw new Error();
@@ -353,21 +258,20 @@ describe("Client _createIdentity", function() {
     });
 
     it("should call callback with error when addShares fails", function(done) {
-        var thrownError = new Error;
-        var addSharesStub = sinon.stub(client, "_addShares").throws(thrownError);
+        var addSharesStub = sinon.stub(client.crypto, "addShares").throws(new Error("Cryptography error"));
 
         client._createIdentity("test@example.com", "1234", {}, {}, {}, {}, function(err) {
             expect(addSharesStub.calledOnce).to.be.true;
             expect(err).to.exist;
-            expect(err).to.equal(thrownError);
+            expect(err.message).to.equal("Cryptography error");
             done();
         });
     });
 
     it("should call callback with error when extractPin fails", function(done) {
         var thrownError = new Error;
-        var addSharesStub = sinon.stub(client, "_addShares");
-        var extractPinStub = sinon.stub(client, "_extractPin").throws(thrownError);
+        var addSharesStub = sinon.stub(client.crypto, "addShares");
+        var extractPinStub = sinon.stub(client.crypto, "extractPin").throws(thrownError);
 
         client._createIdentity("test@example.com", "1234", {}, {}, {}, {}, function(err) {
             expect(extractPinStub.calledOnce).to.be.true;
@@ -378,8 +282,8 @@ describe("Client _createIdentity", function() {
     });
 
     afterEach(function() {
-        client._extractPin.restore && client._extractPin.restore();
-        client._addShares.restore && client._addShares.restore();
+        client.crypto.extractPin.restore && client.crypto.extractPin.restore();
+        client.crypto.addShares.restore && client.crypto.addShares.restore();
     });
 });
 

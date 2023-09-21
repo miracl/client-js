@@ -1,9 +1,7 @@
-import CTX from "@miracl/crypto-js";
+import Crypto from "./crypto.js";
 import Users from "./users.js";
 
-var CryptoContexts = {},
-    RequestError = createErrorType("RequestError", ["message", "status"]),
-    CryptoError = createErrorType("CryptoError", ["message", "code"]),
+var RequestError = createErrorType("RequestError", ["message", "status"]),
     NotVerifiedError = createErrorType("NotVerifiedError", ["message"]),
     VerificationExpiredError = createErrorType("VerificationExpiredError", ["message"]),
     IdentityError = createErrorType("IdentityError", ["message"]),
@@ -79,9 +77,7 @@ export default function Client(options) {
 
     self.options = options;
 
-    // Initialize RNG
-    self.rng = new (self._crypto().RAND)();
-    self.rng.clean();
+    self.crypto = new Crypto(options.seed);
 
     self.users = new Users(options.userStorage, options.projectId, "mfa");
 }
@@ -89,41 +85,6 @@ export default function Client(options) {
 Client.prototype.options = {};
 
 Client.prototype.session = {};
-
-Client.prototype._crypto = function (curve) {
-    // Set to default curve if not provided
-    if (!curve) {
-        curve = "BN254CX";
-    }
-
-    if (!CryptoContexts[curve]) {
-        // Create a new curve context
-        CryptoContexts[curve] = new CTX(curve);
-
-        // Change maximum PIN length to 6 digits
-        CryptoContexts[curve].MPIN.MAXPIN = 1000000;
-
-        // Modify MPIN settings
-        CryptoContexts[curve].MPIN.PBLEN = 20;
-        CryptoContexts[curve].MPIN.TRAP = 2000;
-    }
-
-    return CryptoContexts[curve];
-};
-
-/**
- * Seed the Random Number Generator (RNG)
- * @private
- */
-Client.prototype._seedRNG = function (seedHex) {
-    var self = this,
-        entropyBytes;
-
-    seedHex = seedHex + self.options.seed;
-
-    entropyBytes = self._hexToBytes(seedHex);
-    self.rng.seed(entropyBytes.length, entropyBytes);
-};
 
 /**
  * Set the access(session) ID
@@ -299,7 +260,7 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
         throw new Error("Missing user ID");
     }
 
-    keypair = self._generateKeypair("BN254CX");
+    keypair = self.crypto.generateKeypair("BN254CX");
 
     self._createMPinID(userId, activationToken, function (err, identityData) {
         if (err) {
@@ -334,20 +295,6 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
             });
         });
     });
-};
-
-Client.prototype._generateKeypair = function (curve) {
-    var self = this,
-        privateKeyBytes = [],
-        publicKeyBytes = [],
-        errorCode;
-
-    errorCode = self._crypto(curve).MPIN.GET_DVS_KEYPAIR(self.rng, privateKeyBytes, publicKeyBytes);
-    if (errorCode != 0) {
-        throw new CryptoError("Could not generate key pair", errorCode);
-    }
-
-    return { publicKey: self._bytesToHex(publicKeyBytes), privateKey: self._bytesToHex(privateKeyBytes) };
 };
 
 Client.prototype._createMPinID = function (userId, activationToken, callback) {
@@ -429,8 +376,8 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
         token;
 
     try {
-        csHex = self._addShares(keypair.privateKey, sec1Data.dvsClientSecretShare, sec2Data.dvsClientSecret, sec1Data.curve);
-        token = self._extractPin(self._mpinIdWithPublicKey(identityData.mpinId, keypair.publicKey), userPin, csHex, sec1Data.curve);
+        csHex = self.crypto.addShares(keypair.privateKey, sec1Data.dvsClientSecretShare, sec2Data.dvsClientSecret, sec1Data.curve);
+        token = self.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex, sec1Data.curve);
     } catch (err) {
         return callback(err, null);
     }
@@ -451,62 +398,6 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
     self.users.write(userId, userData);
 
     callback(null, userData);
-};
-
-/**
- * Add two points on the curve that are originally in hex format
- * This function is used to add client secret shares.
- * Returns a hex encoded sum of the shares
- * @private
- */
-Client.prototype._addShares = function (privateKeyHex, share1Hex, share2Hex, curve) {
-    var self = this,
-        privateKeyBytes = [],
-        share1Bytes = [],
-        share2Bytes = [],
-        clientSecretBytes = [],
-        errorCode;
-
-    privateKeyBytes = self._hexToBytes(privateKeyHex);
-    share1Bytes = self._hexToBytes(share1Hex);
-    share2Bytes = self._hexToBytes(share2Hex);
-
-    errorCode = self._crypto(curve).MPIN.RECOMBINE_G1(share1Bytes, share2Bytes, clientSecretBytes);
-    if (errorCode !== 0) {
-        throw new CryptoError("Could not combine the client secret shares", errorCode);
-    }
-
-    errorCode = self._crypto(curve).MPIN.GET_G1_MULTIPLE(null, 0, privateKeyBytes, clientSecretBytes, clientSecretBytes);
-    if (errorCode != 0) {
-        throw new CryptoError("Could not combine private key with client secret", errorCode);
-    }
-
-    return self._bytesToHex(clientSecretBytes);
-};
-
-/**
- * Calculates the MPin Token
- * This function maps the M-Pin ID to a point on the curve,
- * multiplies this value by PIN and then subtractsit from
- * the client secret curve point to generate the M-Pin token.
- * Returns a hex encoded M-Pin Token
- * @private
- */
-Client.prototype._extractPin = function (mpinIdHex, PIN, clientSecretHex, curve) {
-    var self = this,
-        clientSecretBytes = [],
-        mpinIdBytes = [],
-        errorCode;
-
-    clientSecretBytes = self._hexToBytes(clientSecretHex);
-    mpinIdBytes = self._hexToBytes(mpinIdHex);
-
-    errorCode = self._crypto(curve).MPIN.EXTRACT_PIN(self._crypto(curve).MPIN.SHA256, mpinIdBytes, PIN, clientSecretBytes);
-    if (errorCode !== 0) {
-        throw new CryptoError("Could not extract PIN from client secret", errorCode);
-    }
-
-    return self._bytesToHex(clientSecretBytes);
 };
 
 /**
@@ -610,29 +501,13 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
  */
 Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, callback) {
     var self = this,
-        mpinIdHex,
-        U = [],
-        UT = [],
-        errorCode,
+        res,
         requestData;
 
-    mpinIdHex = self._mpinIdWithPublicKey(identityData.mpinId, identityData.publicKey);
-
-    errorCode = self._crypto(identityData.curve).MPIN.CLIENT_1(
-        self._crypto(identityData.curve).MPIN.SHA256,
-        0,
-        self._hexToBytes(mpinIdHex),
-        self.rng,
-        X,
-        userPin,
-        self._hexToBytes(identityData.token),
-        SEC,
-        U,
-        UT,
-        self._hexToBytes(0)
-    );
-    if (errorCode !== 0) {
-        return callback(new CryptoError("Could not calculate pass 1 request data", errorCode), null);
+    try {
+        res = self.crypto.calculatePass1(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC);
+    } catch (err) {
+        return callback(err, null);
     }
 
     requestData = {
@@ -640,8 +515,8 @@ Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, cal
         mpin_id: identityData.mpinId,
         dtas: identityData.dtas,
         publicKey: identityData.publicKey,
-        UT: self._bytesToHex(UT),
-        U: self._bytesToHex(U)
+        UT: res.UT,
+        U: res.U
     };
 
     self._request({ url: self.options.server + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
@@ -664,19 +539,19 @@ Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, cal
  */
 Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callback) {
     var self = this,
-        errorCode,
+        vHex,
         requestData;
 
-    // Compute V
-    errorCode = self._crypto(identityData.curve).MPIN.CLIENT_2(X, self._hexToBytes(yHex), SEC);
-    if (errorCode !== 0) {
-        return callback(new CryptoError("Could not calculate pass 2 request data", errorCode), null);
+    try {
+        vHex = self.crypto.calculatePass2(identityData.curve, X, yHex, SEC);
+    } catch (err) {
+        return callback(err, null);
     }
 
     requestData = {
         mpin_id: identityData.mpinId,
         WID: self.session.accessId,
-        V: self._bytesToHex(SEC)
+        V: vHex
     };
 
     self._request({ url: self.options.server + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
@@ -722,7 +597,7 @@ Client.prototype._renewSecret = function (userId, userPin, activationData, callb
         keypair;
 
     identityData = self.users.get(userId);
-    keypair = self._generateKeypair(activationData.curve);
+    keypair = self.crypto.generateKeypair(activationData.curve);
 
     self._getWaMSecret1(keypair, activationData.token, function (err, sec1Data) {
         if (err) {
@@ -755,31 +630,6 @@ Client.prototype._getWaMSecret1 = function (keypair, registerToken, callback) {
 };
 
 /**
- * Returns the public key bytes appended to the MPin ID bytes in hex encoding
- * @private
- */
-Client.prototype._mpinIdWithPublicKey = function (mpinId, publicKey) {
-    var self = this,
-        mpinIdBytes = self._hexToBytes(mpinId),
-        publicKeyBytes = self._hexToBytes(publicKey),
-        i;
-
-    if (!mpinIdBytes) {
-        return;
-    }
-
-    if (!publicKeyBytes) {
-        return mpinId;
-    }
-
-    for (i = 0; i < publicKeyBytes.length; i++) {
-        mpinIdBytes.push(publicKeyBytes[i]);
-    }
-
-    return self._bytesToHex(mpinIdBytes);
-};
-
-/**
  * Create a cryptographic signature of a given message
  *
  * @param {string} userId - The ID of the user
@@ -791,45 +641,29 @@ Client.prototype._mpinIdWithPublicKey = function (mpinId, publicKey) {
 Client.prototype.sign = function (userId, userPin, message, timestamp, callback) {
     var self = this,
         identityData,
-        mpinIdHex,
-        SEC = [],
-        X = [],
-        Y1 = [],
-        U = [],
-        errorCode,
+        res,
         signatureData;
 
+    if (!userId) {
+        return callback(new Error("Empty user ID"), null);
+    }
+
     if (!self.users.exists(userId)) {
-        return callback(new IdentityError("Missing identity"), null);
+        return callback(new Error("User ID not found"), null);
     }
 
     identityData = self.users.get(userId);
-    mpinIdHex = self._mpinIdWithPublicKey(identityData.mpinId, identityData.publicKey);
 
-    errorCode = self._crypto(identityData.curve).MPIN.CLIENT(
-        self._crypto(identityData.curve).MPIN.SHA256,
-        0,
-        self._hexToBytes(mpinIdHex),
-        self.rng,
-        X,
-        userPin,
-        self._hexToBytes(identityData.token),
-        SEC,
-        U,
-        null,
-        null,
-        timestamp,
-        Y1,
-        self._hexToBytes(message)
-    );
-    if (errorCode != 0) {
-        callback(new CryptoError("Could not sign message", errorCode), null);
+    try {
+        res = self.crypto.sign(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
+    } catch (err) {
+        return callback(new Error("Signing fail", { cause: err }), null);
     }
 
     signatureData = {
         hash: message,
-        u: self._bytesToHex(U),
-        v: self._bytesToHex(SEC),
+        u: res.U,
+        v: res.V,
         mpinId: identityData.mpinId,
         publicKey: identityData.publicKey,
         dtas: identityData.dtas
@@ -837,46 +671,12 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
 
     this._authentication(userId, userPin, ["dvs-auth"], function (err) {
         if (err) {
-            return callback(err, null);
+            // TODO: remap specific authentication errors
+            return callback(new Error("Signing fail", { cause: err.cause }), null);
         }
 
         callback(null, signatureData);
     });
-};
-
-/**
- * Convert a hex representation of a Point to a bytes array
- * @private
- */
-Client.prototype._hexToBytes = function (hexValue) {
-    var len, byteValue, i;
-
-    if (!hexValue) {
-        return;
-    }
-
-    len = hexValue.length;
-    byteValue = [];
-
-    for (i = 0; i < len; i += 2) {
-        byteValue[(i / 2)] = parseInt(hexValue.substr(i, 2), 16);
-    }
-
-    return byteValue;
-};
-
-Client.prototype._bytesToHex = function (b) {
-    var s = "",
-        len = b.length,
-        ch, i;
-
-    for (i = 0; i < len; i++) {
-        ch = b[i];
-        s += ((ch >>> 4) & 15).toString(16);
-        s += (ch & 15).toString(16);
-    }
-
-    return s;
 };
 
 Client.prototype._urlEncode = function (obj) {

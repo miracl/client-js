@@ -12,7 +12,7 @@ describe("Client _getPass1", function () {
 
     it("shoud make a request for first pass", function (done) {
         var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
-        sinon.stub(client._crypto().MPIN, "CLIENT_1").returns(0);
+        sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
         client._getPass1({}, "1234", ["oidc"], [], [], function () {
             expect(requestStub.calledOnce).to.be.true;
@@ -25,7 +25,7 @@ describe("Client _getPass1", function () {
 
     it("should pass response to callback", function (done) {
         sinon.stub(client, "_request").yields(null, { success: true });
-        sinon.stub(client._crypto().MPIN, "CLIENT_1").returns(0);
+        sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
         client._getPass1({}, "1234", ["oidc"], [], [], function (err, data) {
             expect(data).to.exist;
@@ -36,18 +36,18 @@ describe("Client _getPass1", function () {
 
     it("should pass error to callback", function (done) {
         sinon.stub(client, "_request").yields(null, { success: true });
-        sinon.stub(client._crypto().MPIN, "CLIENT_1").returns(-14);
+        sinon.stub(client.crypto, "calculatePass1").throws(new Error("Cryptography error: -14"));
 
         client._getPass1({}, "1234", ["oidc"], [], [], function (err, data) {
             expect(err).to.exist;
-            expect(err.name).to.equal("CryptoError");
+            expect(err.message).to.equal("Cryptography error: -14");
             done();
         });
     });
 
     it("should handle dvs scope", function (done) {
         var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
-        sinon.stub(client._crypto().MPIN, "CLIENT_1").returns(0);
+        sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
         client._getPass1({}, "1234", ["dvs-auth"], [], [], function (err, data) {
             expect(requestStub.firstCall.args[0].data.scope).to.deep.equal(["dvs-auth"]);
@@ -57,7 +57,7 @@ describe("Client _getPass1", function () {
 
     afterEach(function () {
         client._request.restore && client._request.restore();
-        client._crypto().MPIN.CLIENT_1.restore && client._crypto().MPIN.CLIENT_1.restore();
+        client.crypto.calculatePass1.restore && client.crypto.calculatePass1.restore();
     });
 });
 
@@ -70,7 +70,7 @@ describe("Client _getPass2", function () {
 
     it("shoud make a request for second pass", function (done) {
         var stub = sinon.stub(client, "_request").yields(null, { success: true });
-        sinon.stub(client._crypto().MPIN, "CLIENT_2").returns(0);
+        sinon.stub(client.crypto, "calculatePass2").returns();
 
         client._getPass2({}, ["oidc"], "yHex", [], [], function () {
             expect(stub.calledOnce).to.be.true;
@@ -83,7 +83,7 @@ describe("Client _getPass2", function () {
 
     it("should pass response to callback", function (done) {
         sinon.stub(client, "_request").yields(null, { success: true });
-        sinon.stub(client._crypto().MPIN, "CLIENT_2").returns(0);
+        sinon.stub(client.crypto, "calculatePass2").returns();
 
         client._getPass2({}, ["oidc"], "yHex", [], [], function (err, data) {
             expect(data).to.exist;
@@ -94,18 +94,18 @@ describe("Client _getPass2", function () {
 
     it("should pass error to callback", function (done) {
         sinon.stub(client, "_request").yields(null, { success: true });
-        sinon.stub(client._crypto().MPIN, "CLIENT_2").returns(-14);
+        sinon.stub(client.crypto, "calculatePass2").throws(new Error("Cryptography error"));
 
         client._getPass2({}, ["oidc"], "yHex", [], [], function (err, data) {
             expect(err).to.exist;
-            expect(err.name).to.equal("CryptoError");
+            expect(err.message).to.equal("Cryptography error");
             done();
         });
     });
 
     it("should make a request for OTP", function (done) {
         var stub = sinon.stub(client, "_request").yields(null, { success: true });
-        sinon.stub(client._crypto().MPIN, "CLIENT_2").returns(0);
+        sinon.stub(client.crypto, "calculatePass2").returns();
 
         client._getPass2({}, ["otp"], "yHex", [], [], function (err, data) {
             expect(stub.calledOnce).to.be.true;
@@ -115,7 +115,7 @@ describe("Client _getPass2", function () {
 
     afterEach(function () {
         client._request.restore && client._request.restore();
-        client._crypto().MPIN.CLIENT_2.restore && client._crypto().MPIN.CLIENT_2.restore();
+        client.crypto.calculatePass2.restore && client.crypto.calculatePass2.restore();
     });
 });
 

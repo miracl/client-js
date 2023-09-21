@@ -10,13 +10,14 @@ describe("Client sign", function () {
         client = new Client(testData.init());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
+            publicKey: "00",
             state: "REGISTERED"
         });
     });
 
     it("should return U and V", function (done) {
-        sinon.stub(client._crypto().MPIN, "CLIENT").returns(0);
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, true);
+        sinon.stub(client, "_authentication").yields(null, true);
+        sinon.stub(client.crypto, "sign").returns({U: "", V: ""});
 
         client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.be.null;
@@ -26,18 +27,32 @@ describe("Client sign", function () {
         });
     });
 
-    it("should throw error on crypto failure", function (done) {
-        sinon.stub(client._crypto().MPIN, "CLIENT").returns(-1);
+    it("should fail when authentication fails", function (done) {
+        sinon.stub(client, "_authentication").yields(new Error("Authentication failed", { cause: new Error("Authentication error") }), null);
+        sinon.stub(client.crypto, "sign").returns({U: "", V: ""});
 
         client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.exist;
-            expect(err.name).to.equal("CryptoError");
+            expect(err.message).to.equal("Signing fail");
+            expect(err.cause.message).to.equal("Authentication error");
+            done();
+        });
+    });
+
+    it("should fail on crypto failure", function (done) {
+        sinon.stub(client, "_authentication").yields(null, true);
+        sinon.stub(client.crypto, "sign").throws(new Error("Cryptography error"));
+
+        client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Signing fail");
+            expect(err.cause.message).to.equal("Cryptography error");
             done();
         });
     });
 
     afterEach(function () {
         client._authentication.restore && client._authentication.restore();
-        client._crypto().MPIN.CLIENT.restore && client._crypto().MPIN.CLIENT.restore();
+        client.crypto.sign.restore && client.crypto.sign.restore();
     });
 });
