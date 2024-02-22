@@ -305,7 +305,7 @@ describe("Client _authentication", function () {
     it("should fail w/o userId", function (done) {
         client._authentication("", "", ["otp"], function (err) {
             expect(err).to.exist;
-            expect(err.name).to.equal("IdentityError");
+            expect(err.message).to.equal("Empty user ID");
             done();
         });
     });

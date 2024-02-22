@@ -110,14 +110,6 @@ describe("Client fetchAccessId", function () {
         });
     });
 
-    it("should fail if response doesn't have all session data", function () {
-        var requestStub = sinon.stub(client, "_request").yields(null, {});
-
-        client.fetchAccessId("test@example.com", function (err, data) {
-            expect(err).to.exist;
-        });
-    });
-
     it("should store session info", function () {
         var requestStub = sinon.stub(client, "_request").yields(null, sessionInfo);
 
@@ -156,14 +148,6 @@ describe("Client fetchStatus", function() {
 
     it("should fail when request fails", function () {
         var requestStub = sinon.stub(client, "_request").yields(new Error("Error"), null);
-
-        client.fetchStatus(function (err, data) {
-            expect(err).to.exist;
-        });
-    });
-
-    it("should fail if response doesn't have expected data", function () {
-        var requestStub = sinon.stub(client, "_request").yields(null, {});
 
         client.fetchStatus(function (err, data) {
             expect(err).to.exist;

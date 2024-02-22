@@ -1,11 +1,7 @@
 import Crypto from "./crypto.js";
 import Users from "./users.js";
 
-var RequestError = createErrorType("RequestError", ["message", "status"]),
-    NotVerifiedError = createErrorType("NotVerifiedError", ["message"]),
-    VerificationExpiredError = createErrorType("VerificationExpiredError", ["message"]),
-    IdentityError = createErrorType("IdentityError", ["message"]),
-    InvalidRegCodeError = createErrorType("InvalidRegCodeError", ["message"]);
+var RequestError = createErrorType("RequestError", ["message", "status"]);
 
 function createErrorType(name, params) {
     function CustomError() {
@@ -119,10 +115,6 @@ Client.prototype.fetchAccessId = function (userId, callback) {
             return callback(error, null);
         }
 
-        if (!res.webOTT || !res.accessURL || !res.qrURL || !res.accessId) {
-            return callback(new Error("Missing initial request params"), null);
-        }
-
         self.session = res;
 
         callback(null, res);
@@ -151,10 +143,6 @@ Client.prototype.fetchStatus = function (callback) {
             return callback(error, null);
         }
 
-        if (!data || !data.status) {
-            return callback(new Error("Missing status data"), null);
-        }
-
         callback(null, data);
     });
 };
@@ -170,7 +158,7 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
         reqData;
 
     if (!userId) {
-        return callback(new Error("Missing user ID"), null);
+        return callback(new Error("Empty user ID"), null);
     }
 
     reqData = {
@@ -183,6 +171,10 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
 
     self._request(reqData, function (err, result) {
         if (err) {
+            if (err.status === 412) {
+                return callback(new Error("No device registered for provided user ID", { cause: err }));
+            }
+
             return callback(err, null);
         }
 
@@ -201,6 +193,10 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
 Client.prototype.sendVerificationEmail = function (userId, callback) {
     var self = this,
         reqData = {};
+
+    if (!userId) {
+        return callback(new Error("Empty user ID"), null);
+    }
 
     reqData.url = self.options.server + "/verification";
     reqData.type = "POST";
@@ -257,7 +253,11 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
         keypair;
 
     if (!userId) {
-        throw new Error("Missing user ID");
+        return callback(new Error("Empty user ID"), null);
+    }
+
+    if (!activationToken) {
+        return callback(new Error("Empty activation token"), null);
     }
 
     keypair = self.crypto.generateKeypair("BN254CX");
@@ -313,14 +313,14 @@ Client.prototype._createMPinID = function (userId, activationToken, callback) {
     self._request(regData, function (err, data) {
         if (err) {
             if (err.status === 403) {
-                return callback(new InvalidRegCodeError("Invalid registration code"), null);
+                return callback(new Error("Invalid registration code", { cause: err }), null);
             } else {
                 return callback(err, null);
             }
         }
 
         if (data.projectId !== self.options.projectId) {
-            return callback(new InvalidRegCodeError("Registration started for different project"), null);
+            return callback(new Error("Registration started for different project"), null);
         }
 
         self.users.write(userId, { state: self.users.states.start });
@@ -350,13 +350,7 @@ Client.prototype._getSecret1 = function (identityData, keypair, callback) {
 
     self._request({ url: cs1Url }, function (err, sec1Data) {
         if (err) {
-            if (err.status === 401) {
-                return callback(new NotVerifiedError("Identity not verified"), null);
-            } else if (err.status === 404) {
-                return callback(new VerificationExpiredError("Registration session expired"), null);
-            } else {
-                return callback(err, null);
-            }
+            return callback(err, null);
         }
 
         callback(null, sec1Data);
@@ -458,8 +452,12 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
         SEC = [],
         X = [];
 
+    if (!userId) {
+        return callback(new Error("Empty user ID"), null);
+    }
+
     if (!self.users.exists(userId)) {
-        return callback(new IdentityError("Missing identity"), null);
+        return callback(new Error("User ID not found"), null);
     }
 
     identityData = self.users.get(userId);
@@ -568,12 +566,20 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
 
     self._request({ url: self.options.server + "/rps/v2/authenticate", type: "POST", data: requestData }, function (err, data) {
         if (err) {
-            // Revoked identity
-            if (err.status === 410) {
-                self.users.write(userId, { state: self.users.states.revoked });
-            }
+            switch(err.status) {
+                case 401:
+                    return callback(new Error("Wrong PIN", { cause: err }), null);
 
-            return callback(err, null);
+                case 409:
+                    return callback(new Error("MpinId expired", { cause: err }), null);
+
+                case 410:
+                    self.users.write(userId, { state: self.users.states.revoked });
+                    return callback(new Error("Revoked identity", { cause: err }), null);
+
+                default:
+                    return callback(err, null);
+            }
         }
 
         if (data.dvsRegister) {
@@ -640,9 +646,7 @@ Client.prototype._getWaMSecret1 = function (keypair, registerToken, callback) {
  */
 Client.prototype.sign = function (userId, userPin, message, timestamp, callback) {
     var self = this,
-        identityData,
-        res,
-        signatureData;
+        identityData;
 
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
@@ -654,26 +658,33 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
 
     identityData = self.users.get(userId);
 
-    try {
-        res = self.crypto.sign(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
-    } catch (err) {
-        return callback(new Error("Signing fail", { cause: err }), null);
+    if (!identityData.publicKey) {
+        return callback(new Error("Missing public key for signing"), null);
     }
 
-    signatureData = {
-        hash: message,
-        u: res.U,
-        v: res.V,
-        mpinId: identityData.mpinId,
-        publicKey: identityData.publicKey,
-        dtas: identityData.dtas
-    };
-
     this._authentication(userId, userPin, ["dvs-auth"], function (err) {
+        var res,
+            signatureData;
+
         if (err) {
             // TODO: remap specific authentication errors
             return callback(new Error("Signing fail", { cause: err.cause }), null);
         }
+
+        try {
+            res = self.crypto.sign(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
+        } catch (err) {
+            return callback(new Error("Signing fail", { cause: err }), null);
+        }
+
+        signatureData = {
+            hash: message,
+            u: res.U,
+            v: res.V,
+            mpinId: identityData.mpinId,
+            publicKey: identityData.publicKey,
+            dtas: identityData.dtas
+        };
 
         callback(null, signatureData);
     });
