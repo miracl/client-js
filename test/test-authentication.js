@@ -11,7 +11,7 @@ describe("Client _getPass1", function () {
     });
 
     it("shoud make a request for first pass", function (done) {
-        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
+        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
         client._getPass1({}, "1234", ["oidc"], [], [], function () {
@@ -24,7 +24,7 @@ describe("Client _getPass1", function () {
     });
 
     it("should pass response to callback", function (done) {
-        sinon.stub(client, "_request").yields(null, { success: true });
+        sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
         client._getPass1({}, "1234", ["oidc"], [], [], function (err, data) {
@@ -35,7 +35,7 @@ describe("Client _getPass1", function () {
     });
 
     it("should pass error to callback", function (done) {
-        sinon.stub(client, "_request").yields(null, { success: true });
+        sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass1").throws(new Error("Cryptography error: -14"));
 
         client._getPass1({}, "1234", ["oidc"], [], [], function (err, data) {
@@ -46,7 +46,7 @@ describe("Client _getPass1", function () {
     });
 
     it("should handle dvs scope", function (done) {
-        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
+        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
         client._getPass1({}, "1234", ["dvs-auth"], [], [], function (err, data) {
@@ -56,7 +56,7 @@ describe("Client _getPass1", function () {
     });
 
     afterEach(function () {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
         client.crypto.calculatePass1.restore && client.crypto.calculatePass1.restore();
     });
 });
@@ -69,7 +69,7 @@ describe("Client _getPass2", function () {
     });
 
     it("shoud make a request for second pass", function (done) {
-        var stub = sinon.stub(client, "_request").yields(null, { success: true });
+        var stub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass2").returns();
 
         client._getPass2({}, ["oidc"], "yHex", [], [], function () {
@@ -82,7 +82,7 @@ describe("Client _getPass2", function () {
     });
 
     it("should pass response to callback", function (done) {
-        sinon.stub(client, "_request").yields(null, { success: true });
+        sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass2").returns();
 
         client._getPass2({}, ["oidc"], "yHex", [], [], function (err, data) {
@@ -93,7 +93,7 @@ describe("Client _getPass2", function () {
     });
 
     it("should pass error to callback", function (done) {
-        sinon.stub(client, "_request").yields(null, { success: true });
+        sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass2").throws(new Error("Cryptography error"));
 
         client._getPass2({}, ["oidc"], "yHex", [], [], function (err, data) {
@@ -104,7 +104,7 @@ describe("Client _getPass2", function () {
     });
 
     it("should make a request for OTP", function (done) {
-        var stub = sinon.stub(client, "_request").yields(null, { success: true });
+        var stub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass2").returns();
 
         client._getPass2({}, ["otp"], "yHex", [], [], function (err, data) {
@@ -114,7 +114,7 @@ describe("Client _getPass2", function () {
     });
 
     afterEach(function () {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
         client.crypto.calculatePass2.restore && client.crypto.calculatePass2.restore();
     });
 });
@@ -127,7 +127,7 @@ describe("Client _finishAuthentication", function () {
     });
 
     it("should call error callback when request fails", function (done) {
-        sinon.stub(client, "_request").yields({ error: true }, null);
+        sinon.stub(client.http, "request").yields({ error: true }, { status: 400 });
 
         client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (err, data) {
             expect(err).to.exist;
@@ -136,7 +136,7 @@ describe("Client _finishAuthentication", function () {
     });
 
     it("should call the success callback after successful request", function (done) {
-        sinon.stub(client, "_request").yields(null, { success: true });
+        sinon.stub(client.http, "request").yields(null, { success: true });
 
         client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (err, data) {
             expect(err).to.be.null;
@@ -146,7 +146,7 @@ describe("Client _finishAuthentication", function () {
     });
 
     it("should mark an identity as revoked", function (done) {
-        sinon.stub(client, "_request").yields({ status: 410 }, null);
+        sinon.stub(client.http, "request").yields(new Error("Identity revoked"), { status: 410, error: "REVOKED_MPINID" });
 
         client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (err, data) {
             expect(err).to.exist;
@@ -156,7 +156,7 @@ describe("Client _finishAuthentication", function () {
     });
 
     it("should renew client secret if requested", function(done) {
-        sinon.stub(client, "_request").yields(null, { success: true, dvsRegister: { test: 1 } });
+        sinon.stub(client.http, "request").yields(null, { success: true, dvsRegister: { test: 1 } });
         var authenticationStub = sinon.stub(client, "_authentication").yields(null);
         var renewSecretStub = sinon.stub(client, "_renewSecret").yields(null);
 
@@ -169,7 +169,7 @@ describe("Client _finishAuthentication", function () {
     });
 
     afterEach(function () {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
         client._authentication.restore && client._authentication.restore();
     });
 });
@@ -243,7 +243,7 @@ describe("Client _getWaMSecret1", function () {
     });
 
     it("should call error callback when request fails", function (done) {
-        sinon.stub(client, "_request").yields({}, null);
+        sinon.stub(client.http, "request").yields({}, null);
 
         client._getWaMSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err, data) {
             expect(err).to.exist;
@@ -252,7 +252,7 @@ describe("Client _getWaMSecret1", function () {
     });
 
     it("should call success callback with data", function (done) {
-        sinon.stub(client, "_request").yields(null, { success: true });
+        sinon.stub(client.http, "request").yields(null, { success: true });
 
         client._getWaMSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err, cs1Data) {
             expect(err).to.be.null;
@@ -264,7 +264,7 @@ describe("Client _getWaMSecret1", function () {
     });
 
     it("should make request to dvs register endpoint", function (done) {
-        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
+        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
 
         client._getWaMSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
             expect(err).to.be.null;
@@ -275,7 +275,7 @@ describe("Client _getWaMSecret1", function () {
     });
 
     it("should make request with public key", function (done) {
-        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
+        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client, "_getDeviceName").returns("device");
 
         client._getWaMSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
@@ -287,7 +287,7 @@ describe("Client _getWaMSecret1", function () {
     });
 
     afterEach(function () {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
     });
 });
 
@@ -344,7 +344,7 @@ describe("Client _authentication", function () {
     });
 
     it("should call the success callback after getting the passes", function (done) {
-        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
+        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
@@ -360,8 +360,8 @@ describe("Client _authentication", function () {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
-        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
-        requestStub.onFirstCall().yields({ error: true, status: 400 }, null);
+        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
+        requestStub.onFirstCall().yields(new Error("Bad request"), { status: 400 });
 
         client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
             expect(err).to.exist;
@@ -369,12 +369,12 @@ describe("Client _authentication", function () {
         });
     });
 
-    it("should mark the identity as revoked on authenticate error 410", function (done) {
+    it("should mark the identity as revoked on authenticate error REVOKED_MPINID", function (done) {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
-        var requestStub = sinon.stub(client, "_request").yields(null, { success: true });
-        requestStub.onFirstCall().yields({ error: true, status: 410 }, null);
+        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
+        requestStub.onFirstCall().yields(new Error("Identity revoked"), { status: 410, error: "REVOKED_MPINID" });
 
         var userWriteSpy = sinon.spy(client.users, "write");
 
@@ -388,7 +388,7 @@ describe("Client _authentication", function () {
     });
 
     afterEach(function () {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
         client._getPass1.restore && client._getPass1.restore();
         client._getPass2.restore && client._getPass2.restore();
         client._finishAuthentication.restore && client._finishAuthentication.restore();

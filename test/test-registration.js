@@ -11,7 +11,7 @@ describe("Client sendVerificationEmail", function () {
     });
 
     it("should return error when verification request fails", function (done) {
-        sinon.stub(client, "_request").yields({ error: true }, null);
+        sinon.stub(client.http, "request").yields({ error: true }, null);
 
         client.sendVerificationEmail("test@example.com", function (err) {
             expect(err).to.exist;
@@ -20,7 +20,7 @@ describe("Client sendVerificationEmail", function () {
     });
 
     it("should call success callback when verification request succeeds", function (done) {
-        sinon.stub(client, "_request").yields(null, { success: true });
+        sinon.stub(client.http, "request").yields(null, { success: true });
 
         client.sendVerificationEmail("test@example.com", function (err, data) {
             expect(err).to.be.null;
@@ -30,7 +30,7 @@ describe("Client sendVerificationEmail", function () {
     });
 
     afterEach(function() {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
     });
 });
 
@@ -42,7 +42,7 @@ describe("Client getActivationToken", function () {
     });
 
     it("should invoke the callback data containing the activation token if request succeeds", function (done) {
-        sinon.stub(client, "_request").yields(null, { actToken: "testActToken" });
+        sinon.stub(client.http, "request").yields(null, { actToken: "testActToken" });
 
         client.getActivationToken("http://example.com/verification/confirmation?code=test", function(err, data) {
             expect(err).to.be.null;
@@ -53,7 +53,7 @@ describe("Client getActivationToken", function () {
     });
 
     afterEach(function() {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
     });
 });
 
@@ -65,7 +65,7 @@ describe("Client _createMPinID", function() {
     });
 
     it("should return error, when register request fail", function(done) {
-        sinon.stub(client, "_request").yields({ error: true }, null);
+        sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400 });
 
         client._createMPinID("test@example.com", null, function(err) {
             expect(err).to.exist;
@@ -73,18 +73,18 @@ describe("Client _createMPinID", function() {
         });
     });
 
-    it("should return error when registration code is not valid", function (done) {
-        sinon.stub(client, "_request").yields({ status: 403 }, null);
+    it("should return error when activation token is not valid", function (done) {
+        sinon.stub(client.http, "request").yields(new Error("Request failed"), { status: 403, error: "INVALID_ACTIVATION_TOKEN" });
 
         client._createMPinID("test@example.com", "123456", function callback(err) {
             expect(err).to.exist;
-            expect(err.message).to.equal("Invalid registration code");
+            expect(err.message).to.equal("Invalid activation token");
             done();
         });
     });
 
     it("should stop registration for different project", function (done) {
-        sinon.stub(client, "_request").yields(null, { projectId: "anotherProjectID" });
+        sinon.stub(client.http, "request").yields(null, { projectId: "anotherProjectID" });
 
         client._createMPinID("test@example.com", null, function(err, data) {
             expect(err).to.exist;
@@ -95,7 +95,7 @@ describe("Client _createMPinID", function() {
     });
 
     it("should store started user", function(done) {
-        sinon.stub(client, "_request").yields(null, { projectId: "projectID" });
+        sinon.stub(client.http, "request").yields(null, { projectId: "projectID" });
 
         client._createMPinID("test@example.com", null, function(err, data) {
             expect(client.users.exists("test@example.com")).to.be.true;
@@ -105,7 +105,7 @@ describe("Client _createMPinID", function() {
     });
 
     afterEach(function() {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
     });
 });
 
@@ -134,7 +134,7 @@ describe("Client _getSecret1", function() {
     });
 
     it("should fire callback with error when request returns any error", function (done) {
-        sinon.stub(client, "_request").yields({}, null);
+        sinon.stub(client.http, "request").yields({}, null);
 
         client._getSecret1({ mpinId: "0f" }, { publicKey: "public" }, function callback(err) {
             expect(err).to.exist;
@@ -143,7 +143,7 @@ describe("Client _getSecret1", function() {
     });
 
     it("should make a proper request for client secret share", function (done) {
-        var requestStub = sinon.stub(client, "_request").yields(null, {});
+        var requestStub = sinon.stub(client.http, "request").yields(null, {});
 
         client._getSecret1({ mpinId: "0f", regOTT: "ott" }, { publicKey: "public" }, function callback(err, data) {
             if (err) {
@@ -156,7 +156,7 @@ describe("Client _getSecret1", function() {
     });
 
     it("should fire successful callback when request doesn't return error", function (done) {
-        sinon.stub(client, "_request").yields(null, {});
+        sinon.stub(client.http, "request").yields(null, {});
 
         client._getSecret1({ mpinId: "0f" }, { publicKey: "public" }, function callback(err, data) {
             if (err) {
@@ -169,7 +169,7 @@ describe("Client _getSecret1", function() {
     });
 
     afterEach(function() {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
     });
 });
 
@@ -181,7 +181,7 @@ describe("Client _getSecret2", function() {
     });
 
     it("should return error, when signature2 request fails", function(done) {
-        sinon.stub(client, "_request").yields({}, null);
+        sinon.stub(client.http, "request").yields({}, null);
 
         client._getSecret2({}, function(err) {
             expect(err).to.exist;
@@ -190,7 +190,7 @@ describe("Client _getSecret2", function() {
     });
 
     afterEach(function() {
-        client._request.restore && client._request.restore();
+        client.http.request.restore && client.http.request.restore();
         client.crypto.addShares.restore && client.crypto.addShares.restore();
     });
 });
