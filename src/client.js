@@ -183,13 +183,19 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    reqData.url = self.options.server + "/verification";
+    reqData.url = self.options.server + "/verification/email";
     reqData.type = "POST";
     reqData.data = {
         userId: userId,
         projectId: self.options.projectId,
         accessId: self.session.accessId,
-        deviceName: self._getDeviceName()
+        deviceName: self._getDeviceName(),
+        clientId: self.options.oidc["client_id"],
+        redirectURI: self.options.oidc["redirect_uri"],
+        scope: self.options.oidc["scope"] ? self.options.oidc["scope"].split(" ") : "",
+        state: self.options.oidc["state"],
+        nonce: self.options.oidc["nonce"],
+        type: self.options.registerOnly ? "registration" : ""
     };
 
     self.http.request(reqData, callback);
