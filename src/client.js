@@ -387,26 +387,49 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticate = function (userId, userPin, callback) {
+    this._authentication(userId, userPin, ["jwt"], callback);
+};
+
+/**
+ * Authenticate the user for the session specified by the qrCode
+ *
+ * @param {string} userId - The ID of the user
+ * @param {string} qrCode - The QR code URL that initiated the authentication
+ * @param {string} userPin - The PIN of the identity
+ * @param {function(Error, Object)} callback
+ */
+Client.prototype.authenticateWithQRCode = function (userId, qrCode, userPin, callback) {
+    this.setAccessId(qrCode.split("#").pop());
     this._authentication(userId, userPin, ["oidc"], callback);
 };
 
 /**
- * Authenticate the user and receive an authorization code as a result
+ * Authenticate the user for the session specified by the appLink
  *
  * @param {string} userId - The ID of the user
+ * @param {string} appLink - The app link that initiated the authentication
  * @param {string} userPin - The PIN of the identity
  * @param {function(Error, Object)} callback
  */
-Client.prototype.generateAuthCode = function (userId, userPin, callback) {
-    var self = this;
+Client.prototype.authenticateWithAppLink = function (userId, appLink, userPin, callback) {
+    this.setAccessId(appLink.split("#").pop());
+    this._authentication(userId, userPin, ["oidc"], callback);
+};
 
-    self.fetchAccessId(userId, function (err) {
-        if (err) {
-            return callback(err, null);
-        }
+/**
+ * Authenticate the session specified by the push notification payload
+ *
+ * @param {[key: string]: string} payload - The push notification payload
+ * @param {string} userPin - The PIN of the identity
+ * @param {function(Error, Object)} callback
+ */
+Client.prototype.authenticateWithNotificationPayload = function (payload, userPin, callback) {
+    if (!payload || !payload["userID"] || !payload["qrURL"]) {
+        return callback(new Error("Invalid  push notification payload"), null);
+    }
 
-        self._authentication(userId, userPin, ["authcode"], callback);
-    });
+    this.setAccessId(payload["qrURL"].split("#").pop());
+    this._authentication(payload["userID"], userPin, ["oidc"], callback);
 };
 
 /**

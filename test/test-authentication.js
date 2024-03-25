@@ -406,13 +406,105 @@ describe("Client authenticate", function () {
         });
     });
 
-    it("should call _authentication with scope 'oidc'", function (done) {
+    it("should call _authentication with scope 'jwt'", function (done) {
         var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
 
         client.authenticate("test@example.com", "1234", function (err, data) {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
+            expect(authenticationStub.firstCall.args[0]).to.equal("test@example.com");
+            expect(authenticationStub.firstCall.args[1]).to.equal("1234");
+            expect(authenticationStub.firstCall.args[2]).to.deep.equal(["jwt"]);
+            done();
+        });
+    });
+
+    afterEach(function () {
+        client._authentication.restore && client._authentication.restore();
+    });
+});
+
+describe("Client authenticateWithQRCode", function () {
+    var client;
+
+    before(function () {
+        client = new Client(testData.init());
+        client.users.write("test@example.com", {
+            mpinId: "exampleMpinId",
+            state: "REGISTERED"
+        });
+    });
+
+    it("should call _authentication with scope 'oidc'", function (done) {
+        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
+
+        client.authenticateWithQRCode("test@example.com", "https://example.com/mobile/auth#accessID", "1234", function (err, data) {
+            expect(err).to.be.null;
+            expect(data.success).to.be.true;
+            expect(authenticationStub.calledOnce).to.be.true;
+            expect(authenticationStub.firstCall.args[0]).to.equal("test@example.com");
+            expect(authenticationStub.firstCall.args[1]).to.equal("1234");
+            expect(authenticationStub.firstCall.args[2]).to.deep.equal(["oidc"]);
+            done();
+        });
+    });
+
+    afterEach(function () {
+        client._authentication.restore && client._authentication.restore();
+    });
+});
+
+describe("Client authenticateWithAppLink", function () {
+    var client;
+
+    before(function () {
+        client = new Client(testData.init());
+        client.users.write("test@example.com", {
+            mpinId: "exampleMpinId",
+            state: "REGISTERED"
+        });
+    });
+
+    it("should call _authentication with scope 'oidc'", function (done) {
+        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
+
+        client.authenticateWithAppLink("test@example.com", "https://example.com/mobile/auth#accessID", "1234", function (err, data) {
+            expect(err).to.be.null;
+            expect(data.success).to.be.true;
+            expect(authenticationStub.calledOnce).to.be.true;
+            expect(authenticationStub.firstCall.args[0]).to.equal("test@example.com");
+            expect(authenticationStub.firstCall.args[1]).to.equal("1234");
+            expect(authenticationStub.firstCall.args[2]).to.deep.equal(["oidc"]);
+            done();
+        });
+    });
+
+    afterEach(function () {
+        client._authentication.restore && client._authentication.restore();
+    });
+});
+
+describe("Client authenticateWithNotificationPayload", function () {
+    var client;
+
+    before(function () {
+        client = new Client(testData.init());
+        client.users.write("test@example.com", {
+            mpinId: "exampleMpinId",
+            state: "REGISTERED"
+        });
+    });
+
+    it("should call _authentication with scope 'oidc'", function (done) {
+        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
+
+        client.authenticateWithNotificationPayload({userID: "test@example.com", qrURL: "https://example.com/mobile/auth#accessID"}, "1234", function (err, data) {
+            expect(err).to.be.null;
+            expect(data.success).to.be.true;
+            expect(authenticationStub.calledOnce).to.be.true;
+            expect(authenticationStub.firstCall.args[0]).to.equal("test@example.com");
+            expect(authenticationStub.firstCall.args[1]).to.equal("1234");
             expect(authenticationStub.firstCall.args[2]).to.deep.equal(["oidc"]);
             done();
         });
@@ -475,37 +567,6 @@ describe("Client generateQuickCode", function () {
     });
 
     afterEach(function () {
-        client._authentication.restore && client._authentication.restore();
-    });
-});
-
-describe("Client generateAuthCode", function () {
-    var client;
-
-    before(function () {
-        client = new Client(testData.init());
-        client.users.write("test@example.com", {
-            mpinId: "exampleMpinId",
-            state: "REGISTERED"
-        });
-    });
-
-    it("should call _authentication with scope 'authcode'", function (done) {
-        var fetchAccessIdStub = sinon.stub(client, "fetchAccessId").yields(null, { success: true });
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
-
-        client.generateAuthCode("test@example.com", "1234", function (err, data) {
-            expect(err).to.be.null;
-            expect(data.success).to.be.true;
-            expect(fetchAccessIdStub.calledOnce).to.be.true;
-            expect(authenticationStub.calledOnce).to.be.true;
-            expect(authenticationStub.firstCall.args[2]).to.deep.equal(["authcode"]);
-            done();
-        });
-    });
-
-    afterEach(function () {
-        client.fetchAccessId.restore && client.fetchAccessId.restore();
         client._authentication.restore && client._authentication.restore();
     });
 });
