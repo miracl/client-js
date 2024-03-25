@@ -4,15 +4,18 @@
   "description": "MIRACL Trust client library",
   "main": "./src/client.js",
   "exports": {
-    "import": "./src/client.js",
-    "require": "./cjs/client.cjs"
+    ".": {
+      "import": "./src/client.js",
+      "require": "./cjs/client.cjs"
+    },
+    "./promise": {
+      "import": "./src/promise.js",
+      "require": "./cjs/promise.cjs"
+    }
   },
   "type": "module",
   "scripts": {
-    "clean": "rm -rf dist",
-    "rollup": "rollup -c rollup.config.js",
-    "minify": "uglifyjs dist/client.js --comments -o dist/client.min.js",
-    "build": "npm run clean && npm run rollup && npm run minify",
+    "build": "rm -rf dist && rollup -c rollup.config.js",
     "dist": "npm run build",
     "test": "mocha",
     "cover": "c8 -r text -r html npm run test",
@@ -43,6 +46,7 @@
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^8.4.0",
+    "@rollup/plugin-terser": "^0.4.4",
     "c8": "^7.7.3",
     "chai": "^3.5.0",
     "documentation": "^14.0.1",
@@ -50,7 +54,6 @@
     "mocha": "^10.2.0",
     "nodemon": "^2.0.4",
     "rollup": "^2.21.0",
-    "sinon": "^2.1.0",
-    "uglify-js": "^2.8.22"
+    "sinon": "^2.1.0"
   }
 }
