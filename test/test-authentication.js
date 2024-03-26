@@ -1,7 +1,6 @@
 import Client from "../src/client.js";
 import sinon from "sinon";
-import chai from "chai";
-const expect = chai.expect;
+import { expect } from "chai";
 
 describe("Client _getPass1", function () {
     var client;
@@ -16,7 +15,6 @@ describe("Client _getPass1", function () {
 
         client._getPass1({}, "1234", ["oidc"], [], [], function () {
             expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.firstCall.args[0]).to.be.an.object;
             expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/pass1");
             expect(requestStub.firstCall.args[0].type).to.equal("POST");
             done();
@@ -74,7 +72,6 @@ describe("Client _getPass2", function () {
 
         client._getPass2({}, ["oidc"], "yHex", [], [], function () {
             expect(stub.calledOnce).to.be.true;
-            expect(stub.firstCall.args[0]).to.be.an.object;
             expect(stub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/pass2");
             expect(stub.firstCall.args[0].type).to.equal("POST");
             done();

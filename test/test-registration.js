@@ -1,7 +1,6 @@
 import Client from "../src/client.js";
 import sinon from "sinon";
-import chai from "chai";
-const expect = chai.expect;
+import { expect } from "chai";
 
 describe("Client sendVerificationEmail", function () {
     var client;
@@ -276,8 +275,8 @@ describe("Client register", function () {
 
     it("should throw error w/o userId", function () {
         client.register("", null, function () {}, function (err, data) {
-            expect(err).to.existl
-            expect(err.message).to.equal("Empty user ID")
+            expect(err).to.exist;
+            expect(err.message).to.equal("Empty user ID");
         });
     });
 
@@ -300,7 +299,6 @@ describe("Client register", function () {
     });
 
     it("should fire callback with error on error with _getSecret1", function (done) {
-        sinon.stub(client, "_init").yields(null);
         sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
         sinon.stub(client, "_getSecret1").yields({ error: true });
 
@@ -313,7 +311,6 @@ describe("Client register", function () {
     });
 
     it("should fire callback with error on error with _getSecret2", function (done) {
-        sinon.stub(client, "_init").yields(null);
         sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
         sinon.stub(client, "_getSecret1").yields(null);
         sinon.stub(client, "_getSecret2").yields({ error: true });
@@ -327,7 +324,6 @@ describe("Client register", function () {
     });
 
     it("should fire callback with error on error with _createMPinID", function (done) {
-        sinon.stub(client, "_init").yields(null, true);
         sinon.stub(client, "_createMPinID").yields({ error: true }, null);
 
         client.register("test@example.com", "activationToken", function (passPin) {
@@ -339,7 +335,6 @@ describe("Client register", function () {
     });
 
     it("should fire successful callback, when _createMPinID passed successful", function (done) {
-        sinon.stub(client, "_init").yields(null);
         sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
         sinon.stub(client, "_getSecret1").yields(null);
         sinon.stub(client, "_getSecret2").yields(null);
@@ -356,7 +351,6 @@ describe("Client register", function () {
 
     // TODO: fix or test properly in _createMPinID
     it("should fire callback with error when registration code is not valid", function (done) {
-        sinon.stub(client, "_init").yields(null);
         sinon.stub(client, "_createMPinID").yields({ error: true });
 
         client.register("test@example.com", "123456", function (passPin) {

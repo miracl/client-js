@@ -1,7 +1,6 @@
 import Crypto from "../src/crypto.js";
 import sinon from "sinon";
-import chai from "chai";
-const expect = chai.expect;
+import { expect } from "chai";
 
 describe("Crypto generateKeypair", function () {
     var crypto;

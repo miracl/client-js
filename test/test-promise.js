@@ -1,7 +1,6 @@
 import Client from "../src/promise.js";
 import sinon from "sinon";
-import chai from "chai";
-const expect = chai.expect;
+import { expect } from "chai";
 
 describe("Promises", function() {
     var client;

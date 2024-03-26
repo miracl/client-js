@@ -1,8 +1,7 @@
 import Users from "../src/users.js";
 import Storage from "./storage.js";
 import sinon from "sinon";
-import chai from "chai";
-const expect = chai.expect;
+import { expect } from "chai";
 
 describe("Users init", function () {
     it("should fail without compliant user storage", function () {

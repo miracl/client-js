@@ -1,7 +1,6 @@
 import HTTP from "../src/http.js";
 import sinon from "sinon";
-import chai from "chai";
-const expect = chai.expect;
+import { expect } from "chai";
 
 describe("HTTP request", function() {
     var client, server, requests;

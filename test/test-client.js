@@ -1,7 +1,6 @@
 import Client from "../src/client.js";
 import sinon from "sinon";
-import chai from "chai";
-const expect = chai.expect;
+import { expect } from "chai";
 
 describe("Client", function() {
     it("should throw Error w/o options", function () {

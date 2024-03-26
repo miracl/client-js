@@ -45,15 +45,15 @@
     "@miracl/crypto-js": "^4.0.0"
   },
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^8.4.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
-    "c8": "^7.7.3",
-    "chai": "^3.5.0",
-    "documentation": "^14.0.1",
-    "eslint": "^8.3.0",
-    "mocha": "^10.2.0",
-    "nodemon": "^2.0.4",
-    "rollup": "^2.21.0",
-    "sinon": "^2.1.0"
+    "c8": "^9.1.0",
+    "chai": "^5.1.0",
+    "documentation": "^14.0.3",
+    "eslint": "^8.57.0",
+    "mocha": "^10.3.0",
+    "nodemon": "^3.1.0",
+    "rollup": "^4.13.0",
+    "sinon": "^17.0.1"
   }
 }
