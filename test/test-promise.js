@@ -74,7 +74,7 @@ describe("Promises", function() {
         try {
             await client.sendVerificationEmail("test@example.com")
         } catch (err) {
-            expect(err.message).to.equal("Request error");
+            expect(err.message).to.equal("Verification fail");
             return;
         }
 
@@ -92,7 +92,7 @@ describe("Promises", function() {
         try {
             await client.getActivationToken("https://example.com/verification/confirmation?user_id=test@example.com&code=test")
         } catch (err) {
-            expect(err.message).to.equal("Request error");
+            expect(err.message).to.equal("Get activation token fail");
             return;
         }
 
@@ -100,7 +100,7 @@ describe("Promises", function() {
     });
 
     it("should call register", async function () {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
         sinon.stub(client, "_getSecret1").yields(null);
         sinon.stub(client, "_getSecret2").yields(null);
         sinon.stub(client, "_createIdentity").yields(null, { state: "REGISTERED" });
@@ -114,12 +114,12 @@ describe("Promises", function() {
     });
 
     it("should fail on register error", async function () {
-        sinon.stub(client, "_createMPinID").yields(new Error("Registration error"), null);
+        sinon.stub(client, "_createMPinID").yields(new Error("Request error"), null);
 
         try {
             await client.register("test@example.com", "activationToken", function (passPin) { passPin("1234"); })
         } catch (err) {
-            expect(err.message).to.equal("Registration error");
+            expect(err.message).to.equal("Registration fail");
             return;
         }
 

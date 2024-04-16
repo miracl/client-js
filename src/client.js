@@ -24,15 +24,15 @@ export default function Client(options) {
     var self = this;
 
     if (!options) {
-        throw new Error("Missing options");
+        throw new Error("Invalid configuration");
     }
 
     if (!options.projectId) {
-        throw new Error("Missing project ID");
+        throw new Error("Empty project ID");
     }
 
     if (!options.userStorage) {
-        throw new Error("Missing user storage object");
+        throw new Error("Invalid user storage");
     }
 
     if (!options.server) {
@@ -157,7 +157,7 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
     self.http.request(reqData, function (err, result) {
         if (err) {
             if (result && result.error === "NO_PUSH_TOKEN") {
-                return callback(new Error("No device registered for provided user ID", { cause: err }));
+                return callback(new Error("No push token", { cause: err }));
             }
 
             return callback(err, null);
@@ -198,7 +198,17 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         type: self.options.registerOnly ? "registration" : ""
     };
 
-    self.http.request(reqData, callback);
+    self.http.request(reqData, function (err, result) {
+        if (err) {
+            if (result && result.error === "REQUEST_BACKOFF") {
+                return callback(new Error("Request backoff", { cause: err }), result);
+            }
+
+            return callback(new Error("Verification fail", { cause: err }), result);
+        }
+
+        callback(null, result);
+    });
 };
 
 /**
@@ -214,6 +224,14 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
 
     params = self._parseUriParams(verificationURI);
 
+    if (!params["user_id"]) {
+        return callback(new Error("Empty user ID"), null);
+    }
+
+    if (!params["code"]) {
+        return callback(new Error("Empty verification code"), null);
+    }
+
     reqData.url = self.options.server + "/verification/confirmation";
     reqData.type = "POST";
     reqData.data = {
@@ -221,13 +239,17 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
         code: params["code"]
     };
 
-    self.http.request(reqData, function (err, data) {
+    self.http.request(reqData, function (err, result) {
         if (err) {
-            return callback(err, data);
+            if (result && result.error === "UNSUCCESSFUL_VERIFICATION") {
+                return callback(new Error("Unsuccessful verification", { cause: err }), result);
+            }
+
+            return callback(new Error("Get activation token fail", { cause: err }), result);
         }
 
-        data.userId = params["user_id"];
-        callback(null, data);
+        result.userId = params["user_id"];
+        callback(null, result);
     });
 };
 
@@ -255,17 +277,25 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
 
     self._createMPinID(userId, activationToken, function (err, identityData) {
         if (err) {
-            return callback(err, null);
+            if (identityData && identityData.error === "INVALID_ACTIVATION_TOKEN") {
+                return callback(new Error("Invalid activation token", { cause: err }), null);
+            }
+
+            return callback(new Error("Registration fail", { cause: err }), null);
+        }
+
+        if (identityData.projectId !== self.options.projectId) {
+            return callback(new Error("Project mismatch"), null);
         }
 
         self._getSecret1(identityData, keypair, function (err, sec1Data) {
             if (err) {
-                return callback(err, null);
+                return callback(new Error("Registration fail", { cause: err }), null);
             }
 
             self._getSecret2(sec1Data, function (err, sec2Data) {
                 if (err) {
-                    return callback(err, null);
+                    return callback(new Error("Registration fail", { cause: err }), null);
                 }
 
                 var pinLength,
@@ -303,15 +333,7 @@ Client.prototype._createMPinID = function (userId, activationToken, callback) {
 
     self.http.request(regData, function (err, result) {
         if (err) {
-            if (result && result.error === "INVALID_ACTIVATION_TOKEN") {
-                return callback(new Error("Invalid activation token", { cause: err }), null);
-            } else {
-                return callback(err, null);
-            }
-        }
-
-        if (result.projectId !== self.options.projectId) {
-            return callback(new Error("Registration started for different project"), null);
+            return callback(err, result);
         }
 
         self.users.write(userId, { state: self.users.states.start });
@@ -431,7 +453,7 @@ Client.prototype.authenticateWithAppLink = function (userId, appLink, userPin, c
  */
 Client.prototype.authenticateWithNotificationPayload = function (payload, userPin, callback) {
     if (!payload || !payload["userID"] || !payload["qrURL"]) {
-        return callback(new Error("Invalid  push notification payload"), null);
+        return callback(new Error("Invalid push notification payload"), null);
     }
 
     this.setAccessId(payload["qrURL"].split("#").pop());
@@ -471,22 +493,42 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
     }
 
     if (!self.users.exists(userId)) {
-        return callback(new Error("User ID not found"), null);
+        return callback(new Error("User not found"), null);
     }
 
     identityData = self.users.get(userId);
 
     self._getPass1(identityData, userPin, scope, X, SEC, function (err, pass1Data) {
         if (err) {
-            return callback(err, null);
+            if (pass1Data && pass1Data.error === "EXPIRED_MPINID") {
+                self.users.write(userId, { state: self.users.states.revoked });
+                return callback(new Error("Revoked", { cause: err }), null);
+            }
+
+            return callback(new Error("Authentication fail", { cause: err }), null);
         }
 
         self._getPass2(identityData, scope, pass1Data.y, X, SEC, function (err, pass2Data) {
             if (err) {
-                return callback(err, null);
+                return callback(new Error("Authentication fail", { cause: err }), null);
             }
 
-            self._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, callback);
+            self._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, function (err, result) {
+                if (err) {
+                    if (result && result.error === "UNSUCCESSFUL_AUTHENTICATION") {
+                        return callback(new Error("Unsuccessful authentication", { cause: err }), null);
+                    }
+
+                    if (result && result.error === "REVOKED_MPINID") {
+                        self.users.write(userId, { state: self.users.states.revoked });
+                        return callback(new Error("Revoked", { cause: err }), null);
+                    }
+
+                    return callback(new Error("Authentication fail", { cause: err }), null);
+                }
+
+                callback(null, result);
+            });
         });
     });
 };
@@ -580,24 +622,7 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
 
     self.http.request({ url: self.options.server + "/rps/v2/authenticate", type: "POST", data: requestData }, function (err, result) {
         if (err) {
-            if (!result) {
-                return callback(err, null);
-            }
-
-            switch(result.error) {
-                case "UNSUCCESSFUL_AUTHENTICATION":
-                    return callback(new Error("Wrong PIN", { cause: err }), null);
-
-                case "EXPIRED_MPINID":
-                    return callback(new Error("MpinId expired", { cause: err }), null);
-
-                case "REVOKED_MPINID":
-                    self.users.write(userId, { state: self.users.states.revoked });
-                    return callback(new Error("Revoked identity", { cause: err }), null);
-
-                default:
-                    return callback(err, null);
-            }
+            return callback(err, result);
         }
 
         if (result.dvsRegister) {
@@ -671,13 +696,17 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
     }
 
     if (!self.users.exists(userId)) {
-        return callback(new Error("User ID not found"), null);
+        return callback(new Error("User not found"), null);
+    }
+
+    if (!message) {
+        return callback(new Error("Empty message"), null);
     }
 
     identityData = self.users.get(userId);
 
     if (!identityData.publicKey) {
-        return callback(new Error("Missing public key for signing"), null);
+        return callback(new Error("Empty public key"), null);
     }
 
     this._authentication(userId, userPin, ["dvs-auth"], function (err) {
@@ -685,8 +714,14 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
             signatureData;
 
         if (err) {
-            // TODO: remap specific authentication errors
-            return callback(new Error("Signing fail", { cause: err.cause }), null);
+            switch (err.message) {
+                case "Unsuccessful authentication":
+                case "Revoked":
+                    return callback(err, null);
+
+                default:
+                    return callback(new Error("Signing fail", { cause: err.cause }), null);
+            }
         }
 
         try {

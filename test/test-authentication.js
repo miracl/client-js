@@ -124,7 +124,7 @@ describe("Client _finishAuthentication", function () {
     });
 
     it("should call error callback when request fails", function (done) {
-        sinon.stub(client.http, "request").yields({ error: true }, { status: 400 });
+        sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400 });
 
         client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (err, data) {
             expect(err).to.exist;
@@ -138,16 +138,6 @@ describe("Client _finishAuthentication", function () {
         client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (err, data) {
             expect(err).to.be.null;
             expect(data).to.exist;
-            done();
-        });
-    });
-
-    it("should mark an identity as revoked", function (done) {
-        sinon.stub(client.http, "request").yields(new Error("Identity revoked"), { status: 410, error: "REVOKED_MPINID" });
-
-        client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (err, data) {
-            expect(err).to.exist;
-            expect(client.users.get("test@example.com", "state")).to.equal(client.users.states.revoked);
             done();
         });
     });
@@ -193,22 +183,22 @@ describe("Client _renewSecret", function () {
     });
 
     it("should call error callback on _getWaMSecret1 failure", function (done) {
-        sinon.stub(client, "_getWaMSecret1").yields({ error: true });
+        sinon.stub(client, "_getWaMSecret1").yields(new Error("Request error"));
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
             expect(err).to.exist;
-            expect(err.error).to.be.true;
+            expect(err.message).to.equal("Request error");
             done();
         });
     });
 
     it("should call error callback on _getSecret2 failure", function (done) {
         sinon.stub(client, "_getWaMSecret1").yields(null, true);
-        sinon.stub(client, "_getSecret2").yields({ error: true }, null);
+        sinon.stub(client, "_getSecret2").yields(new Error("Request error"), null);
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
             expect(err).to.exist;
-            expect(err.error).to.be.true;
+            expect(err.message).to.equal("Request error");
             done();
         });
     });
@@ -216,11 +206,11 @@ describe("Client _renewSecret", function () {
     it("should call error callback on createIdentity error", function (done) {
         sinon.stub(client, "_getWaMSecret1").yields(null, true);
         sinon.stub(client, "_getSecret2").yields(null, true);
-        sinon.stub(client, "_createIdentity").yields({ error: true });
+        sinon.stub(client, "_createIdentity").yields(new Error("Request error"));
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
             expect(err).to.exist;
-            expect(err.error).to.be.true;
+            expect(err.message).to.equal("Request error");
             done();
         });
     });
@@ -300,9 +290,17 @@ describe("Client _authentication", function () {
     });
 
     it("should fail w/o userId", function (done) {
-        client._authentication("", "", ["otp"], function (err) {
+        client._authentication("", "", ["jwt"], function (err) {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty user ID");
+            done();
+        });
+    });
+
+    it("should fail when user does not exist", function (done) {
+        client._authentication("missing@example.com", "", ["jwt"], function (err) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("User not found");
             done();
         });
     });
@@ -322,7 +320,26 @@ describe("Client _authentication", function () {
     });
 
     it("should call callback with error when _getPass1 fails", function (done) {
-        sinon.stub(client, "_getPass1").yields({ error: true }, null);
+        sinon.stub(client, "_getPass1").yields(new Error("Request error"), null);
+
+        client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
+            expect(err).to.exist;
+            done();
+        });
+    });
+
+    it("should call callback with error when MPIN ID has expired", function (done) {
+        sinon.stub(client, "_getPass1").yields(new Error("Request error"), { error: "EXPIRED_MPINID" });
+
+        client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Revoked");
+            done();
+        });
+    });
+
+    it("should call callback with error when _getPass1 fails", function (done) {
+        sinon.stub(client, "_getPass1").yields(new Error("Request error"), null);
 
         client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
             expect(err).to.exist;
@@ -332,7 +349,7 @@ describe("Client _authentication", function () {
 
     it("should call callback with error when _getPass2 fails", function (done) {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
-        sinon.stub(client, "_getPass2").yields({ error: true }, null);
+        sinon.stub(client, "_getPass2").yields(new Error("Request error"), null);
 
         client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
             expect(err).to.exist;
@@ -358,10 +375,25 @@ describe("Client _authentication", function () {
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
         var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
-        requestStub.onFirstCall().yields(new Error("Bad request"), { status: 400 });
+        requestStub.onFirstCall().yields(new Error("Request error"), { status: 400 });
 
         client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
             expect(err).to.exist;
+            expect(err.message).to.equal("Authentication fail");
+            done();
+        });
+    });
+
+    it("should call the error callback on unsuccessful authentication", function (done) {
+        sinon.stub(client, "_getPass1").yields(null, { success: true });
+        sinon.stub(client, "_getPass2").yields(null, { success: true });
+
+        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
+        requestStub.onFirstCall().yields(new Error("Request error"), { error: "UNSUCCESSFUL_AUTHENTICATION" });
+
+        client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Unsuccessful authentication");
             done();
         });
     });
@@ -371,12 +403,13 @@ describe("Client _authentication", function () {
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
         var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
-        requestStub.onFirstCall().yields(new Error("Identity revoked"), { status: 410, error: "REVOKED_MPINID" });
+        requestStub.onFirstCall().yields(new Error("Request error"), { status: 410, error: "REVOKED_MPINID" });
 
         var userWriteSpy = sinon.spy(client.users, "write");
 
         client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
             expect(err).to.exist;
+            expect(err.message).to.equal("Revoked");
             expect(userWriteSpy.calledOnce).to.be.true;
             expect(userWriteSpy.firstCall.args[0]).to.equal("test@example.com");
             expect(userWriteSpy.firstCall.args[1].state).to.equal("REVOKED");
@@ -503,6 +536,22 @@ describe("Client authenticateWithNotificationPayload", function () {
             expect(authenticationStub.firstCall.args[0]).to.equal("test@example.com");
             expect(authenticationStub.firstCall.args[1]).to.equal("1234");
             expect(authenticationStub.firstCall.args[2]).to.deep.equal(["oidc"]);
+            done();
+        });
+    });
+
+    it("should fail w/o user ID", function (done) {
+        client.authenticateWithNotificationPayload({qrURL: "https://example.com/mobile/auth#accessID"}, "1234", function (err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Invalid push notification payload");
+            done();
+        });
+    });
+
+    it("should fail w/o QR URL", function (done) {
+        client.authenticateWithNotificationPayload({userID: "test@example.com"}, "1234", function (err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Invalid push notification payload");
             done();
         });
     });

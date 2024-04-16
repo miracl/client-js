@@ -6,7 +6,7 @@ describe("Client", function() {
     it("should throw Error w/o options", function () {
         expect(function () {
             var client = new Client();
-        }).to.throw("Missing options");
+        }).to.throw("Invalid configuration");
     });
 
     it("should throw Error w/o project ID", function () {
@@ -14,7 +14,7 @@ describe("Client", function() {
             var config = testData.init();
             delete config["projectId"];
             var client = new Client(config);
-        }).to.throw("Missing project ID");
+        }).to.throw("Empty project ID");
     });
 
     it("should throw Error w/o user storage", function () {
@@ -22,7 +22,7 @@ describe("Client", function() {
             var config = testData.init();
             delete config["userStorage"];
             var client = new Client(config);
-        }).to.throw("Missing user storage object");
+        }).to.throw("Invalid user storage");
     });
 
     it("should return client instance", function () {
@@ -176,10 +176,19 @@ describe("Client sendPushNotificationForAuth", function () {
     });
 
     it("should fail when the request fails", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(new Error("Error"), { status: 400 });
+        var requestStub = sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400 });
 
         client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(err).to.exist;
+        });
+    });
+
+    it("should fail when the request fails", function () {
+        var requestStub = sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400, error: "NO_PUSH_TOKEN" });
+
+        client.sendPushNotificationForAuth("test@example.com", function (err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("No push token");
         });
     });
 

@@ -9,11 +9,30 @@ describe("Client sendVerificationEmail", function () {
         client = new Client(testData.init());
     });
 
+    it("should fail w/o userId", function (done) {
+        client.sendVerificationEmail("", function (err) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Empty user ID");
+            done();
+        });
+    });
+
     it("should return error when verification request fails", function (done) {
-        sinon.stub(client.http, "request").yields({ error: true }, null);
+        sinon.stub(client.http, "request").yields(new Error("Request error"), null);
 
         client.sendVerificationEmail("test@example.com", function (err) {
             expect(err).to.exist;
+            expect(err.message).to.equal("Verification fail");
+            done();
+        });
+    });
+
+    it("should return error when verification request fails with backoff error", function (done) {
+        sinon.stub(client.http, "request").yields(new Error("Request error"), { error: "REQUEST_BACKOFF" });
+
+        client.sendVerificationEmail("test@example.com", function (err) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Request backoff");
             done();
         });
     });
@@ -40,10 +59,46 @@ describe("Client getActivationToken", function () {
         client = new Client(testData.init());
     });
 
+    it("should fail w/o userId", function (done) {
+        client.getActivationToken("http://example.com/verification/confirmation?code=test", function (err) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Empty user ID");
+            done();
+        });
+    });
+
+    it("should fail w/o code", function (done) {
+        client.getActivationToken("http://example.com/verification/confirmation?user_id=test@example.com", function (err) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Empty verification code");
+            done();
+        });
+    });
+
+    it("should fail when the request fails", function (done) {
+        sinon.stub(client.http, "request").yields(new Error("Request error"), null);
+
+        client.getActivationToken("http://example.com/verification/confirmation?code=test&user_id=test@example.com", function(err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Get activation token fail");
+            done();
+        });
+    });
+
+    it("should fail when the verification fails", function (done) {
+        sinon.stub(client.http, "request").yields(new Error("Request error"), { error: "UNSUCCESSFUL_VERIFICATION" });
+
+        client.getActivationToken("http://example.com/verification/confirmation?code=test&user_id=test@example.com", function(err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Unsuccessful verification");
+            done();
+        });
+    });
+
     it("should invoke the callback data containing the activation token if request succeeds", function (done) {
         sinon.stub(client.http, "request").yields(null, { actToken: "testActToken" });
 
-        client.getActivationToken("http://example.com/verification/confirmation?code=test", function(err, data) {
+        client.getActivationToken("http://example.com/verification/confirmation?code=test&user_id=test@example.com", function(err, data) {
             expect(err).to.be.null;
             expect(data).to.exist;
             expect(data.actToken).to.equal("testActToken");
@@ -68,27 +123,6 @@ describe("Client _createMPinID", function() {
 
         client._createMPinID("test@example.com", null, function(err) {
             expect(err).to.exist;
-            done();
-        });
-    });
-
-    it("should return error when activation token is not valid", function (done) {
-        sinon.stub(client.http, "request").yields(new Error("Request failed"), { status: 403, error: "INVALID_ACTIVATION_TOKEN" });
-
-        client._createMPinID("test@example.com", "123456", function callback(err) {
-            expect(err).to.exist;
-            expect(err.message).to.equal("Invalid activation token");
-            done();
-        });
-    });
-
-    it("should stop registration for different project", function (done) {
-        sinon.stub(client.http, "request").yields(null, { projectId: "anotherProjectID" });
-
-        client._createMPinID("test@example.com", null, function(err, data) {
-            expect(err).to.exist;
-            expect(err.message).to.equal("Registration started for different project");
-            expect(client.users.exists("test@example.com")).to.be.false;
             done();
         });
     });
@@ -273,15 +307,22 @@ describe("Client register", function () {
         client = new Client(testData.init());
     });
 
-    it("should throw error w/o userId", function () {
+    it("should return error w/o userId", function () {
         client.register("", null, function () {}, function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty user ID");
         });
     });
 
+    it("should return error w/o activation token", function () {
+        client.register("test@example.com", null, function () {}, function (err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Empty activation token");
+        });
+    });
+
     it("should go through the registration flow", function (done) {
-        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
+        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
         var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
         var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
         var finishRegistrationStub = sinon.stub(client, "_createIdentity").yields(null);
@@ -299,8 +340,8 @@ describe("Client register", function () {
     });
 
     it("should fire callback with error on error with _getSecret1", function (done) {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
-        sinon.stub(client, "_getSecret1").yields({ error: true });
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
+        sinon.stub(client, "_getSecret1").yields(new Error("Request error"));
 
         client.register("test@example.com", "activationToken", function (passPin) {
             passPin("1234");
@@ -311,9 +352,9 @@ describe("Client register", function () {
     });
 
     it("should fire callback with error on error with _getSecret2", function (done) {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
         sinon.stub(client, "_getSecret1").yields(null);
-        sinon.stub(client, "_getSecret2").yields({ error: true });
+        sinon.stub(client, "_getSecret2").yields(new Error("Request error"));
 
         client.register("test@example.com", "activationToken", function (passPin) {
             passPin("1234");
@@ -324,7 +365,7 @@ describe("Client register", function () {
     });
 
     it("should fire callback with error on error with _createMPinID", function (done) {
-        sinon.stub(client, "_createMPinID").yields({ error: true }, null);
+        sinon.stub(client, "_createMPinID").yields(new Error("Request error"), null);
 
         client.register("test@example.com", "activationToken", function (passPin) {
             passPin("1234");
@@ -335,7 +376,7 @@ describe("Client register", function () {
     });
 
     it("should fire successful callback, when _createMPinID passed successful", function (done) {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
         sinon.stub(client, "_getSecret1").yields(null);
         sinon.stub(client, "_getSecret2").yields(null);
         sinon.stub(client, "_createIdentity").yields(null, {});
@@ -349,20 +390,33 @@ describe("Client register", function () {
         });
     });
 
-    // TODO: fix or test properly in _createMPinID
     it("should fire callback with error when registration code is not valid", function (done) {
-        sinon.stub(client, "_createMPinID").yields({ error: true });
+        sinon.stub(client, "_createMPinID").yields(new Error("Request failed"), { status: 403, error: "INVALID_ACTIVATION_TOKEN" });
 
         client.register("test@example.com", "123456", function (passPin) {
             passPin("1234");
         }, function (err, data) {
             expect(err).to.exist;
+            expect(err.message).to.equal("Invalid activation token");
+            done();
+        });
+    });
+
+    it("should stop registration for different project", function (done) {
+        sinon.stub(client, "_createMPinID").yields(null, { projectId: "anotherProjectID" });
+
+        client.register("test@example.com", "123456", function (passPin) {
+            passPin("1234");
+        }, function(err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Project mismatch");
+            expect(client.users.exists("test@example.com")).to.be.false;
             done();
         });
     });
 
     it("should pass provided PIN length to the PIN callback", function (done) {
-        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 5 });
+        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 5, projectId: "projectID" });
         var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
         var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
         var finishRegistrationStub = sinon.stub(client, "_createIdentity").yields(null, true);
@@ -377,27 +431,12 @@ describe("Client register", function () {
     });
 
     it("should pass default PIN length to the PIN callback", function (done) {
-        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
+        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
         var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
         var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
         var finishRegistrationStub = sinon.stub(client, "_createIdentity").yields(null, true);
 
         client.register("test@example.com", "activationToken", function (passPin, pinLength) {
-            expect(pinLength).to.equal(4);
-            passPin("1234");
-        }, function (err, data) {
-            expect(err).to.be.null;
-            done();
-        });
-    });
-
-    it("should auto confirm when registration code is provided", function (done) {
-        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4 });
-        var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
-        var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
-        var finishRegistrationStub = sinon.stub(client, "_createIdentity").yields(null, true);
-
-        client.register("test@example.com", 123456, function (passPin, pinLength) {
             expect(pinLength).to.equal(4);
             passPin("1234");
         }, function (err, data) {
