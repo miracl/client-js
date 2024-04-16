@@ -6,7 +6,7 @@ import HTTP from "./http.js";
  * @class
  * @param {Object} options
  * @param {string} options.server - Server address, defaults to https://api.mpin.io
- * @param {string} options.projectId - MIRACL Trust project ID
+ * @param {string} options.projectId - MIRACL Trust Project ID
  * @param {string} options.seed - Hex encoded random number generator seed
  * @param {string} options.deviceName - Name of the current device
  * @param {Object} options.userStorage - Storage for saving user data
@@ -79,7 +79,7 @@ Client.prototype.setAccessId = function (accessId) {
 /**
  * Make a request to start a new session and fetch the access(session) ID
  *
- * @param {string} userId - The ID of the user that will be authenticating (not required)
+ * @param {string} userId - The unique identifier of the user that will be authenticating (not required)
  * @param {function(Error, Object)} callback
  */
 Client.prototype.fetchAccessId = function (userId, callback) {
@@ -135,7 +135,7 @@ Client.prototype.fetchStatus = function (callback) {
 /**
  * Start the push authentication flow
  *
- * @param {string} userId - The ID of the user that will be authenticating
+ * @param {string} userId - The unique identifier of the user that will be authenticating
  * @param {function(Error, Object)} callback
  */
 Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
@@ -256,7 +256,7 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
 /**
  * Create an identity for the specified user ID
  *
- * @param {string} userId - The ID of the user
+ * @param {string} userId - The unique identifier of the user
  * @param {string} activationToken - The code received from the verification process
  * @param {function} pinCallback - Called when the PIN code needs to be entered
  * @param {function(Error, Object)} callback
@@ -410,8 +410,8 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
 /**
  * Authenticate the user with the specified user ID
  *
- * @param {string} userId - The ID of the user
- * @param {string} userPin - The PIN of the identity
+ * @param {string} userId - The unique identifier of the user
+ * @param {string} userPin - The PIN associated with the userId
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticate = function (userId, userPin, callback) {
@@ -419,11 +419,11 @@ Client.prototype.authenticate = function (userId, userPin, callback) {
 };
 
 /**
- * Authenticate the user for the session specified by the qrCode
+ * Authenticate the user for the session specified by the qrCode parameter
  *
- * @param {string} userId - The ID of the user
+ * @param {string} userId - The unique identifier of the user
  * @param {string} qrCode - The QR code URL that initiated the authentication
- * @param {string} userPin - The PIN of the identity
+ * @param {string} userPin - The PIN associated with the userId
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticateWithQRCode = function (userId, qrCode, userPin, callback) {
@@ -432,11 +432,11 @@ Client.prototype.authenticateWithQRCode = function (userId, qrCode, userPin, cal
 };
 
 /**
- * Authenticate the user for the session specified by the appLink
+ * Authenticate the user for the session specified by the appLink parameter
  *
- * @param {string} userId - The ID of the user
+ * @param {string} userId - The unique identifier of the user
  * @param {string} appLink - The app link that initiated the authentication
- * @param {string} userPin - The PIN of the identity
+ * @param {string} userPin - The PIN associated with the userId
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticateWithAppLink = function (userId, appLink, userPin, callback) {
@@ -448,7 +448,7 @@ Client.prototype.authenticateWithAppLink = function (userId, appLink, userPin, c
  * Authenticate the session specified by the push notification payload
  *
  * @param {[key: string]: string} payload - The push notification payload
- * @param {string} userPin - The PIN of the identity
+ * @param {string} userPin - The PIN associated with the userId
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticateWithNotificationPayload = function (payload, userPin, callback) {
@@ -463,8 +463,8 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
 /**
  * Fetch an OTP for the specified user ID
  *
- * @param {string} userId - The ID of the user
- * @param {string} userPin - The PIN of the identity
+ * @param {string} userId - The unique identifier of the user
+ * @param {string} userPin - The PIN associated with the userId
  * @param {function(Error, Object)} callback
  */
 Client.prototype.generateOTP = function (userId, userPin, callback) {
@@ -474,8 +474,8 @@ Client.prototype.generateOTP = function (userId, userPin, callback) {
 /**
  * Fetch a registration (bootstrap) code for the specified user ID
  *
- * @param {string} userId - The ID of the user
- * @param {string} userPin - The PIN of the identity
+ * @param {string} userId - The unique identifier of the user
+ * @param {string} userPin - The PIN associated with the userId
  * @param {function(Error, Object)} callback
  */
 Client.prototype.generateQuickCode = function (userId, userPin, callback) {
@@ -681,8 +681,8 @@ Client.prototype._getWaMSecret1 = function (keypair, registerToken, callback) {
 /**
  * Create a cryptographic signature of a given message
  *
- * @param {string} userId - The ID of the user
- * @param {string} userPin - The PIN of the identity used for authentication
+ * @param {string} userId - The unique identifier of the user
+ * @param {string} userPin - The PIN associated with the userId
  * @param {string} message - The message that will be signed
  * @param {number} timestamp - The creation timestamp of the message
  * @param {function(Error, Object)} callback
