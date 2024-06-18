@@ -23923,7 +23923,7 @@ function Client(options) {
     }
 
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.0.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.1.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     self.options = options;
 
@@ -23958,11 +23958,11 @@ Client.prototype.fetchAccessId = function (userId, callback) {
         reqData;
 
     reqData = {
-        url: self.options.server + "/authorize?" + self._urlEncode(self.options.oidc),
+        url: self.options.server + "/rps/v2/session",
         type: "POST",
         data: {
-            prerollId: userId,
-            registerOnly: self.options.registerOnly ? true : false
+            projectId: self.options.projectId,
+            userId: userId
         }
     };
 
@@ -24063,7 +24063,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         deviceName: self._getDeviceName(),
         clientId: self.options.oidc["client_id"],
         redirectURI: self.options.oidc["redirect_uri"],
-        scope: self.options.oidc["scope"] ? self.options.oidc["scope"].split(" ") : "",
+        scope: self.options.oidc["scope"] ? self.options.oidc["scope"].split(" ") : [],
         state: self.options.oidc["state"],
         nonce: self.options.oidc["nonce"],
         type: self.options.registerOnly ? "registration" : ""
