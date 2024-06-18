@@ -192,7 +192,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         deviceName: self._getDeviceName(),
         clientId: self.options.oidc["client_id"],
         redirectURI: self.options.oidc["redirect_uri"],
-        scope: self.options.oidc["scope"] ? self.options.oidc["scope"].split(" ") : "",
+        scope: self.options.oidc["scope"] ? self.options.oidc["scope"].split(" ") : [],
         state: self.options.oidc["state"],
         nonce: self.options.oidc["nonce"],
         type: self.options.registerOnly ? "registration" : ""
