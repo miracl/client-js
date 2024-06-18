@@ -87,11 +87,11 @@ Client.prototype.fetchAccessId = function (userId, callback) {
         reqData;
 
     reqData = {
-        url: self.options.server + "/authorize?" + self._urlEncode(self.options.oidc),
+        url: self.options.server + "/rps/v2/session",
         type: "POST",
         data: {
-            prerollId: userId,
-            registerOnly: self.options.registerOnly ? true : false
+            projectId: self.options.projectId,
+            userId: userId
         }
     };
 
