@@ -187,6 +187,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
     reqData.type = "POST";
     reqData.data = {
         userId: userId,
+        mpinId: self.users.get(userId, "mpinId"),
         projectId: self.options.projectId,
         accessId: self.session.accessId,
         deviceName: self._getDeviceName(),
