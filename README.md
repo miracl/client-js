@@ -1,8 +1,5 @@
 # Headless MFA Client Library
 
-[![pipeline status](https://gitlab.corp.miracl.com/mfa/maas/pkg/client-js/badges/master/pipeline.svg)](https://gitlab.corp.miracl.com/mfa/maas/pkg/client-js/commits/master)
-[![coverage report](https://gitlab.corp.miracl.com/mfa/maas/pkg/client-js/badges/master/coverage.svg)](https://gitlab.corp.miracl.com/mfa/maas/pkg/client-js/commits/master)
-
 ## Installation
 
 ```sh
@@ -29,7 +26,7 @@ var options = {
 	deviceName: "Name of Device"
 }
 
-var client = new Mfa(options);
+var client = new MIRACLTrust(options);
 ```
 
 ## Build in Docker image
