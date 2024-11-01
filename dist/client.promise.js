@@ -24333,17 +24333,6 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
 };
 
 /**
- * Fetch an OTP for the specified user ID
- *
- * @param {string} userId - The unique identifier of the user
- * @param {string} userPin - The PIN associated with the userId
- * @param {function(Error, Object)} callback
- */
-Client.prototype.generateOTP = function (userId, userPin, callback) {
-    this._authentication(userId, userPin, ["otp"], callback);
-};
-
-/**
  * Fetch a registration (bootstrap) code for the specified user ID
  *
  * @param {string} userId - The unique identifier of the user
@@ -24686,10 +24675,6 @@ class PromiseInterface extends Client {
 
     authenticateWithNotificationPayload(payload, userPin) {
         return promisify(super.authenticateWithNotificationPayload.bind(this), payload, userPin);
-    }
-
-    generateOTP(userId, userPin) {
-        return promisify(super.generateOTP.bind(this), userId, userPin);
     }
 
     generateQuickCode(userId, userPin) {

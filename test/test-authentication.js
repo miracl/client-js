@@ -100,16 +100,6 @@ describe("Client _getPass2", function () {
         });
     });
 
-    it("should make a request for OTP", function (done) {
-        var stub = sinon.stub(client.http, "request").yields(null, { success: true });
-        sinon.stub(client.crypto, "calculatePass2").returns();
-
-        client._getPass2({}, ["otp"], "yHex", [], [], function (err, data) {
-            expect(stub.calledOnce).to.be.true;
-            done();
-        });
-    });
-
     afterEach(function () {
         client.http.request.restore && client.http.request.restore();
         client.crypto.calculatePass2.restore && client.crypto.calculatePass2.restore();
@@ -362,7 +352,7 @@ describe("Client _authentication", function () {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
-        client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
             expect(err).to.be.null;
             expect(requestStub.callCount).to.equal(1);
             expect(data).to.exist;
@@ -377,7 +367,7 @@ describe("Client _authentication", function () {
         var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         requestStub.onFirstCall().yields(new Error("Request error"), { status: 400 });
 
-        client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Authentication fail");
             done();
@@ -391,7 +381,7 @@ describe("Client _authentication", function () {
         var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         requestStub.onFirstCall().yields(new Error("Request error"), { error: "UNSUCCESSFUL_AUTHENTICATION" });
 
-        client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Unsuccessful authentication");
             done();
@@ -407,7 +397,7 @@ describe("Client _authentication", function () {
 
         var userWriteSpy = sinon.spy(client.users, "write");
 
-        client._authentication("test@example.com", "1234", ["otp"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Revoked");
             expect(userWriteSpy.calledOnce).to.be.true;
@@ -552,34 +542,6 @@ describe("Client authenticateWithNotificationPayload", function () {
         client.authenticateWithNotificationPayload({userID: "test@example.com"}, "1234", function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Invalid push notification payload");
-            done();
-        });
-    });
-
-    afterEach(function () {
-        client._authentication.restore && client._authentication.restore();
-    });
-});
-
-describe("Client generateOTP", function () {
-    var client;
-
-    before(function () {
-        client = new Client(testData.init());
-        client.users.write("test@example.com", {
-            mpinId: "exampleMpinId",
-            state: "REGISTERED"
-        });
-    });
-
-    it("should call _authentication with scope 'otp'", function (done) {
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
-
-        client.generateOTP("test@example.com", "1234", function (err, data) {
-            expect(err).to.be.null;
-            expect(data.success).to.be.true;
-            expect(authenticationStub.calledOnce).to.be.true;
-            expect(authenticationStub.firstCall.args[2]).to.deep.equal(["otp"]);
             done();
         });
     });
