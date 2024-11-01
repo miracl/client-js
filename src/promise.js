@@ -41,10 +41,6 @@ export default class PromiseInterface extends Client {
         return promisify(super.authenticateWithNotificationPayload.bind(this), payload, userPin);
     }
 
-    generateOTP(userId, userPin) {
-        return promisify(super.generateOTP.bind(this), userId, userPin);
-    }
-
     generateQuickCode(userId, userPin) {
         return promisify(super.generateQuickCode.bind(this), userId, userPin);
     }

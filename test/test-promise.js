@@ -200,24 +200,6 @@ describe("Promises", function() {
         throw new Error("Unexpected result");
     });
 
-    it("should call generateOTP", async function () {
-        sinon.stub(client, "_authentication").yields(null, { message: "OK" });
-        expect(await client.generateOTP("test@example.com", "1234")).to.deep.equal({ message: "OK" });
-    });
-
-    it("should fail on generateOTP error", async function () {
-        sinon.stub(client, "_authentication").yields(new Error("Authentication error"), null);
-
-        try {
-            await client.generateOTP("test@example.com", "1234")
-        } catch (err) {
-            expect(err.message).to.equal("Authentication error");
-            return;
-        }
-
-        throw new Error("Unexpected result");
-    });
-
     it("should call generateQuickCode", async function () {
         sinon.stub(client, "_authentication").yields(null, { message: "OK" });
         expect(await client.generateQuickCode("test@example.com", "1234")).to.deep.equal({ message: "OK" });
