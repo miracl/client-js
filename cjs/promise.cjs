@@ -24065,8 +24065,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         redirectURI: self.options.oidc["redirect_uri"],
         scope: self.options.oidc["scope"] ? self.options.oidc["scope"].split(" ") : [],
         state: self.options.oidc["state"],
-        nonce: self.options.oidc["nonce"],
-        type: self.options.registerOnly ? "registration" : ""
+        nonce: self.options.oidc["nonce"]
     };
 
     self.http.request(reqData, function (err, result) {
@@ -24339,7 +24338,35 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
  * @param {function(Error, Object)} callback
  */
 Client.prototype.generateQuickCode = function (userId, userPin, callback) {
-    this._authentication(userId, userPin, ["reg-code"], callback);
+    var self = this;
+
+    self._authentication(userId, userPin, ["reg-code"], function (err, result) {
+        if (err) {
+            return callback(err, null);
+        }
+
+        self.http.request({
+            url: self.options.server + "/verification/quickcode",
+            type: "POST",
+            data: {
+                projectId: self.options.projectId,
+                jwt: result.jwt,
+                deviceName: self._getDeviceName()
+            }
+        }, function (err, result) {
+            if (err) {
+                return callback(err, null);
+            }
+
+            callback(null, {
+                code: result.code,
+                expireTime: result.expireTime,
+                ttlSeconds: result.ttlSeconds,
+                // Deprecated, kept for backward compatibility
+                OTP: result.code
+            });
+        });
+    });
 };
 
 Client.prototype._authentication = function (userId, userPin, scope, callback) {
