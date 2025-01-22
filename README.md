@@ -200,7 +200,7 @@ authentication PIN code.
 
 ### Authentication
 
-MIRACL Trust SDK offers two options:
+MIRACL Trust Client JS Library offers two options:
 
 - [Authenticate users on the same application](#authenticate-users-on-the-same-application)
 - [Authenticate users on another application](#authenticate-users-on-another-application)
@@ -292,7 +292,7 @@ devices, see
 DVS stands for Designated Verifier Signature, which is a protocol for
 cryptographic signing of documents. For more information, see
 [Designated Verifier Signature](https://miracl.com/resources/docs/concepts/dvs/).
-In the context of this SDK, we refer to it as ‘Signing’.
+In the context of this library, we refer to it as ‘Signing’.
 
 To sign a document, use the `sign` method as follows:
 
