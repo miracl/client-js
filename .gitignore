@@ -1,10 +1,6 @@
 node_modules/
 .tmp/
 npm-debug.log
-nbproject/
-test/coverage.html
-mocha.json
-target
 coverage
-htmlcov
-localStorageTemp
+docs.sh
+deploy-cdn.sh
