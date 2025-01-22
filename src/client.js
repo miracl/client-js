@@ -195,8 +195,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         redirectURI: self.options.oidc["redirect_uri"],
         scope: self.options.oidc["scope"] ? self.options.oidc["scope"].split(" ") : [],
         state: self.options.oidc["state"],
-        nonce: self.options.oidc["nonce"],
-        type: self.options.registerOnly ? "registration" : ""
+        nonce: self.options.oidc["nonce"]
     };
 
     self.http.request(reqData, function (err, result) {
