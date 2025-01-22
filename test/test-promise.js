@@ -202,7 +202,8 @@ describe("Promises", function() {
 
     it("should call generateQuickCode", async function () {
         sinon.stub(client, "_authentication").yields(null, { message: "OK" });
-        expect(await client.generateQuickCode("test@example.com", "1234")).to.deep.equal({ message: "OK" });
+        sinon.stub(client.http, "request").yields(null, { code: "123456", ttlSeconds: 60, expireTime: 1737520575 });
+        expect(await client.generateQuickCode("test@example.com", "1234")).to.deep.equal({ code: "123456", OTP: "123456", ttlSeconds: 60, expireTime: 1737520575 });
     });
 
     it("should fail on generateQuickCode error", async function () {
