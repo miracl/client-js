@@ -563,18 +563,44 @@ describe("Client generateQuickCode", function () {
     });
 
     it("should call _authentication with scope 'reg-code'", function (done) {
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
+        var authenticationStub = sinon.stub(client, "_authentication").yields(null, {});
+        var requestStub = sinon.stub(client.http, "request").yields(null, { code: "123456", ttlSeconds: 60, expireTime: 1737520575 });
 
         client.generateQuickCode("test@example.com", "1234", function (err, data) {
             expect(err).to.be.null;
-            expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
             expect(authenticationStub.firstCall.args[2]).to.deep.equal(["reg-code"]);
+            expect(data.code).to.equal("123456");
+            expect(data.OTP).to.equal("123456");
+            expect(data.ttlSeconds).to.equal(60);
+            expect(data.expireTime).to.equal(1737520575);
+            done();
+        });
+    });
+
+    it("should fail on _authentication error", function (done) {
+        var authenticationStub = sinon.stub(client, "_authentication").yields(new Error("Authentication fail"), null);
+
+        client.generateQuickCode("test@example.com", "1234", function (err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Authentication fail");
+            done();
+        });
+    });
+
+    it("should fail on verification/quickcode request error", function (done) {
+        var authenticationStub = sinon.stub(client, "_authentication").yields(null, {});
+        var requestStub = sinon.stub(client.http, "request").yields(new Error("Request error"), null);
+
+        client.generateQuickCode("test@example.com", "1234", function (err, data) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Request error");
             done();
         });
     });
 
     afterEach(function () {
         client._authentication.restore && client._authentication.restore();
+        client.http.request.restore && client.http.request.restore();
     });
 });

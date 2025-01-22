@@ -350,7 +350,7 @@ Promise:
 ```js
 try {
   const result = await mcl.generateQuickCode(userId, pin);
-  console.log(result.otp);
+  console.log(result.code);
 } catch (err) {
   // Handle any potential errors
 }
@@ -364,7 +364,7 @@ mcl.generateQuickCode(userId, pin, function callback(err, result) {
     // Handle any potential errors
   }
 
-  console.log(result.otp);
+  console.log(result.code);
 });
 ```
 
