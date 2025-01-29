@@ -9,10 +9,7 @@ global.testData = {
             projectId: "projectID",
             seed: "hexSeed",
             defaultPinLength: 4,
-            userStorage: new storage(),
-            oidc: {
-                client_id: "testClientID"
-            }
+            userStorage: new storage()
         };
     }
 };

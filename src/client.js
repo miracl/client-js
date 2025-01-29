@@ -51,6 +51,10 @@ export default function Client(options) {
         options.requestTimeout = 4000;
     }
 
+    if (!options.oidc) {
+        options.oidc = {};
+    }
+
     // Set the client name using the current lib version and provided application info
     options.clientName = "MIRACL Client.js/8.4.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
