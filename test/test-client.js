@@ -1,4 +1,5 @@
 import Client from "../src/client.js";
+import pkg from "../package.json" with { type: "json" };
 import sinon from "sinon";
 import { expect } from "chai";
 
@@ -63,6 +64,18 @@ describe("Client", function() {
         config.defaultPinLength = 5;
         var client = new Client(config);
         expect(client.options.defaultPinLength).to.equal(5);
+    });
+
+    it("should set clientName", function () {
+        var client = new Client(testData.init());
+        expect(client.options.clientName).to.equal("MIRACL Client.js/" + pkg.version);
+    });
+
+    it("should set clientName with application info", function () {
+        var config = testData.init();
+        config.applicationInfo = "Test Application";
+        var client = new Client(config);
+        expect(client.options.clientName).to.equal("MIRACL Client.js/" + pkg.version + " Test Application");
     });
 });
 
