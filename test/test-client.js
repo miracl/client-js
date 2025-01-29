@@ -175,7 +175,11 @@ describe("Client sendPushNotificationForAuth", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        const config = testData.init();
+        config.oidc = {
+            client_id: "testClientID"
+        };
+        client = new Client(config);
     });
 
     it("should make a request to the pushauth endpoint", function () {
