@@ -144,6 +144,14 @@ Users.prototype.list = function () {
 };
 
 /**
+ * Returns the number of registered identities
+ * @return {number}
+ */
+Users.prototype.count = function () {
+    return Object.keys(this.list()).length;
+};
+
+/**
  * Remove an identity
  * @param {string} userId - The ID of the user
  */

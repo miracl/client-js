@@ -307,6 +307,53 @@ describe("Users list", function () {
     });
 });
 
+describe("Users count", function () {
+    var users;
+
+    it("should return a count of users", function () {
+        var storage = new Storage();
+        storage.setItem("mfa", JSON.stringify([
+            {
+                "userId":"test@example.com",
+                "projectId":"projectID",
+                "state":"REGISTERED",
+                "mpinId":"exampleMpinId"
+            }
+        ]));
+        users = new Users(storage, "projectID", "mfa");
+
+        expect(users.count()).to.equal(1);
+    });
+
+    it("should return zero on empty storage", function () {
+        var storage = new Storage();
+        users = new Users(storage, "projectID", "mfa");
+
+        expect(users.count()).to.equal(0);
+    });
+
+    it("should count only identities for the current project", function () {
+        var storage = new Storage();
+        storage.setItem("mfa", JSON.stringify([
+            {
+                "userId":"test@example.com",
+                "projectId":"projectID",
+                "state":"REGISTERED",
+                "mpinId":"exampleMpinId"
+            },
+            {
+                "userId":"another.project@example.com",
+                "projectId":"anotherProjectID",
+                "state":"REGISTERED",
+                "mpinId":"anotherExampleMpinId"
+            }
+        ]));
+        users = new Users(storage, "projectID", "mfa");
+
+        expect(users.count()).to.equal(1);
+    });
+});
+
 describe("Users remove", function () {
     var users, storage;
 
