@@ -23755,6 +23755,14 @@ Users.prototype.list = function () {
 };
 
 /**
+ * Returns the number of registered identities
+ * @return {number}
+ */
+Users.prototype.count = function () {
+    return Object.keys(this.list()).length;
+};
+
+/**
  * Remove an identity
  * @param {string} userId - The ID of the user
  */
@@ -23922,8 +23930,12 @@ function Client(options) {
         options.requestTimeout = 4000;
     }
 
+    if (!options.oidc) {
+        options.oidc = {};
+    }
+
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.2.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.5.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     self.options = options;
 
