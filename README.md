@@ -61,6 +61,30 @@ const mcl = new MIRACLTrust({
 });
 ```
 
+The seed is used for initializing the random number generator necessary for the
+security of the authentication protocol. Here is an example implementation
+compatible with most browsers:
+
+```js
+function getLocalEntropy() {
+  const crypto = window.crypto || window.msCrypto;
+
+  if (typeof crypto === "undefined") {
+    throw new Error("Crypto API unavailable");
+  }
+
+  const buffer = new Uint32Array(8);
+  crypto.getRandomValues(buffer);
+
+  let entropyHex = "";
+  for (let i = 0; i < buffer.length; i++) {
+    entropyHex = entropyHex + buffer[i].toString(16);
+  }
+
+  return entropyHex;
+}
+```
+
 ### User ID Verification
 
 To register a new User ID, you need to verify it. MIRACL Trust offers two
@@ -77,7 +101,7 @@ options for that:
     (default)
   - [Email Code](https://miracl.com/resources/docs/guides/built-in-user-verification/email-code/)
 
-  Start the verification by calling of the `sendVerificationEmail` method:
+  Start the verification by calling the `sendVerificationEmail` method:
 
   Promise:
 
@@ -113,7 +137,7 @@ options for that:
 
     - If the end user is registering for the first time or resetting their PIN,
       an email with a verification code will be sent, and the email verification
-      method in the response will be `code`. Then, ask the user to enter the
+      method in the response will be `code`. Then, ask the end user to enter the
       code in the application.
 
     - If the end user has already registered another device with the same User
@@ -136,9 +160,14 @@ try {
   const result = await mcl.getActivationToken(
     "https://yourdomain.com/verification/confirmation?userId=alice@miracl.com&code=theVerificationCode",
   );
-  console.log(result);
+  console.log(result.actToken);
 } catch (err) {
-  // Handle any potential errors
+  switch (error.message) {
+    case "Unsuccessful verification":
+      break;
+    default:
+    // Handle any unexpected errors
+  }
 }
 ```
 
@@ -149,13 +178,21 @@ mcl.getActivationToken(
   "https://yourdomain.com/verification/confirmation?userId=alice@miracl.com&code=theVerificationCode",
   function callback(err, result) {
     if (err) {
-      // Handle any potential errors
+      switch (error.message) {
+        case "Unsuccessful verification":
+          break;
+        default:
+        // Handle any unexpected errors
+      }
     }
 
     console.log(result.actToken);
   },
 );
 ```
+
+An "Unsuccessful verification" error can be returned if the code is invalid or
+expired.
 
 2. Pass the User ID (email or any string you use for identification) and
    activation token to the `register` method.
@@ -207,8 +244,9 @@ MIRACL Trust Client JS Library offers two options:
 
 #### Authenticate users on the same application
 
-The `authenticate` method generates a [JWT](https://jwt.io) authentication token
-for а registered user.
+The `authenticate` method generates a
+[JWT](https://datatracker.ietf.org/doc/html/rfc7519) authentication token for а
+registered user.
 
 Promise:
 
@@ -217,7 +255,14 @@ try {
   const result = await mcl.authenticate(userId, pin);
   console.log(result.jwt);
 } catch (err) {
-  // Handle any potential errors
+  switch (error.message) {
+    case "Unsuccessful authentication":
+      break;
+    case "Revoked":
+      break;
+    default:
+    // Handle any unexpected errors
+  }
 }
 ```
 
@@ -226,7 +271,14 @@ Callback:
 ```js
 mcl.authenticate(userId, pin, function callback(err, result) {
   if (err) {
-    // Handle any potential errors
+    switch (error.message) {
+      case "Unsuccessful authentication":
+        break;
+      case "Revoked":
+        break;
+      default:
+      // Handle any unexpected errors
+    }
   }
 
   // The JWT in the result needs to be verified by your back end
@@ -234,6 +286,15 @@ mcl.authenticate(userId, pin, function callback(err, result) {
   console.log(result.jwt);
 });
 ```
+
+"Unsuccessful authentication" is returned when there is a discrepancy in the
+cryptographic calculations between the client and the server. This may be due to
+an incorrect PIN input or an issue with the token.
+
+"Revoked" is returned after the third consecutive failed authentication attempt,
+and for any subsequent attempts after the revocation. This error may also occur
+if the device registration has been explicitly revoked by an administrator via
+the MIRACL Trust Console or through the revocation API.
 
 After the JWT authentication token is generated, it needs to be sent to the
 application server for verification. Then, the application server verifies the
@@ -333,7 +394,7 @@ mcl.sign(
 
 The signature needs to be verified. This is done when the signature is sent to
 the application server, which then makes an HTTP call to the
-[POST /dvs/verify](https://miracl.com/resources/docs/guides/dvs/dvs-web-plugin/#api-reference)
+[POST /dvs/verify](https://miracl.com/resources/docs/apis-and-libraries/backend-api/verify-dvs-signature/)
 endpoint. If the MIRACL Trust platform returns status code `200`, the
 `certificate` entry in the response body indicates that signing is successful.
 
