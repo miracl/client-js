@@ -144,6 +144,24 @@ Users.prototype.list = function () {
 };
 
 /**
+ * Returns an array of all user objects
+ * @returns {Array}
+ */
+Users.prototype.all = function () {
+    var self = this,
+        users = [],
+        i;
+
+    for (i = 0; i < self.data.length; ++i) {
+        if (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId) {
+            users.push(self.data[i]);
+        }
+    }
+
+    return users;
+};
+
+/**
  * Returns the number of registered identities
  * @return {number}
  */
