@@ -23755,6 +23755,24 @@ Users.prototype.list = function () {
 };
 
 /**
+ * Returns an array of all user objects
+ * @returns {Array}
+ */
+Users.prototype.all = function () {
+    var self = this,
+        users = [],
+        i;
+
+    for (i = 0; i < self.data.length; ++i) {
+        if (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId) {
+            users.push(self.data[i]);
+        }
+    }
+
+    return users;
+};
+
+/**
  * Returns the number of registered identities
  * @return {number}
  */
@@ -23935,7 +23953,7 @@ function Client(options) {
     }
 
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.5.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.6.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     self.options = options;
 
