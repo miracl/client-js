@@ -56,7 +56,7 @@ export default function Client(options) {
     }
 
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.6.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.7.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     self.options = options;
 
@@ -279,7 +279,7 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
 
     keypair = self.crypto.generateKeypair("BN254CX");
 
-    self._createMPinID(userId, activationToken, function (err, identityData) {
+    self._createMPinID(userId, activationToken, keypair, function (err, identityData) {
         if (err) {
             if (identityData && identityData.error === "INVALID_ACTIVATION_TOKEN") {
                 return callback(new Error("Invalid activation token", { cause: err }), null);
@@ -292,12 +292,12 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
             return callback(new Error("Project mismatch"), null);
         }
 
-        self._getSecret1(identityData, keypair, function (err, sec1Data) {
+        self._getSecret(identityData.secretUrls[0], function (err, sec1Data) {
             if (err) {
                 return callback(new Error("Registration fail", { cause: err }), null);
             }
 
-            self._getSecret2(sec1Data, function (err, sec2Data) {
+            self._getSecret(identityData.secretUrls[1], function (err, sec2Data) {
                 if (err) {
                     return callback(new Error("Registration fail", { cause: err }), null);
                 }
@@ -322,17 +322,17 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
     });
 };
 
-Client.prototype._createMPinID = function (userId, activationToken, callback) {
+Client.prototype._createMPinID = function (userId, activationToken, keypair, callback) {
     var self = this,
         regData = {};
 
-    regData.url = self.options.server + "/rps/v2/user";
-    regData.type = "PUT";
+    regData.url = self.options.server + "/registration";
+    regData.type = "POST";
     regData.data = {
         userId: userId,
-        mobile: 0,
         deviceName: self._getDeviceName(),
-        activateCode: activationToken
+        activationToken: activationToken,
+        publicKey: keypair.publicKey
     };
 
     self.http.request(regData, function (err, result) {
@@ -356,28 +356,23 @@ Client.prototype._getDeviceName = function () {
     return "Browser";
 };
 
-Client.prototype._getSecret1 = function (identityData, keypair, callback) {
+Client.prototype._getSecret = function (secretUrl, callback) {
     var self = this,
-        cs1Url;
+        requestData = { url: secretUrl };
 
-    cs1Url = self.options.server + "/rps/v2/signature/";
-    cs1Url += identityData.mpinId;
-    cs1Url += "?regOTT=" + identityData.regOTT;
-    cs1Url += "&publicKey=" + keypair.publicKey;
-
-    self.http.request({ url: cs1Url }, function (err, sec1Data) {
+    self.http.request(requestData, function (err, result) {
         if (err) {
-            return callback(err, null);
+            if (err.message === "The request was aborted") {
+                self.http.request(requestData, callback);
+            } else {
+                callback(err, result);
+            }
+
+            return;
         }
 
-        callback(null, sec1Data);
+        callback(null, result);
     });
-};
-
-Client.prototype._getSecret2 = function (sec1Data, callback) {
-    var self = this;
-
-    self.http.request({ url: sec1Data.cs2url }, callback);
 };
 
 Client.prototype._createIdentity = function (userId, userPin, identityData, sec1Data, sec2Data, keypair, callback) {
@@ -387,8 +382,8 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
         token;
 
     try {
-        csHex = self.crypto.addShares(keypair.privateKey, sec1Data.dvsClientSecretShare, sec2Data.dvsClientSecret, sec1Data.curve);
-        token = self.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex, sec1Data.curve);
+        csHex = self.crypto.addShares(keypair.privateKey, sec1Data.dvsClientSecret, sec2Data.dvsClientSecret, identityData.curve);
+        token = self.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex, identityData.curve);
     } catch (err) {
         return callback(err, null);
     }
@@ -396,8 +391,8 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
     userData = {
         mpinId: identityData.mpinId,
         token: token,
-        curve: sec1Data.curve,
-        dtas: sec1Data.dtas,
+        curve: identityData.curve,
+        dtas: identityData.dtas,
         publicKey: keypair.publicKey,
         pinLength: identityData.pinLength,
         projectId: identityData.projectId,
@@ -663,40 +658,29 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
 
 Client.prototype._renewSecret = function (userId, userPin, activationData, callback) {
     var self = this,
-        identityData,
         keypair;
 
-    identityData = self.users.get(userId);
     keypair = self.crypto.generateKeypair(activationData.curve);
 
-    self._getWaMSecret1(keypair, activationData.token, function (err, sec1Data) {
+    self._createMPinID(userId, activationData.token, keypair, function (err, identityData) {
         if (err) {
             return callback(err, null);
         }
 
-        self._getSecret2(sec1Data, function (err, sec2Data) {
+        self._getSecret(identityData.secretUrls[0], function (err, sec1Data) {
             if (err) {
                 return callback(err, null);
             }
 
-            self._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
+            self._getSecret(identityData.secretUrls[1], function (err, sec2Data) {
+                if (err) {
+                    return callback(err, null);
+                }
+
+                self._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
+            });
         });
     });
-};
-
-Client.prototype._getWaMSecret1 = function (keypair, registerToken, callback) {
-    var self = this,
-        cs1Url,
-        reqData;
-
-    reqData = {
-        publicKey: keypair.publicKey,
-        dvsRegisterToken: registerToken
-    };
-
-    cs1Url = self.options.server + "/rps/v2/dvsregister";
-
-    self.http.request({ url: cs1Url, type: "POST", data: reqData }, callback);
 };
 
 /**
