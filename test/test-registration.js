@@ -121,7 +121,7 @@ describe("Client _createMPinID", function() {
     it("should return error, when register request fail", function(done) {
         sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400 });
 
-        client._createMPinID("test@example.com", null, function(err) {
+        client._createMPinID("test@example.com", null, { publicKey: "00" }, function(err) {
             expect(err).to.exist;
             done();
         });
@@ -130,7 +130,7 @@ describe("Client _createMPinID", function() {
     it("should store started user", function(done) {
         sinon.stub(client.http, "request").yields(null, { projectId: "projectID" });
 
-        client._createMPinID("test@example.com", null, function(err, data) {
+        client._createMPinID("test@example.com", null, { publicKey: "00" }, function(err, data) {
             expect(client.users.exists("test@example.com")).to.be.true;
             expect(client.users.get("test@example.com", "state")).to.equal("STARTED");
             done();
@@ -158,73 +158,66 @@ describe("Client _getDeviceName", function () {
     })
 });
 
-describe("Client _getSecret1", function() {
-    var client, spy;
-
-    before(function () {
-        client = new Client(testData.init());
-        spy = sinon.spy();
-    });
-
-    it("should fire callback with error when request returns any error", function (done) {
-        sinon.stub(client.http, "request").yields({}, null);
-
-        client._getSecret1({ mpinId: "0f" }, { publicKey: "public" }, function callback(err) {
-            expect(err).to.exist;
-            done();
-        });
-    });
-
-    it("should make a proper request for client secret share", function (done) {
-        var requestStub = sinon.stub(client.http, "request").yields(null, {});
-
-        client._getSecret1({ mpinId: "0f", regOTT: "ott" }, { publicKey: "public" }, function callback(err, data) {
-            if (err) {
-                throw new Error(err);
-            }
-
-            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/signature/0f?regOTT=ott&publicKey=public");
-            done();
-        });
-    });
-
-    it("should fire successful callback when request doesn't return error", function (done) {
-        sinon.stub(client.http, "request").yields(null, {});
-
-        client._getSecret1({ mpinId: "0f" }, { publicKey: "public" }, function callback(err, data) {
-            if (err) {
-                throw new Error(err);
-            }
-
-            expect(data).to.exist;
-            done();
-        });
-    });
-
-    afterEach(function() {
-        client.http.request.restore && client.http.request.restore();
-    });
-});
-
-describe("Client _getSecret2", function() {
+describe("Client _getSecret", function() {
     var client;
 
     before(function () {
         client = new Client(testData.init());
     });
 
-    it("should return error, when signature2 request fails", function(done) {
-        sinon.stub(client.http, "request").yields({}, null);
+    it("should return error, when signature request fails", function(done) {
+        sinon.stub(client.http, "request").yields(new Error("Request failed"), null);
 
-        client._getSecret2({}, function(err) {
+        client._getSecret("secretUrl", function(err) {
             expect(err).to.exist;
+            expect(err.message).to.equal("Request failed");
+            done();
+        });
+    });
+
+    it("should retry if the request was aborted", function(done) {
+        var requestStub = sinon.stub(client.http, "request");
+
+        requestStub.onFirstCall().yields(new Error("The request was aborted"), null);
+        requestStub.onSecondCall().yields(null, {});
+
+        client._getSecret("secretUrl", function(err) {
+            expect(requestStub.calledTwice).to.be.true;
+            expect(err).to.be.null;
+            done();
+        });
+    });
+
+    it("should return error if the retried request fails", function(done) {
+        var requestStub = sinon.stub(client.http, "request");
+
+        requestStub.onFirstCall().yields(new Error("The request was aborted"), null);
+        requestStub.onSecondCall().yields(new Error("Request failed"), null);
+
+        client._getSecret("secretUrl", function(err) {
+            expect(requestStub.calledTwice).to.be.true;
+            expect(err).to.exist;
+            expect(err.message).to.equal("Request failed");
+            done();
+        });
+    });
+
+    it("should return error if the retried request is aborted", function(done) {
+        var requestStub = sinon.stub(client.http, "request");
+
+        requestStub.onFirstCall().yields(new Error("The request was aborted"), null);
+        requestStub.onSecondCall().yields(new Error("The request was aborted"), null);
+
+        client._getSecret("secretUrl", function(err) {
+            expect(requestStub.calledTwice).to.be.true;
+            expect(err).to.exist;
+            expect(err.message).to.equal("The request was aborted");
             done();
         });
     });
 
     afterEach(function() {
         client.http.request.restore && client.http.request.restore();
-        client.crypto.addShares.restore && client.crypto.addShares.restore();
     });
 });
 
@@ -242,7 +235,7 @@ describe("Client _createIdentity", function() {
     it("should call addShares with CS share 1 and 2", function(done) {
         var addSharesStub = sinon.stub(client.crypto, "addShares");
         var keypair = { privateKey: "privateKey" };
-        var share1 = { dvsClientSecretShare: "clientSecretValue1" };
+        var share1 = { dvsClientSecret: "clientSecretValue1" };
         var share2 = { dvsClientSecret: "clientSecretValue2" };
 
         client._createIdentity("test@example.com", "1234", {}, share1, share2, keypair, function(err) {
@@ -322,26 +315,24 @@ describe("Client register", function () {
     });
 
     it("should go through the registration flow", function (done) {
-        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
-        var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
-        var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
-        var finishRegistrationStub = sinon.stub(client, "_createIdentity").yields(null);
+        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        var getSecretStub = sinon.stub(client, "_getSecret").yields(null);
+        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null);
 
         client.register("test@example.com", "activationToken", function (passPin) {
             passPin("1234");
         }, function (err, data) {
             expect(err).to.be.null;
             expect(registrationStub.calledOnce).to.be.true;
-            expect(getSecret1Stub.calledOnce).to.be.true;
-            expect(getSecret2Stub.calledOnce).to.be.true;
-            expect(finishRegistrationStub.calledOnce).to.be.true;
+            expect(getSecretStub.calledTwice).to.be.true;
+            expect(createIdentityStub.calledOnce).to.be.true;
             done();
         });
     });
 
-    it("should fire callback with error on error with _getSecret1", function (done) {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
-        sinon.stub(client, "_getSecret1").yields(new Error("Request error"));
+    it("should fire callback with error on error with first _getSecret", function (done) {
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        sinon.stub(client, "_getSecret").yields(new Error("Request error"));
 
         client.register("test@example.com", "activationToken", function (passPin) {
             passPin("1234");
@@ -351,10 +342,11 @@ describe("Client register", function () {
         });
     });
 
-    it("should fire callback with error on error with _getSecret2", function (done) {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
-        sinon.stub(client, "_getSecret1").yields(null);
-        sinon.stub(client, "_getSecret2").yields(new Error("Request error"));
+    it("should fire callback with error on error with second _getSecret", function (done) {
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        var getSecretStub = sinon.stub(client, "_getSecret");
+        getSecretStub.onFirstCall().yields(null);
+        getSecretStub.onSecondCall().yields(new Error("Request error"));
 
         client.register("test@example.com", "activationToken", function (passPin) {
             passPin("1234");
@@ -376,9 +368,8 @@ describe("Client register", function () {
     });
 
     it("should fire successful callback, when _createMPinID passed successful", function (done) {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
-        sinon.stub(client, "_getSecret1").yields(null);
-        sinon.stub(client, "_getSecret2").yields(null);
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        sinon.stub(client, "_getSecret").yields(null);
         sinon.stub(client, "_createIdentity").yields(null, {});
 
         client.register("test@example.com", "activationToken", function (passPin) {
@@ -416,10 +407,9 @@ describe("Client register", function () {
     });
 
     it("should pass provided PIN length to the PIN callback", function (done) {
-        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 5, projectId: "projectID" });
-        var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
-        var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
-        var finishRegistrationStub = sinon.stub(client, "_createIdentity").yields(null, true);
+        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 5, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        var getSecretStub = sinon.stub(client, "_getSecret").yields(null);
+        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, true);
 
         client.register("test@example.com", "activationToken", function (passPin, pinLength) {
             expect(pinLength).to.equal(5);
@@ -431,10 +421,9 @@ describe("Client register", function () {
     });
 
     it("should pass default PIN length to the PIN callback", function (done) {
-        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
-        var getSecret1Stub = sinon.stub(client, "_getSecret1").yields(null);
-        var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null);
-        var finishRegistrationStub = sinon.stub(client, "_createIdentity").yields(null, true);
+        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        var getSecretStub = sinon.stub(client, "_getSecret").yields(null);
+        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, true);
 
         client.register("test@example.com", "activationToken", function (passPin, pinLength) {
             expect(pinLength).to.equal(4);
@@ -447,8 +436,7 @@ describe("Client register", function () {
 
     afterEach(function () {
         client._createMPinID.restore && client._createMPinID.restore();
-        client._getSecret1.restore && client._getSecret1.restore();
-        client._getSecret2.restore && client._getSecret2.restore();
+        client._getSecret.restore && client._getSecret.restore();
         client._createIdentity.restore && client._createIdentity.restore();
         client.users.remove("test@example.com");
     });

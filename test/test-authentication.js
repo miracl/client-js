@@ -145,8 +145,20 @@ describe("Client _finishAuthentication", function () {
         });
     });
 
+    it("should return error when _renewSecret fails", function(done) {
+        sinon.stub(client.http, "request").yields(null, { success: true, dvsRegister: { test: 1 } });
+        var renewSecretStub = sinon.stub(client, "_renewSecret").yields(new Error("Renew secret error"));
+
+        client._finishAuthentication("test@example.com", 1234, ["dvs-auth"], "authOTT", function (err) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Renew secret error");
+            done();
+        });
+    });
+
     afterEach(function () {
         client.http.request.restore && client.http.request.restore();
+        client._renewSecret.restore && client._renewSecret.restore();
         client._authentication.restore && client._authentication.restore();
     });
 });
@@ -159,21 +171,21 @@ describe("Client _renewSecret", function () {
     });
 
     it("should renew the identity secret", function (done) {
-        var getWaMSecret1Stub = sinon.stub(client, "_getWaMSecret1").yields(null, true);
-        var getSecret2Stub = sinon.stub(client, "_getSecret2").yields(null, true);
+        var createMPinIDStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        var getSecretStub = sinon.stub(client, "_getSecret").yields(null, true);
         var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, true);
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
             expect(err).to.be.null;
-            expect(getWaMSecret1Stub.calledOnce).to.be.true;
-            expect(getSecret2Stub.calledOnce).to.be.true;
+            expect(createMPinIDStub.calledOnce).to.be.true;
+            expect(getSecretStub.calledTwice).to.be.true;
             expect(createIdentityStub.calledOnce).to.be.true;
             done();
         });
     });
 
-    it("should call error callback on _getWaMSecret1 failure", function (done) {
-        sinon.stub(client, "_getWaMSecret1").yields(new Error("Request error"));
+    it("should call error callback on _createMPinID failure", function (done) {
+        sinon.stub(client, "_createMPinID").yields(new Error("Request error"));
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
             expect(err).to.exist;
@@ -182,9 +194,22 @@ describe("Client _renewSecret", function () {
         });
     });
 
-    it("should call error callback on _getSecret2 failure", function (done) {
-        sinon.stub(client, "_getWaMSecret1").yields(null, true);
-        sinon.stub(client, "_getSecret2").yields(new Error("Request error"), null);
+    it("should call error callback on first _getSecret failure", function (done) {
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        sinon.stub(client, "_getSecret").yields(new Error("Request error"));
+
+        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Request error");
+            done();
+        });
+    });
+
+    it("should call error callback on second _getSecret failure", function (done) {
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        var getSecretStub = sinon.stub(client, "_getSecret");
+        getSecretStub.onFirstCall().yields(null);
+        getSecretStub.onSecondCall().yields(new Error("Request error"));
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
             expect(err).to.exist;
@@ -194,8 +219,8 @@ describe("Client _renewSecret", function () {
     });
 
     it("should call error callback on createIdentity error", function (done) {
-        sinon.stub(client, "_getWaMSecret1").yields(null, true);
-        sinon.stub(client, "_getSecret2").yields(null, true);
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        sinon.stub(client, "_getSecret").yields(null, true);
         sinon.stub(client, "_createIdentity").yields(new Error("Request error"));
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
@@ -206,66 +231,10 @@ describe("Client _renewSecret", function () {
     });
 
     afterEach(function () {
-        client._getWaMSecret1.restore && client._getWaMSecret1.restore();
-        client._getSecret2.restore && client._getSecret2.restore();
+        client._createMPinID.restore && client._createMPinID.restore();
+        client._getSecret.restore && client._getSecret.restore();
         client._createIdentity.restore && client._createIdentity.restore();
     })
-});
-
-describe("Client _getWaMSecret1", function () {
-    var client;
-
-    before(function () {
-        client = new Client(testData.init());
-    });
-
-    it("should call error callback when request fails", function (done) {
-        sinon.stub(client.http, "request").yields({}, null);
-
-        client._getWaMSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err, data) {
-            expect(err).to.exist;
-            done();
-        });
-    });
-
-    it("should call success callback with data", function (done) {
-        sinon.stub(client.http, "request").yields(null, { success: true });
-
-        client._getWaMSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err, cs1Data) {
-            expect(err).to.be.null;
-            expect(cs1Data).to.exist;
-            expect(cs1Data).to.have.property("success");
-            expect(cs1Data.success).to.be.true;
-            done();
-        });
-    });
-
-    it("should make request to dvs register endpoint", function (done) {
-        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
-
-        client._getWaMSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
-            expect(err).to.be.null;
-            expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/dvsregister");
-            done();
-        });
-    });
-
-    it("should make request with public key", function (done) {
-        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
-        sinon.stub(client, "_getDeviceName").returns("device");
-
-        client._getWaMSecret1({ publicKey: "public" }, "dvsRegisterToken", function (err) {
-            expect(err).to.be.null;
-            expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.firstCall.args[0].data).to.deep.equal({ publicKey: "public", dvsRegisterToken: "dvsRegisterToken" });
-            done();
-        });
-    });
-
-    afterEach(function () {
-        client.http.request.restore && client.http.request.restore();
-    });
 });
 
 describe("Client _authentication", function () {
