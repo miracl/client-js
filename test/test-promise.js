@@ -100,16 +100,14 @@ describe("Promises", function() {
     });
 
     it("should call register", async function () {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID" });
-        sinon.stub(client, "_getSecret1").yields(null);
-        sinon.stub(client, "_getSecret2").yields(null);
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        sinon.stub(client, "_getSecret").yields(null);
         sinon.stub(client, "_createIdentity").yields(null, { state: "REGISTERED" });
 
         expect(await client.register("test@example.com", "activationToken", function (passPin) { passPin("1234"); })).to.deep.equal({ state: "REGISTERED" });
 
         client._createMPinID.restore();
-        client._getSecret1.restore();
-        client._getSecret2.restore();
+        client._getSecret.restore();
         client._createIdentity.restore();
     });
 
