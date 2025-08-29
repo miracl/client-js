@@ -5,7 +5,7 @@ import HTTP from "./http.js";
 /**
  * @class
  * @param {Object} options
- * @param {string} options.server - Server address, defaults to https://api.mpin.io
+ * @param {string} options.projectUrl - MIRACL Trust Project URL that is used for communication with the MIRACL Trust API
  * @param {string} options.projectId - MIRACL Trust Project ID
  * @param {string} options.seed - Hex encoded random number generator seed
  * @param {string} options.deviceName - Name of the current device
@@ -35,11 +35,11 @@ export default function Client(options) {
         throw new Error("Invalid user storage");
     }
 
-    if (!options.server) {
-        options.server = "https://api.mpin.io";
+    if (!options.projectUrl) {
+        options.projectUrl = "https://api.mpin.io";
     } else {
         // remove trailing slash from url, if there is one
-        options.server = options.server.replace(/\/$/, "");
+        options.projectUrl = options.projectUrl.replace(/\/$/, "");
     }
 
     // Ensure that default PIN lenght is between 4 and 6
@@ -56,7 +56,7 @@ export default function Client(options) {
     }
 
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.7.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.8.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     self.options = options;
 
@@ -91,7 +91,7 @@ Client.prototype.fetchAccessId = function (userId, callback) {
         reqData;
 
     reqData = {
-        url: self.options.server + "/rps/v2/session",
+        url: self.options.projectUrl + "/rps/v2/session",
         type: "POST",
         data: {
             projectId: self.options.projectId,
@@ -120,7 +120,7 @@ Client.prototype.fetchStatus = function (callback) {
         reqData;
 
     reqData = {
-        url: self.options.server + "/rps/v2/access",
+        url: self.options.projectUrl + "/rps/v2/access",
         type: "POST",
         data: {
             webOTT: self.session.webOTT
@@ -151,7 +151,7 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
     }
 
     reqData = {
-        url: self.options.server + "/pushauth?" + self._urlEncode(self.options.oidc),
+        url: self.options.projectUrl + "/pushauth?" + self._urlEncode(self.options.oidc),
         type: "POST",
         data: {
             prerollId: userId
@@ -187,7 +187,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    reqData.url = self.options.server + "/verification/email";
+    reqData.url = self.options.projectUrl + "/verification/email";
     reqData.type = "POST";
     reqData.data = {
         userId: userId,
@@ -236,7 +236,7 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
         return callback(new Error("Empty verification code"), null);
     }
 
-    reqData.url = self.options.server + "/verification/confirmation";
+    reqData.url = self.options.projectUrl + "/verification/confirmation";
     reqData.type = "POST";
     reqData.data = {
         userId: params["user_id"],
@@ -326,7 +326,7 @@ Client.prototype._createMPinID = function (userId, activationToken, keypair, cal
     var self = this,
         regData = {};
 
-    regData.url = self.options.server + "/registration";
+    regData.url = self.options.projectUrl + "/registration";
     regData.type = "POST";
     regData.data = {
         userId: userId,
@@ -475,7 +475,7 @@ Client.prototype.generateQuickCode = function (userId, userPin, callback) {
         }
 
         self.http.request({
-            url: self.options.server + "/verification/quickcode",
+            url: self.options.projectUrl + "/verification/quickcode",
             type: "POST",
             data: {
                 projectId: self.options.projectId,
@@ -589,7 +589,7 @@ Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, cal
         U: res.U
     };
 
-    self.http.request({ url: self.options.server + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
+    self.http.request({ url: self.options.projectUrl + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
 };
 
 /**
@@ -624,7 +624,7 @@ Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callba
         V: vHex
     };
 
-    self.http.request({ url: self.options.server + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
+    self.http.request({ url: self.options.projectUrl + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
 };
 
 Client.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
@@ -636,7 +636,7 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
         "wam": "dvs"
     };
 
-    self.http.request({ url: self.options.server + "/rps/v2/authenticate", type: "POST", data: requestData }, function (err, result) {
+    self.http.request({ url: self.options.projectUrl + "/rps/v2/authenticate", type: "POST", data: requestData }, function (err, result) {
         if (err) {
             return callback(err, result);
         }

@@ -5,7 +5,7 @@ import storage from "./storage.js";
 global.testData = {
     init: function () {
         return {
-            server: "http://server.com",
+            projectUrl: "https://project.miracl.io",
             projectId: "projectID",
             seed: "hexSeed",
             defaultPinLength: 4,

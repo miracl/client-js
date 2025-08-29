@@ -53,7 +53,8 @@ To configure the library:
 
 ```js
 const mcl = new MIRACLTrust({
-  projectId: "<YOUR_PROJECT_ID>", // required
+  projectUrl: "<PROJECT_URL>", // required
+  projectId: "<PROJECT_ID>", // required
   seed: "hexEncodedRandomNumberGeneratorSeed", // required
   userStorage: localStorage, // required
   deviceName: "Name of Device",
