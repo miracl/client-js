@@ -31,11 +31,11 @@ describe("Client", function() {
         expect(client).to.be.an.instanceof(Client);
     });
 
-    it("should set default server address if there is none", function () {
+    it("should set default server address if there is no projectUrl", function () {
         var config = testData.init();
-        delete config["server"];
+        delete config["projectUrl"];
         var client = new Client(config);
-        expect(client.options.server).to.equal("https://api.mpin.io");
+        expect(client.options.projectUrl).to.equal("https://api.mpin.io");
     });
 
     it("should set default PIN length to 4 if there is none", function () {
@@ -187,7 +187,7 @@ describe("Client sendPushNotificationForAuth", function () {
 
         client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(data).to.exist;
-            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/pushauth?client_id=testClientID");
+            expect(requestStub.firstCall.args[0].url).to.equal("https://project.miracl.io/pushauth?client_id=testClientID");
             expect(data.webOTT).to.equal("test");
         });
     });

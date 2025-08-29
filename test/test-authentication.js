@@ -15,7 +15,7 @@ describe("Client _getPass1", function () {
 
         client._getPass1({}, "1234", ["oidc"], [], [], function () {
             expect(requestStub.calledOnce).to.be.true;
-            expect(requestStub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/pass1");
+            expect(requestStub.firstCall.args[0].url).to.equal("https://project.miracl.io/rps/v2/pass1");
             expect(requestStub.firstCall.args[0].type).to.equal("POST");
             done();
         });
@@ -72,7 +72,7 @@ describe("Client _getPass2", function () {
 
         client._getPass2({}, ["oidc"], "yHex", [], [], function () {
             expect(stub.calledOnce).to.be.true;
-            expect(stub.firstCall.args[0].url).to.equal("http://server.com/rps/v2/pass2");
+            expect(stub.firstCall.args[0].url).to.equal("https://project.miracl.io/rps/v2/pass2");
             expect(stub.firstCall.args[0].type).to.equal("POST");
             done();
         });
