@@ -159,7 +159,7 @@ Promise:
 ```js
 try {
   const result = await mcl.getActivationToken(
-    "https://yourdomain.com/verification/confirmation?userId=alice@miracl.com&code=theVerificationCode",
+    "https://yourdomain.com/verification/confirmation?user_id=alice@miracl.com&code=theVerificationCode",
   );
   console.log(result.actToken);
 } catch (err) {
@@ -176,7 +176,7 @@ Callback:
 
 ```js
 mcl.getActivationToken(
-  "https://yourdomain.com/verification/confirmation?userId=alice@miracl.com&code=theVerificationCode",
+  "https://yourdomain.com/verification/confirmation?user_id=alice@miracl.com&code=theVerificationCode",
   function callback(err, result) {
     if (err) {
       switch (error.message) {
