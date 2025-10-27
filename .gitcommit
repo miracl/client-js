@@ -1,0 +1,8 @@
+# <type>: <header line up to 50 chars total>
+
+# Explain what & why, wrapped at 72 characters per line.
+# Focus on rationale and intent, not implementation details.
+
+# Footer: use only if needed.
+# - BREAKING CHANGE: describe incompatible change
+# - Other important notes (e.g. migration, deprecation)

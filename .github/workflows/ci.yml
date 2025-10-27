@@ -5,6 +5,25 @@ on:
   - pull_request
 
 jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - name: Lint branch commits with commitlint
+        if: github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+        run: |
+            npm install -g @commitlint/config-conventional @commitlint/cli
+            commitlint --verbose \
+            --from $(git merge-base origin/${{ github.event.repository.default_branch }} ${{ github.sha }}) \
+            --to ${{ github.sha }}
+
   test:
     runs-on: ubuntu-latest
     steps:
