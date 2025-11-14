@@ -1,8 +1,10 @@
 import Client from "../src/client.js";
-import pkg from "../package.json" with { type: "json" };
+import { readFileSync } from "fs";
 import sinon from "sinon";
 import { expect } from "chai";
 import testConfig from "./config.js";
+
+const pkg = JSON.parse(readFileSync("./package.json"));
 
 describe("Client", function() {
     it("should throw Error w/o options", function () {
@@ -137,7 +139,7 @@ describe("Client fetchAccessId", function () {
     });
 
     it("should set the access ID", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(null, sessionInfo);
+        sinon.stub(client.http, "request").yields(null, sessionInfo);
 
         client.fetchAccessId("test@example.com", function (err, data) {
             expect(err).to.be.null;
@@ -159,7 +161,7 @@ describe("Client fetchStatus", function() {
     });
 
     it("should make a request for session status", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(null, { status: "new" });
+        sinon.stub(client.http, "request").yields(null, { status: "new" });
 
         client.fetchStatus(function (err, data) {
             expect(data.status).to.equal("new");
@@ -167,7 +169,7 @@ describe("Client fetchStatus", function() {
     });
 
     it("should fail when request fails", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(new Error("Error"), null);
+        sinon.stub(client.http, "request").yields(new Error("Error"), null);
 
         client.fetchStatus(function (err, data) {
             expect(err).to.exist;
@@ -202,7 +204,7 @@ describe("Client sendPushNotificationForAuth", function () {
     });
 
     it("should fail when the request fails", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400 });
+        sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400 });
 
         client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(err).to.exist;
@@ -211,7 +213,7 @@ describe("Client sendPushNotificationForAuth", function () {
     });
 
     it("should fail when the request fails", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400, error: "NO_PUSH_TOKEN" });
+        sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400, error: "NO_PUSH_TOKEN" });
 
         client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(err).to.exist;

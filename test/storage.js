@@ -1,10 +1,10 @@
 // Mock in-memory user storage
 export default function UserStorage() {
     this.storage = {};
-};
+}
 
 UserStorage.prototype.setItem = function (key, value) {
-    this.storage[key] = value || '';
+    this.storage[key] = value || "";
 };
 
 UserStorage.prototype.getItem = function (key) {
@@ -15,6 +15,6 @@ UserStorage.prototype.removeItem = function (key) {
     delete this.storage[key];
 };
 
-UserStorage.prototype.clear = function (key) {
+UserStorage.prototype.clear = function () {
     this.storage = {};
 };

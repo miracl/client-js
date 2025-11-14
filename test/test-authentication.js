@@ -153,7 +153,7 @@ describe("Client _finishAuthentication", function () {
 
     it("should return error when _renewSecret fails", function(done) {
         sinon.stub(client.http, "request").yields(null, { success: true, dvsRegister: { test: 1 } });
-        var renewSecretStub = sinon.stub(client, "_renewSecret").yields(new Error("Renew secret error"));
+        sinon.stub(client, "_renewSecret").yields(new Error("Renew secret error"));
 
         client._finishAuthentication("test@example.com", 1234, ["dvs-auth"], "authOTT", function (err) {
             expect(err).to.exist;
@@ -240,7 +240,7 @@ describe("Client _renewSecret", function () {
         client._createMPinID.restore && client._createMPinID.restore();
         client._getSecret.restore && client._getSecret.restore();
         client._createIdentity.restore && client._createIdentity.restore();
-    })
+    });
 });
 
 describe("Client _authentication", function () {
@@ -275,7 +275,7 @@ describe("Client _authentication", function () {
         var getPass2Stub = sinon.stub(client, "_getPass2").yields(null, {});
         var finishAuthenticationStub = sinon.stub(client, "_finishAuthentication").yields(null, { success: true });
 
-        client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
             expect(err).to.be.null;
             expect(data).to.deep.equal({ success: true });
             expect(getPass1Stub.calledOnce).to.be.true;
@@ -288,7 +288,7 @@ describe("Client _authentication", function () {
     it("should call callback with error when _getPass1 fails", function (done) {
         sinon.stub(client, "_getPass1").yields(new Error("Request error"), null);
 
-        client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
             expect(err).to.exist;
             expect(data).to.be.null;
             done();
@@ -298,7 +298,7 @@ describe("Client _authentication", function () {
     it("should call callback with error when MPIN ID has expired", function (done) {
         sinon.stub(client, "_getPass1").yields(new Error("Request error"), { error: "EXPIRED_MPINID" });
 
-        client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Revoked");
             expect(data).to.be.null;
@@ -309,7 +309,7 @@ describe("Client _authentication", function () {
     it("should call callback with error when _getPass1 fails", function (done) {
         sinon.stub(client, "_getPass1").yields(new Error("Request error"), null);
 
-        client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
             expect(err).to.exist;
             expect(data).to.be.null;
             done();
@@ -320,7 +320,7 @@ describe("Client _authentication", function () {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(new Error("Request error"), null);
 
-        client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
             expect(err).to.exist;
             expect(data).to.be.null;
             done();
@@ -549,7 +549,7 @@ describe("Client generateQuickCode", function () {
 
     it("should call _authentication with scope 'reg-code'", function (done) {
         var authenticationStub = sinon.stub(client, "_authentication").yields(null, {});
-        var requestStub = sinon.stub(client.http, "request").yields(null, { code: "123456", ttlSeconds: 60, expireTime: 1737520575 });
+        sinon.stub(client.http, "request").yields(null, { code: "123456", ttlSeconds: 60, expireTime: 1737520575 });
 
         client.generateQuickCode("test@example.com", "1234", function (err, data) {
             expect(err).to.be.null;
@@ -564,7 +564,7 @@ describe("Client generateQuickCode", function () {
     });
 
     it("should fail on _authentication error", function (done) {
-        var authenticationStub = sinon.stub(client, "_authentication").yields(new Error("Authentication fail"), null);
+        sinon.stub(client, "_authentication").yields(new Error("Authentication fail"), null);
 
         client.generateQuickCode("test@example.com", "1234", function (err, data) {
             expect(err).to.exist;
@@ -575,8 +575,8 @@ describe("Client generateQuickCode", function () {
     });
 
     it("should fail on verification/quickcode request error", function (done) {
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, {});
-        var requestStub = sinon.stub(client.http, "request").yields(new Error("Request error"), null);
+        sinon.stub(client, "_authentication").yields(null, {});
+        sinon.stub(client.http, "request").yields(new Error("Request error"), null);
 
         client.generateQuickCode("test@example.com", "1234", function (err, data) {
             expect(err).to.exist;

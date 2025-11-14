@@ -3,7 +3,7 @@ import sinon from "sinon";
 import { expect } from "chai";
 
 describe("HTTP request", function() {
-    var client, server, requests;
+    var client, requests;
 
     before(function () {
         var xhr = global.XMLHttpRequest = sinon.useFakeXMLHttpRequest();
