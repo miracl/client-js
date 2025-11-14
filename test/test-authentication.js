@@ -40,6 +40,7 @@ describe("Client _getPass1", function () {
         client._getPass1({}, "1234", ["oidc"], [], [], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Cryptography error: -14");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -49,6 +50,8 @@ describe("Client _getPass1", function () {
         sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
         client._getPass1({}, "1234", ["dvs-auth"], [], [], function (err, data) {
+            expect(err).to.be.null;
+            expect(data).to.deep.equal({ success: true });
             expect(requestStub.firstCall.args[0].data.scope).to.deep.equal(["dvs-auth"]);
             done();
         });
@@ -97,6 +100,7 @@ describe("Client _getPass2", function () {
         client._getPass2({}, ["oidc"], "yHex", [], [], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Cryptography error");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -119,6 +123,7 @@ describe("Client _finishAuthentication", function () {
 
         client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (err, data) {
             expect(err).to.exist;
+            expect(data).to.deep.equal({ status: 400 });
             done();
         });
     });
@@ -268,10 +273,11 @@ describe("Client _authentication", function () {
     it("should go through the authentication flow", function (done) {
         var getPass1Stub = sinon.stub(client, "_getPass1").yields(null, {});
         var getPass2Stub = sinon.stub(client, "_getPass2").yields(null, {});
-        var finishAuthenticationStub = sinon.stub(client, "_finishAuthentication").yields(null, true);
+        var finishAuthenticationStub = sinon.stub(client, "_finishAuthentication").yields(null, { success: true });
 
         client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
             expect(err).to.be.null;
+            expect(data).to.deep.equal({ success: true });
             expect(getPass1Stub.calledOnce).to.be.true;
             expect(getPass2Stub.calledOnce).to.be.true;
             expect(finishAuthenticationStub.calledOnce).to.be.true;
@@ -284,6 +290,7 @@ describe("Client _authentication", function () {
 
         client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
             done();
         });
     });
@@ -294,6 +301,7 @@ describe("Client _authentication", function () {
         client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Revoked");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -303,6 +311,7 @@ describe("Client _authentication", function () {
 
         client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
             done();
         });
     });
@@ -313,6 +322,7 @@ describe("Client _authentication", function () {
 
         client._authentication("test@example.com", "1234", ['oidc'], function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
             done();
         });
     });
@@ -340,6 +350,7 @@ describe("Client _authentication", function () {
         client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Authentication fail");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -354,6 +365,7 @@ describe("Client _authentication", function () {
         client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Unsuccessful authentication");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -370,6 +382,7 @@ describe("Client _authentication", function () {
         client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Revoked");
+            expect(data).to.be.null;
             expect(userWriteSpy.calledOnce).to.be.true;
             expect(userWriteSpy.firstCall.args[0]).to.equal("test@example.com");
             expect(userWriteSpy.firstCall.args[1].state).to.equal("REVOKED");
@@ -504,6 +517,7 @@ describe("Client authenticateWithNotificationPayload", function () {
         client.authenticateWithNotificationPayload({qrURL: "https://example.com/mobile/auth#accessID"}, "1234", function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Invalid push notification payload");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -512,6 +526,7 @@ describe("Client authenticateWithNotificationPayload", function () {
         client.authenticateWithNotificationPayload({userID: "test@example.com"}, "1234", function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Invalid push notification payload");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -554,6 +569,7 @@ describe("Client generateQuickCode", function () {
         client.generateQuickCode("test@example.com", "1234", function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Authentication fail");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -565,6 +581,7 @@ describe("Client generateQuickCode", function () {
         client.generateQuickCode("test@example.com", "1234", function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Request error");
+            expect(data).to.be.null;
             done();
         });
     });

@@ -19,6 +19,7 @@ describe("Client sign", function () {
         client.sign("", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty user ID");
+            expect(result).to.be.null;
             done();
         });
     });
@@ -27,6 +28,7 @@ describe("Client sign", function () {
         client.sign("test@example.com", "1234", "", "timestamp", function (err, result) {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty message");
+            expect(result).to.be.null;
             done();
         });
     });
@@ -35,6 +37,7 @@ describe("Client sign", function () {
         client.sign("missing@example.com", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.exist;
             expect(err.message).to.equal("User not found");
+            expect(result).to.be.null;
             done();
         });
     });
@@ -48,6 +51,7 @@ describe("Client sign", function () {
         client.sign("nopublickey@example.com", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty public key");
+            expect(result).to.be.null;
             done();
         });
     });
@@ -72,6 +76,7 @@ describe("Client sign", function () {
             expect(err).to.exist;
             expect(err.message).to.equal("Signing fail");
             expect(err.cause.message).to.equal("Request error");
+            expect(result).to.be.null;
             done();
         });
     });
@@ -83,6 +88,7 @@ describe("Client sign", function () {
         client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.exist;
             expect(err.message).to.equal("Unsuccessful authentication");
+            expect(result).to.be.null;
             done();
         });
     });
@@ -94,6 +100,7 @@ describe("Client sign", function () {
         client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
             expect(err).to.exist;
             expect(err.message).to.equal("Revoked");
+            expect(result).to.be.null;
             done();
         });
     });
@@ -106,6 +113,7 @@ describe("Client sign", function () {
             expect(err).to.exist;
             expect(err.message).to.equal("Signing fail");
             expect(err.cause.message).to.equal("Cryptography error");
+            expect(result).to.be.null;
             done();
         });
     });
