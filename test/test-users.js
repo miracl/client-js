@@ -430,7 +430,7 @@ describe("Users remove", function () {
 
     afterEach(function () {
         users.store.restore && users.store.restore();
-    })
+    });
 });
 
 describe("Users get", function () {

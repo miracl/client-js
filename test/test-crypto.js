@@ -72,7 +72,7 @@ describe("Crypto extractPin", function () {
     it("should throw error on crypto failure", function () {
         sinon.stub(crypto._crypto().MPIN, "EXTRACT_PIN").returns(-1);
         expect(function () {
-            crypto.extractPin("0f", "0f", "1234", "hex", "BN254CX")
+            crypto.extractPin("0f", "0f", "1234", "hex", "BN254CX");
         }).to.throw("Could not extract PIN from client secret: -1");
     });
 

@@ -160,7 +160,7 @@ describe("Client _getDeviceName", function () {
         config.deviceName = "test";
         client = new Client(config);
         expect(client._getDeviceName()).to.equal("test");
-    })
+    });
 });
 
 describe("Client _getSecret", function() {
@@ -269,7 +269,7 @@ describe("Client _createIdentity", function() {
             expect(extractPinStub.firstCall.args[1]).to.equal("0f");
             expect(extractPinStub.firstCall.args[2]).to.equal("1234");
             done();
-        }, function (err) {
+        }, function () {
             throw new Error();
         });
     });
@@ -288,7 +288,7 @@ describe("Client _createIdentity", function() {
 
     it("should call callback with error when extractPin fails", function(done) {
         var thrownError = new Error;
-        var addSharesStub = sinon.stub(client.crypto, "addShares");
+        sinon.stub(client.crypto, "addShares");
         var extractPinStub = sinon.stub(client.crypto, "extractPin").throws(thrownError);
 
         client._createIdentity("test@example.com", "1234", {}, {}, {}, {}, function(err, data) {
@@ -428,9 +428,9 @@ describe("Client register", function () {
     });
 
     it("should pass provided PIN length to the PIN callback", function (done) {
-        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 5, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        var getSecretStub = sinon.stub(client, "_getSecret").yields(null);
-        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, { identity: true });
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 5, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        sinon.stub(client, "_getSecret").yields(null);
+        sinon.stub(client, "_createIdentity").yields(null, { identity: true });
 
         client.register("test@example.com", "activationToken", function (passPin, pinLength) {
             expect(pinLength).to.equal(5);
@@ -443,9 +443,9 @@ describe("Client register", function () {
     });
 
     it("should pass default PIN length to the PIN callback", function (done) {
-        var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        var getSecretStub = sinon.stub(client, "_getSecret").yields(null);
-        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, { identity: true });
+        sinon.stub(client, "_createMPinID").yields(null, { projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        sinon.stub(client, "_getSecret").yields(null);
+        sinon.stub(client, "_createIdentity").yields(null, { identity: true });
 
         client.register("test@example.com", "activationToken", function (passPin, pinLength) {
             expect(pinLength).to.equal(4);

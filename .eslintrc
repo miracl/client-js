@@ -2,11 +2,8 @@
     "env": {
         "browser": true,
         "es6": true,
-        "node": true
-    },
-    "globals": {
-        "CTX": true,
-        "console": true
+        "node": true,
+        "mocha": true
     },
     "extends": "eslint:recommended",
     "rules": {
@@ -29,10 +26,6 @@
             "error",
             "always"
         ],
-        "one-var": [
-            "error",
-            "always"
-        ],
         "eol-last": [
             "error",
             "always"
@@ -51,8 +44,7 @@
             {
                 "max": 2
             }
-        ],
-        "no-console":0
+        ]
     },
     "parserOptions": {
         "sourceType": "module"
