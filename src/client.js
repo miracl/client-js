@@ -161,7 +161,7 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
     self.http.request(reqData, function (err, result) {
         if (err) {
             if (result && result.error === "NO_PUSH_TOKEN") {
-                return callback(new Error("No push token", { cause: err }));
+                return callback(new Error("No push token", { cause: err }), null);
             }
 
             return callback(err, null);
