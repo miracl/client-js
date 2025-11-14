@@ -110,7 +110,7 @@ describe("Client fetchAccessId", function () {
     });
 
     it("should make a request for access ID", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(null, sessionInfo);
+        sinon.stub(client.http, "request").yields(null, sessionInfo);
 
         client.fetchAccessId("test@example.com", function (err, data) {
             expect(data).to.deep.equal(sessionInfo);
@@ -118,17 +118,20 @@ describe("Client fetchAccessId", function () {
     });
 
     it("should fail when request fails", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(new Error("Error"), null);
+        sinon.stub(client.http, "request").yields(new Error("Error"), null);
 
         client.fetchAccessId("test@example.com", function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
         });
     });
 
     it("should store session info", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(null, sessionInfo);
+        sinon.stub(client.http, "request").yields(null, sessionInfo);
 
         client.fetchAccessId("test@example.com", function (err, data) {
+            expect(err).to.be.null;
+            expect(data).to.deep.equal(sessionInfo);
             expect(client.session).to.deep.equal(sessionInfo);
         });
     });
@@ -137,6 +140,8 @@ describe("Client fetchAccessId", function () {
         var requestStub = sinon.stub(client.http, "request").yields(null, sessionInfo);
 
         client.fetchAccessId("test@example.com", function (err, data) {
+            expect(err).to.be.null;
+            expect(data).to.deep.equal(sessionInfo);
             expect(client.session.accessId).to.equal("accessID");
         });
     });
@@ -166,6 +171,7 @@ describe("Client fetchStatus", function() {
 
         client.fetchStatus(function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
         });
     });
 
@@ -200,6 +206,7 @@ describe("Client sendPushNotificationForAuth", function () {
 
         client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
         });
     });
 
@@ -209,12 +216,14 @@ describe("Client sendPushNotificationForAuth", function () {
         client.sendPushNotificationForAuth("test@example.com", function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("No push token");
+            expect(data).to.be.null;
         });
     });
 
     it("should return an error without an user ID", function () {
         client.sendPushNotificationForAuth(null, function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
         });
     });
 

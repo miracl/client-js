@@ -82,6 +82,7 @@ describe("Client getActivationToken", function () {
         client.getActivationToken("http://example.com/verification/confirmation?code=test&user_id=test@example.com", function(err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Get activation token fail");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -92,6 +93,7 @@ describe("Client getActivationToken", function () {
         client.getActivationToken("http://example.com/verification/confirmation?code=test&user_id=test@example.com", function(err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Unsuccessful verification");
+            expect(data).to.deep.equal({ error: "UNSUCCESSFUL_VERIFICATION" });
             done();
         });
     });
@@ -132,6 +134,8 @@ describe("Client _createMPinID", function() {
         sinon.stub(client.http, "request").yields(null, { projectId: "projectID" });
 
         client._createMPinID("test@example.com", null, { publicKey: "00" }, function(err, data) {
+            expect(err).to.be.null;
+            expect(data).to.deep.equal({ projectId: "projectID" });
             expect(client.users.exists("test@example.com")).to.be.true;
             expect(client.users.get("test@example.com", "state")).to.equal("STARTED");
             done();
@@ -235,11 +239,15 @@ describe("Client _createIdentity", function() {
 
     it("should call addShares with CS share 1 and 2", function(done) {
         var addSharesStub = sinon.stub(client.crypto, "addShares");
+        sinon.stub(client.crypto, "extractPin");
+
         var keypair = { privateKey: "privateKey" };
         var share1 = { dvsClientSecret: "clientSecretValue1" };
         var share2 = { dvsClientSecret: "clientSecretValue2" };
 
-        client._createIdentity("test@example.com", "1234", {}, share1, share2, keypair, function(err) {
+        client._createIdentity("test@example.com", "1234", {}, share1, share2, keypair, function(err, data) {
+            expect(err).to.be.null;
+            expect(data).to.exist;
             expect(addSharesStub.calledOnce).to.be.true;
             expect(addSharesStub.firstCall.args[0]).to.equal("privateKey");
             expect(addSharesStub.firstCall.args[1]).to.equal("clientSecretValue1");
@@ -252,7 +260,9 @@ describe("Client _createIdentity", function() {
         var addSharesStub = sinon.stub(client.crypto, "addShares");
         var extractPinStub = sinon.stub(client.crypto, "extractPin");
 
-        client._createIdentity("test@example.com", "1234", { mpinId: "0f" }, {}, {}, { publicKey: "0f" }, function (data) {
+        client._createIdentity("test@example.com", "1234", { mpinId: "0f" }, {}, {}, { publicKey: "0f" }, function (err, data) {
+            expect(err).to.be.null;
+            expect(data).to.exist;
             expect(addSharesStub.calledOnce).to.be.true;
             expect(extractPinStub.calledOnce).to.be.true;
             expect(extractPinStub.firstCall.args[0]).to.equal("0f");
@@ -267,10 +277,11 @@ describe("Client _createIdentity", function() {
     it("should call callback with error when addShares fails", function(done) {
         var addSharesStub = sinon.stub(client.crypto, "addShares").throws(new Error("Cryptography error"));
 
-        client._createIdentity("test@example.com", "1234", {}, {}, {}, {}, function(err) {
+        client._createIdentity("test@example.com", "1234", {}, {}, {}, {}, function(err, data) {
             expect(addSharesStub.calledOnce).to.be.true;
             expect(err).to.exist;
             expect(err.message).to.equal("Cryptography error");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -280,10 +291,11 @@ describe("Client _createIdentity", function() {
         var addSharesStub = sinon.stub(client.crypto, "addShares");
         var extractPinStub = sinon.stub(client.crypto, "extractPin").throws(thrownError);
 
-        client._createIdentity("test@example.com", "1234", {}, {}, {}, {}, function(err) {
+        client._createIdentity("test@example.com", "1234", {}, {}, {}, {}, function(err, data) {
             expect(extractPinStub.calledOnce).to.be.true;
             expect(err).to.exist;
             expect(err).to.equal(thrownError);
+            expect(data).to.be.null;
             done();
         });
     });
@@ -305,6 +317,7 @@ describe("Client register", function () {
         client.register("", null, function () {}, function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty user ID");
+            expect(data).to.be.null;
         });
     });
 
@@ -312,18 +325,20 @@ describe("Client register", function () {
         client.register("test@example.com", null, function () {}, function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty activation token");
+            expect(data).to.be.null;
         });
     });
 
     it("should go through the registration flow", function (done) {
         var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
         var getSecretStub = sinon.stub(client, "_getSecret").yields(null);
-        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null);
+        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, { identityData: true });
 
         client.register("test@example.com", "activationToken", function (passPin) {
             passPin("1234");
         }, function (err, data) {
             expect(err).to.be.null;
+            expect(data).to.deep.equal({ identityData: true });
             expect(registrationStub.calledOnce).to.be.true;
             expect(getSecretStub.calledTwice).to.be.true;
             expect(createIdentityStub.calledOnce).to.be.true;
@@ -339,6 +354,7 @@ describe("Client register", function () {
             passPin("1234");
         }, function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
             done();
         });
     });
@@ -353,6 +369,7 @@ describe("Client register", function () {
             passPin("1234");
         }, function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
             done();
         });
     });
@@ -364,6 +381,7 @@ describe("Client register", function () {
             passPin("1234");
         }, function (err, data) {
             expect(err).to.exist;
+            expect(data).to.be.null;
             done();
         });
     });
@@ -390,6 +408,7 @@ describe("Client register", function () {
         }, function (err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Invalid activation token");
+            expect(data).to.be.null;
             done();
         });
     });
@@ -402,6 +421,7 @@ describe("Client register", function () {
         }, function(err, data) {
             expect(err).to.exist;
             expect(err.message).to.equal("Project mismatch");
+            expect(data).to.be.null;
             expect(client.users.exists("test@example.com")).to.be.false;
             done();
         });
@@ -410,13 +430,14 @@ describe("Client register", function () {
     it("should pass provided PIN length to the PIN callback", function (done) {
         var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 5, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
         var getSecretStub = sinon.stub(client, "_getSecret").yields(null);
-        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, true);
+        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, { identity: true });
 
         client.register("test@example.com", "activationToken", function (passPin, pinLength) {
             expect(pinLength).to.equal(5);
             passPin("1234");
         }, function (err, data) {
             expect(err).to.be.null;
+            expect(data).to.deep.equal({ identity: true });
             done();
         });
     });
@@ -424,13 +445,14 @@ describe("Client register", function () {
     it("should pass default PIN length to the PIN callback", function (done) {
         var registrationStub = sinon.stub(client, "_createMPinID").yields(null, { projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
         var getSecretStub = sinon.stub(client, "_getSecret").yields(null);
-        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, true);
+        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, { identity: true });
 
         client.register("test@example.com", "activationToken", function (passPin, pinLength) {
             expect(pinLength).to.equal(4);
             passPin("1234");
         }, function (err, data) {
             expect(err).to.be.null;
+            expect(data).to.deep.equal({ identity: true });
             done();
         });
     });
