@@ -1,12 +1,13 @@
 import Client from "../src/promise.js";
 import sinon from "sinon";
 import { expect } from "chai";
+import testConfig from "./config.js";
 
 describe("Promises", function() {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should call fetchAccessId", async function () {

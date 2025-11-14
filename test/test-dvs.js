@@ -1,12 +1,13 @@
 import Client from "../src/client.js";
 import sinon from "sinon";
 import { expect } from "chai";
+import testConfig from "./config.js";
 
 describe("Client sign", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             publicKey: "00",

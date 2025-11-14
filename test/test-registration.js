@@ -1,12 +1,13 @@
 import Client from "../src/client.js";
 import sinon from "sinon";
 import { expect } from "chai";
+import testConfig from "./config.js";
 
 describe("Client sendVerificationEmail", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should fail w/o userId", function (done) {
@@ -56,7 +57,7 @@ describe("Client getActivationToken", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should fail w/o userId", function (done) {
@@ -115,7 +116,7 @@ describe("Client _createMPinID", function() {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should return error, when register request fail", function(done) {
@@ -146,12 +147,12 @@ describe("Client _getDeviceName", function () {
     var client;
 
     it("should return default device name", function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
         expect(client._getDeviceName()).to.equal("Browser");
     });
 
     it("should return provided device name", function () {
-        var config = testData.init();
+        var config = testConfig();
         config.deviceName = "test";
         client = new Client(config);
         expect(client._getDeviceName()).to.equal("test");
@@ -162,7 +163,7 @@ describe("Client _getSecret", function() {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should return error, when signature request fails", function(done) {
@@ -225,7 +226,7 @@ describe("Client _createIdentity", function() {
     var client;
 
     beforeEach(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "0f",
             state: "REGISTERED"
@@ -297,7 +298,7 @@ describe("Client register", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should return error w/o userId", function () {

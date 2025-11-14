@@ -1,12 +1,13 @@
 import Client from "../src/client.js";
 import sinon from "sinon";
 import { expect } from "chai";
+import testConfig from "./config.js";
 
 describe("Client _getPass1", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("shoud make a request for first pass", function (done) {
@@ -63,7 +64,7 @@ describe("Client _getPass2", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("shoud make a request for second pass", function (done) {
@@ -110,7 +111,7 @@ describe("Client _finishAuthentication", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should call error callback when request fails", function (done) {
@@ -167,7 +168,7 @@ describe("Client _renewSecret", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should renew the identity secret", function (done) {
@@ -241,7 +242,7 @@ describe("Client _authentication", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "REGISTERED"
@@ -388,7 +389,7 @@ describe("Client authenticate", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "REGISTERED"
@@ -418,7 +419,7 @@ describe("Client authenticateWithQRCode", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "REGISTERED"
@@ -448,7 +449,7 @@ describe("Client authenticateWithAppLink", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "REGISTERED"
@@ -478,7 +479,7 @@ describe("Client authenticateWithNotificationPayload", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "REGISTERED"
@@ -524,7 +525,7 @@ describe("Client generateQuickCode", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             state: "REGISTERED"
