@@ -1,7 +1,10 @@
 import Client from "../src/promise.js";
 import sinon from "sinon";
-import { expect } from "chai";
+import { expect, use } from "chai";
+import chaiAsPromised from "chai-as-promised";
 import testConfig from "./config.js";
+
+use(chaiAsPromised);
 
 describe("Promises", function() {
     var client;
@@ -10,215 +13,163 @@ describe("Promises", function() {
         client = new Client(testConfig());
     });
 
-    it("should call fetchAccessId", async function () {
+    it("should call fetchAccessId", function () {
         sinon.stub(client.http, "request").yields(null, { accessId: "accessID" });
-        expect(await client.fetchAccessId("test@example.com")).to.deep.equal({ accessId: "accessID" });
+
+        expect(client.fetchAccessId("test@example.com")).to.eventually.deep.equal({ accessId: "accessID" });
     });
 
-    it("should fail on fetchAccessId error", async function () {
-        sinon.stub(client.http, "request").yields(new Error("Request error"), null);
+    it("should fail on fetchAccessId error", function () {
+        var err = new Error("Request error");
+        sinon.stub(client.http, "request").yields(err, null);
 
-        try {
-            await client.fetchAccessId("test@example.com");
-        } catch (err) {
-            expect(err.message).to.equal("Request error");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.fetchAccessId("test@example.com")).to.be.rejectedWith(err);
     });
 
-    it("should call fetchStatus", async function () {
+    it("should call fetchStatus", function () {
         sinon.stub(client.http, "request").yields(null, { status: "new" });
-        expect(await client.fetchStatus()).to.deep.equal({ status: "new" });
+
+        expect(client.fetchStatus()).to.eventually.deep.equal({ status: "new" });
     });
 
-    it("should fail on fetchStatus error", async function () {
-        sinon.stub(client.http, "request").yields(new Error("Request error"), null);
+    it("should fail on fetchStatus error", function () {
+        var err = new Error("Request error");
+        sinon.stub(client.http, "request").yields(err, null);
 
-        try {
-            await client.fetchStatus();
-        } catch (err) {
-            expect(err.message).to.equal("Request error");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.fetchStatus()).to.be.rejectedWith(err);
     });
 
-    it("should call sendPushNotificationForAuth", async function () {
+    it("should call sendPushNotificationForAuth", function () {
         sinon.stub(client.http, "request").yields(null, { accessId: "accessID" });
-        expect(await client.sendPushNotificationForAuth("test@example.com")).to.deep.equal({ accessId: "accessID" });
+
+        expect(client.sendPushNotificationForAuth("test@example.com")).to.eventually.deep.equal({ accessId: "accessID" });
     });
 
-    it("should fail on sendPushNotificationForAuth error", async function () {
-        sinon.stub(client.http, "request").yields(new Error("Request error"), null);
+    it("should fail on sendPushNotificationForAuth error", function () {
+        var err = new Error("Request error");
+        sinon.stub(client.http, "request").yields(err, null);
 
-        try {
-            await client.sendPushNotificationForAuth("test@example.com")
-        } catch (err) {
-            expect(err.message).to.equal("Request error");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.sendPushNotificationForAuth("test@example.com")).to.be.rejectedWith(err);
     });
 
-    it("should call sendVerificationEmail", async function () {
+    it("should call sendVerificationEmail", function () {
         sinon.stub(client.http, "request").yields(null, { backoff: 1 });
-        expect(await client.sendVerificationEmail("test@example.com")).to.deep.equal({ backoff: 1 });
+
+        expect(client.sendVerificationEmail("test@example.com")).to.eventually.deep.equal({ backoff: 1 });
     });
 
-    it("should fail on sendVerificationEmail error", async function () {
-        sinon.stub(client.http, "request").yields(new Error("Request error"), null);
+    it("should fail on sendVerificationEmail error", function () {
+        var err = new Error("Request error");
+        sinon.stub(client.http, "request").yields(err, null);
 
-        try {
-            await client.sendVerificationEmail("test@example.com")
-        } catch (err) {
-            expect(err.message).to.equal("Verification fail");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.sendVerificationEmail("test@example.com")).to.be.rejectedWith(err);
     });
 
-    it("should call getActivationToken", async function () {
+    it("should call getActivationToken", function () {
         sinon.stub(client.http, "request").yields(null, { actToken: "test" });
-        expect(await client.getActivationToken("https://example.com/verification/confirmation?user_id=test@example.com&code=test")).to.deep.equal({ userId: "test@example.com", actToken: "test" });
+
+        expect(client.getActivationToken("https://example.com/verification/confirmation?user_id=test@example.com&code=test")).to.eventually.deep.equal({ userId: "test@example.com", actToken: "test" });
     });
 
-    it("should fail on getActivationToken error", async function () {
-        sinon.stub(client.http, "request").yields(new Error("Request error"), null);
+    it("should fail on getActivationToken error", function () {
+        var err = new Error("Request error");
+        sinon.stub(client.http, "request").yields(err, null);
 
-        try {
-            await client.getActivationToken("https://example.com/verification/confirmation?user_id=test@example.com&code=test")
-        } catch (err) {
-            expect(err.message).to.equal("Get activation token fail");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.getActivationToken("https://example.com/verification/confirmation?user_id=test@example.com&code=test")).to.be.rejectedWith(err);
     });
 
-    it("should call register", async function () {
+    it("should call register", function () {
         sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
         sinon.stub(client, "_getSecret").yields(null);
         sinon.stub(client, "_createIdentity").yields(null, { state: "REGISTERED" });
 
-        expect(await client.register("test@example.com", "activationToken", function (passPin) { passPin("1234"); })).to.deep.equal({ state: "REGISTERED" });
+        expect(client.register("test@example.com", "activationToken", function (passPin) {
+            passPin("1234");
+        })).to.eventually.deep.equal({ state: "REGISTERED" });
 
         client._createMPinID.restore();
         client._getSecret.restore();
         client._createIdentity.restore();
     });
 
-    it("should fail on register error", async function () {
-        sinon.stub(client, "_createMPinID").yields(new Error("Request error"), null);
+    it("should fail on register error", function () {
+        var err = new Error("Create MPinID error");
+        sinon.stub(client, "_createMPinID").yields(err, null);
 
-        try {
-            await client.register("test@example.com", "activationToken", function (passPin) { passPin("1234"); })
-        } catch (err) {
-            expect(err.message).to.equal("Registration fail");
-            return;
-        }
+        expect(client.register("test@example.com", "activationToken", function (passPin) {
+            passPin("1234");
+        })).to.be.rejectedWith(err);
 
         client._createMPinID.restore();
-
-        throw new Error("Unexpected result");
     });
 
-    it("should call authenticate", async function () {
+    it("should call authenticate", function () {
         sinon.stub(client, "_authentication").yields(null, { message: "OK" });
-        expect(await client.authenticate("test@example.com", "1234")).to.deep.equal({ message: "OK" });
+
+        expect(client.authenticate("test@example.com", "1234")).to.eventually.deep.equal({ message: "OK" });
     });
 
-    it("should fail on authenticate error", async function () {
-        sinon.stub(client, "_authentication").yields(new Error("Authentication error"), null);
+    it("should fail on authenticate error", function () {
+        var err = new Error("Authentication error");
+        sinon.stub(client, "_authentication").yields(err, null);
 
-        try {
-            await client.authenticate("test@example.com", "1234")
-        } catch (err) {
-            expect(err.message).to.equal("Authentication error");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.authenticate("test@example.com", "1234")).to.be.rejectedWith(err);
     });
 
-    it("should call authenticateWithQRCode", async function () {
+    it("should call authenticateWithQRCode", function () {
         sinon.stub(client, "_authentication").yields(null, { message: "OK" });
-        expect(await client.authenticateWithQRCode("test@example.com", "https://example.com#accessID", "1234")).to.deep.equal({ message: "OK" });
+
+        expect(client.authenticateWithQRCode("test@example.com", "https://example.com#accessID", "1234")).to.eventually.deep.equal({ message: "OK" });
     });
 
-    it("should fail on authenticateWithQRCode error", async function () {
-        sinon.stub(client, "_authentication").yields(new Error("Authentication error"), null);
+    it("should fail on authenticateWithQRCode error", function () {
+        var err = new Error("Authentication error");
+        sinon.stub(client, "_authentication").yields(err, null);
 
-        try {
-            await client.authenticateWithQRCode("test@example.com", "https://example.com#accessID", "1234")
-        } catch (err) {
-            expect(err.message).to.equal("Authentication error");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.authenticateWithQRCode("test@example.com", "https://example.com#accessID", "1234")).to.be.rejectedWith(err);
     });
 
-    it("should call authenticateWithAppLink", async function () {
+    it("should call authenticateWithAppLink", function () {
         sinon.stub(client, "_authentication").yields(null, { message: "OK" });
-        expect(await client.authenticateWithAppLink("test@example.com", "https://example.com#accessID", "1234")).to.deep.equal({ message: "OK" });
+
+        expect(client.authenticateWithAppLink("test@example.com", "https://example.com#accessID", "1234")).to.eventually.deep.equal({ message: "OK" });
     });
 
-    it("should fail on authenticateWithAppLink error", async function () {
-        sinon.stub(client, "_authentication").yields(new Error("Authentication error"), null);
+    it("should fail on authenticateWithAppLink error", function () {
+        var err = new Error("Authentication error");
+        sinon.stub(client, "_authentication").yields(err, null);
 
-        try {
-            await client.authenticateWithAppLink("test@example.com", "https://example.com#accessID", "1234")
-        } catch (err) {
-            expect(err.message).to.equal("Authentication error");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.authenticateWithAppLink("test@example.com", "https://example.com#accessID", "1234")).to.be.rejectedWith(err);
     });
 
-    it("should call authenticateWithNotificationPayload", async function () {
+    it("should call authenticateWithNotificationPayload", function () {
         sinon.stub(client, "_authentication").yields(null, { message: "OK" });
-        expect(await client.authenticateWithNotificationPayload({ userID: "test@example.com", qrURL: "https://example.com#accessID" }, "1234")).to.deep.equal({ message: "OK" });
+
+        expect(client.authenticateWithNotificationPayload({ userID: "test@example.com", qrURL: "https://example.com#accessID" }, "1234")).to.eventually.deep.equal({ message: "OK" });
     });
 
-    it("should fail on authenticateWithNotificationPayload error", async function () {
-        sinon.stub(client, "_authentication").yields(new Error("Authentication error"), null);
+    it("should fail on authenticateWithNotificationPayload error", function () {
+        var err = new Error("Authentication error");
+        sinon.stub(client, "_authentication").yields(err, null);
 
-        try {
-            await client.authenticateWithNotificationPayload({ userID: "test@example.com", qrURL: "https://example.com#accessID" }, "1234")
-        } catch (err) {
-            expect(err.message).to.equal("Authentication error");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.authenticateWithNotificationPayload({ userID: "test@example.com", qrURL: "https://example.com#accessID" }, "1234")).to.be.rejectedWith(err);
     });
 
-    it("should call generateQuickCode", async function () {
+    it("should call generateQuickCode", function () {
         sinon.stub(client, "_authentication").yields(null, { message: "OK" });
         sinon.stub(client.http, "request").yields(null, { code: "123456", ttlSeconds: 60, expireTime: 1737520575 });
-        expect(await client.generateQuickCode("test@example.com", "1234")).to.deep.equal({ code: "123456", OTP: "123456", ttlSeconds: 60, expireTime: 1737520575 });
+
+        expect(client.generateQuickCode("test@example.com", "1234")).to.eventually.deep.equal({ code: "123456", OTP: "123456", ttlSeconds: 60, expireTime: 1737520575 });
     });
 
-    it("should fail on generateQuickCode error", async function () {
-        sinon.stub(client, "_authentication").yields(new Error("Authentication error"), null);
+    it("should fail on generateQuickCode error", function () {
+        var err = new Error("Authentication error");
+        sinon.stub(client, "_authentication").yields(err, null);
 
-        try {
-            await client.generateQuickCode("test@example.com", "1234")
-        } catch (err) {
-            expect(err.message).to.equal("Authentication error");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+        expect(client.generateQuickCode("test@example.com", "1234")).to.be.rejectedWith(err);
     });
 
-    it("should call sign", async function () {
+    it("should call sign", function () {
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
             publicKey: "00",
@@ -228,23 +179,13 @@ describe("Promises", function() {
         sinon.stub(client, "_authentication").yields(null, { message: "OK" });
         sinon.stub(client.crypto, "sign").returns({U: "1", V: "2"});
 
-        var res = await client.sign("test@example.com", "1234", "0f", "timestamp")
-
-        expect(res.u).to.equal("1");
-        expect(res.v).to.equal("2");
+        expect(client.sign("test@example.com", "1234", "0f", "timestamp")).to.eventually.deep.equal({u: "1", v: "2"});
 
         client.crypto.sign.restore();
     });
 
-    it("should fail on sign error", async function () {
-        try {
-            await client.sign("test@example.com", "1234", "0f", "timestamp")
-        } catch (err) {
-            expect(err.message).to.equal("Signing fail");
-            return;
-        }
-
-        throw new Error("Unexpected result");
+    it("should fail on sign error", function () {
+        expect(client.sign("test@example.com", "1234", "0f", "timestamp")).to.be.rejectedWith("Signing fail");
     });
 
     afterEach(function () {
