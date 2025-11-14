@@ -25,10 +25,7 @@
   },
   "mocha": {
     "recursive": true,
-    "timeout": 5000,
-    "require": [
-      "test/init.js"
-    ]
+    "timeout": 5000
   },
   "repository": {
     "type": "git",

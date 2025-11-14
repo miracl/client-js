@@ -2,77 +2,80 @@ import Client from "../src/client.js";
 import pkg from "../package.json" with { type: "json" };
 import sinon from "sinon";
 import { expect } from "chai";
+import testConfig from "./config.js";
 
 describe("Client", function() {
     it("should throw Error w/o options", function () {
         expect(function () {
-            var client = new Client();
+            new Client();
         }).to.throw("Invalid configuration");
     });
 
     it("should throw Error w/o project ID", function () {
+        var config = testConfig();
+        delete config["projectId"];
+
         expect(function () {
-            var config = testData.init();
-            delete config["projectId"];
-            var client = new Client(config);
+            new Client(config);
         }).to.throw("Empty project ID");
     });
 
     it("should throw Error w/o user storage", function () {
+        var config = testConfig();
+        delete config["userStorage"];
+
         expect(function () {
-            var config = testData.init();
-            delete config["userStorage"];
-            var client = new Client(config);
+            new Client(config);
         }).to.throw("Invalid user storage");
     });
 
     it("should return client instance", function () {
-        var client = new Client(testData.init());
+        var client = new Client(testConfig());
         expect(client).to.be.an.instanceof(Client);
     });
 
     it("should set default server address if there is no projectUrl", function () {
-        var config = testData.init();
+        var config = testConfig();
         delete config["projectUrl"];
         var client = new Client(config);
         expect(client.options.projectUrl).to.equal("https://api.mpin.io");
     });
 
     it("should set default PIN length to 4 if there is none", function () {
-        var config = testData.init();
+        var config = testConfig();
         delete config["defaultPinLength"];
         var client = new Client(config);
         expect(client.options.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to 4 if less than 4", function () {
-        var config = testData.init();
+        var config = testConfig();
         config.defaultPinLength = 3;
         var client = new Client(config);
         expect(client.options.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to 4 if more than 6", function () {
-        var config = testData.init();
+        var config = testConfig();
         config.defaultPinLength = 7;
         var client = new Client(config);
         expect(client.options.defaultPinLength).to.equal(4);
     });
 
     it("should set default PIN length to provided value within range", function () {
-        var config = testData.init();
+        var config = testConfig();
         config.defaultPinLength = 5;
         var client = new Client(config);
         expect(client.options.defaultPinLength).to.equal(5);
     });
 
     it("should set clientName", function () {
-        var client = new Client(testData.init());
+        var client = new Client(testConfig());
         expect(client.options.clientName).to.equal("MIRACL Client.js/" + pkg.version);
     });
 
     it("should set clientName with application info", function () {
-        var config = testData.init();
+        var config = testConfig();
         config.applicationInfo = "Test Application";
         var client = new Client(config);
         expect(client.options.clientName).to.equal("MIRACL Client.js/" + pkg.version + " Test Application");
@@ -83,7 +86,7 @@ describe("Client setAccessId", function () {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should set access id", function () {
@@ -96,7 +99,7 @@ describe("Client fetchAccessId", function () {
     var client, sessionInfo;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
 
         sessionInfo = {
             webOTT: 1,
@@ -147,7 +150,7 @@ describe("Client fetchStatus", function() {
     var client;
 
     before(function () {
-        client = new Client(testData.init());
+        client = new Client(testConfig());
     });
 
     it("should make a request for session status", function () {
@@ -175,7 +178,7 @@ describe("Client sendPushNotificationForAuth", function () {
     var client;
 
     before(function () {
-        const config = testData.init();
+        const config = testConfig();
         config.oidc = {
             client_id: "testClientID"
         };
