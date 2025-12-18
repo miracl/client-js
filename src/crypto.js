@@ -28,7 +28,7 @@ Crypto.prototype._crypto = function (curve) {
         // Change maximum PIN length to 6 digits
         CryptoContexts[curve].MPIN.MAXPIN = 1000000;
 
-        // Modify MPIN settings
+        // Modify M-PIN settings
         CryptoContexts[curve].MPIN.PBLEN = 20;
         CryptoContexts[curve].MPIN.TRAP = 2000;
     }
@@ -52,8 +52,8 @@ Crypto.prototype.generateKeypair = function (curve) {
 
 /**
  * Add two points on the curve that are originally in hex format
- * This function is used to add client secret shares.
- * Returns a hex encoded sum of the shares
+ * This function is used to add Client Secret shares.
+ * Returns a hex-encoded sum of the shares
  * @private
  */
 Crypto.prototype.addShares = function (privateKeyHex, share1Hex, share2Hex, curve) {
@@ -82,11 +82,11 @@ Crypto.prototype.addShares = function (privateKeyHex, share1Hex, share2Hex, curv
 };
 
 /**
- * Calculates the MPin Token
- * This function maps the M-Pin ID to a point on the curve,
- * multiplies this value by PIN and then subtractsit from
- * the client secret curve point to generate the M-Pin token.
- * Returns a hex encoded M-Pin Token
+ * Calculates the M-PIN Token
+ * This function maps the M-PIN ID to a point on the curve,
+ * multiplies this value by PIN and then subtracts it from
+ * the Client Secret curve point to generate the M-PIN token.
+ * Returns a hex-encoded M-PIN Token
  * @private
  */
 Crypto.prototype.extractPin = function (mpinId, publicKey, PIN, clientSecretHex, curve) {
@@ -191,7 +191,7 @@ Crypto.prototype.sign = function (curve, mpinId, publicKey, token, userPin, mess
 };
 
 /**
- * Returns the public key bytes appended to the MPin ID bytes in hex encoding
+ * Returns the public key bytes appended to the M-PIN ID bytes in hex encoding
  * @private
  */
 Crypto.prototype._mpinIdWithPublicKey = function (mpinId, publicKey) {

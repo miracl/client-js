@@ -87,7 +87,7 @@ Users.prototype.updateLastUsed = function (userId) {
 };
 
 /**
- * Check if an user with the specified user ID exists
+ * Check if an user with the specified User ID exists
  * @param {string} userId - The ID of the user
  * @returns {boolean}
  */

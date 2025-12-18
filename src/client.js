@@ -5,20 +5,20 @@ import HTTP from "./http.js";
 /**
  * @class
  * @param {Object} options
- * @param {string} options.projectUrl - MIRACL Trust Project URL that is used for communication with the MIRACL Trust API
+ * @param {string} options.projectUrl - MIRACL Trust Project URL used for communication with the MIRACL Trust API
  * @param {string} options.projectId - MIRACL Trust Project ID
- * @param {string} options.seed - Hex encoded random number generator seed
+ * @param {string} options.seed - Hex-encoded random number generator seed
  * @param {string} options.deviceName - Name of the current device
  * @param {Object} options.userStorage - Storage for saving user data
  * @param {Object} options.oidc - Parameters for initializing an OIDC auth session
- * @param {string} options.oidc.client_id - OIDC client ID
+ * @param {string} options.oidc.client_id - OIDC Client ID
  * @param {string} options.oidc.redirect_uri - OIDC redirect URI
  * @param {string} options.oidc.response_type - OIDC response type. Only 'code' is supported
  * @param {string} options.oidc.scope - OIDC scope. Must include 'openid'
  * @param {string} options.oidc.state - OIDC state
  * @param {bool}   options.cors - Enable CORS requests if set to 'true'
- * @param {number} options.requestTimeout - Time before a HTTP request times out in miliseconds
- * @param {string} options.applicationInfo - Sets additional information that will be sent via X-MIRACL-CLIENT HTTP header
+ * @param {number} options.requestTimeout - Time before an HTTP request times out in milliseconds
+ * @param {string} options.applicationInfo - Set additional information that will be sent via X-MIRACL-CLIENT HTTP header
  */
 export default function Client(options) {
     var self = this;
@@ -38,11 +38,11 @@ export default function Client(options) {
     if (!options.projectUrl) {
         options.projectUrl = "https://api.mpin.io";
     } else {
-        // remove trailing slash from url, if there is one
+        // Remove trailing slash from URL, if there is one
         options.projectUrl = options.projectUrl.replace(/\/$/, "");
     }
 
-    // Ensure that default PIN lenght is between 4 and 6
+    // Ensure the default PIN length is between 4 and 6
     if (!options.defaultPinLength || options.defaultPinLength > 6 || options.defaultPinLength < 4) {
         options.defaultPinLength = 4;
     }
@@ -72,7 +72,7 @@ Client.prototype.options = {};
 Client.prototype.session = {};
 
 /**
- * Set the access(session) ID
+ * Set the access/session ID
  *
  * @param {string} accessId
  */
@@ -81,7 +81,7 @@ Client.prototype.setAccessId = function (accessId) {
 };
 
 /**
- * Make a request to start a new session and fetch the access(session) ID
+ * Make a request to start a new session and fetch the access/session ID
  *
  * @param {string} userId - The unique identifier of the user that will be authenticating (not required)
  * @param {function(Error, Object)} callback
@@ -111,7 +111,7 @@ Client.prototype.fetchAccessId = function (userId, callback) {
 };
 
 /**
- * Request for changes in status
+ * Get session status
  *
  * @param {function(Error, Object)} callback
  */
@@ -174,9 +174,9 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
 };
 
 /**
- * Start the verification process for a specified user ID (must be email)
+ * Start the verification process for a specified User ID (must be an email address)
  *
- * @param {string} userId - The email to start verification for
+ * @param {string} userId - The email address for which to start verification
  * @param {function(Error, Object)} callback
  */
 Client.prototype.sendVerificationEmail = function (userId, callback) {
@@ -258,7 +258,7 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
 };
 
 /**
- * Create an identity for the specified user ID
+ * Create an identity for the specified User ID
  *
  * @param {string} userId - The unique identifier of the user
  * @param {string} activationToken - The code received from the verification process
@@ -407,7 +407,7 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
 };
 
 /**
- * Authenticate the user with the specified user ID
+ * Authenticate the user with the specified User ID
  *
  * @param {string} userId - The unique identifier of the user
  * @param {string} userPin - The PIN associated with the userId
@@ -460,7 +460,7 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
 };
 
 /**
- * Fetch a registration (bootstrap) code for the specified user ID
+ * Fetch a registration (bootstrap) code for the specified User ID
  *
  * @param {string} userId - The unique identifier of the user
  * @param {string} userPin - The PIN associated with the userId
@@ -550,20 +550,20 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
 };
 
 /**
- * Make a request for pass one of the M-Pin protocol
+ * Make a request for pass one of the M-PIN protocol
  *
- * This function assigns to the property X a random value. It assigns to
- * the property SEC the sum of the client secret and time permit. It also
+ * This function assigns a random value to the property X. It assigns the sum of the Client Secret
+ * and time permit to the property SEC. It also
  * calculates the values U and UT which are required for M-Pin authentication,
  * where U = X.(map_to_curve(MPIN_ID)) and UT = X.(map_to_curve(MPIN_ID) + map_to_curve(DATE|sha256(MPIN_ID))
- * UT is called the commitment. U is the required for finding the PIN error.
+ * UT is called the commitment. U is required for finding the PIN error.
  *
  * Request data has the following structure:
  * {
- *    mpin_id: mpinIdHex,   // Hex encoded M-Pin ID
+ *    mpin_id: mpinIdHex,   // Hex-encoded M-PIN ID
  *    dtas: dtaList         // Identifier of the DTAs used for this identity
- *    UT: UT_hex,           // Hex encoded UT
- *    U: U_hex,             // Hex encoded U
+ *    UT: UT_hex,           // Hex-encoded UT
+ *    U: U_hex,             // Hex-encoded U
  *    publicKey: publicKey, // The public key used for DVS
  *    scope: ['oidc']       // Scope of the authentication
  * }
@@ -596,12 +596,12 @@ Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, cal
  * Make a request for pass two of the M-Pin protocol
  *
  * This function uses the random value y from the server, property X
- * and the combined client secret and time permit to calculate
- * the value V which is sent to the M-Pin server.
+ * and the combined Client Secret and time permit to calculate
+ * the value V which is sent to the M-PIN server.
  *
  * Request data has the following structure:
  * {
- *    mpin_id: mpinIdHex, // Hex encoded M-Pin ID
+ *    mpin_id: mpinIdHex, // Hex-encoded M-PIN ID
  *    V: V_hex,           // Value required by the server to authenticate user
  *    WID: accessNumber   // Number required for mobile authentication
  * }
