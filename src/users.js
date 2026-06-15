@@ -7,8 +7,6 @@
  * @param {string} storageKey
  */
 export default function Users(storage, projectId, storageKey) {
-    var self = this;
-
     if (typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
         throw new Error("Invalid user storage object");
     }
@@ -21,11 +19,11 @@ export default function Users(storage, projectId, storageKey) {
         throw new Error("Storage key must be provided when configuring storage");
     }
 
-    self.storage = storage;
-    self.projectId = projectId;
-    self.storageKey = storageKey;
+    this.storage = storage;
+    this.projectId = projectId;
+    this.storageKey = storageKey;
 
-    self.loadData();
+    this.loadData();
 }
 
 Users.prototype.data = [],
@@ -37,14 +35,12 @@ Users.prototype.states = {
 };
 
 Users.prototype.loadData = function () {
-    var self = this;
+    this.data = JSON.parse(this.storage.getItem(this.storageKey)) || [];
 
-    self.data = JSON.parse(self.storage.getItem(self.storageKey)) || [];
-
-    self.store();
+    this.store();
 
     // Sort list by last used timestamp
-    self.data.sort(function (a, b) {
+    this.data.sort((a, b) => {
         if (a.lastUsed && (!b.lastUsed || a.lastUsed > b.lastUsed)) {
             return 1;
         }
@@ -58,28 +54,26 @@ Users.prototype.loadData = function () {
 };
 
 Users.prototype.write = function (userId, userData) {
-    var self = this, i, uKey;
-
-    if (!self.exists(userId)) {
-        self.data.push({
+    if (!this.exists(userId)) {
+        this.data.push({
             userId: userId,
-            projectId: self.projectId,
-            state: self.states.invalid,
+            projectId: this.projectId,
+            state: this.states.invalid,
             created: Math.round(new Date().getTime() / 1000)
         });
     }
 
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].userId === userId && (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId)) {
-            for (uKey in userData) {
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].userId === userId && (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId)) {
+            for (const uKey in userData) {
                 if (userData[uKey]) {
-                    self.data[i][uKey] = userData[uKey];
+                    this.data[i][uKey] = userData[uKey];
                 }
             }
         }
     }
 
-    self.store();
+    this.store();
 };
 
 Users.prototype.updateLastUsed = function (userId) {
@@ -112,16 +106,14 @@ Users.prototype.is = function (userId, state) {
  * @returns {string} - The value of the user property. Will return undefined if property doesn't exist
  */
 Users.prototype.get = function (userId, userProperty) {
-    var self = this, i;
-
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].userId === userId && (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId)) {
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].userId === userId && (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId)) {
             if (userProperty) {
                 // Return requested property
-                return self.data[i][userProperty] || "";
+                return this.data[i][userProperty] || "";
             } else {
                 // Return the whole user data if no property is requested
-                return self.data[i];
+                return this.data[i];
             }
         }
     }
@@ -132,11 +124,10 @@ Users.prototype.get = function (userId, userProperty) {
  * @returns {Object}
  */
 Users.prototype.list = function () {
-    var self = this, usersList = {}, i;
-
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId) {
-            usersList[self.data[i].userId] = self.data[i].state;
+    const usersList = {};
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId) {
+            usersList[this.data[i].userId] = this.data[i].state;
         }
     }
 
@@ -148,13 +139,10 @@ Users.prototype.list = function () {
  * @returns {Array}
  */
 Users.prototype.all = function () {
-    var self = this,
-        users = [],
-        i;
-
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId) {
-            users.push(self.data[i]);
+    const users = [];
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId) {
+            users.push(this.data[i]);
         }
     }
 
@@ -174,30 +162,25 @@ Users.prototype.count = function () {
  * @param {string} userId - The ID of the user
  */
 Users.prototype.remove = function (userId) {
-    var self = this, i;
-
-    if (!self.exists(userId)) {
+    if (!this.exists(userId)) {
         return;
     }
 
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].userId === userId && (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId)) {
-            self.data.splice(i, 1);
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].userId === userId && (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId)) {
+            this.data.splice(i, 1);
         }
     }
 
-    self.store();
+    this.store();
 };
 
 Users.prototype.store = function () {
-    var self = this,
-        i;
-
     // Ensure that there is no sensitive data before storing it
-    for (i = 0; i < self.data.length; ++i) {
-        delete self.data[i].csHex;
-        delete self.data[i].regOTT;
+    for (let i = 0; i < this.data.length; ++i) {
+        delete this.data[i].csHex;
+        delete this.data[i].regOTT;
     }
 
-    self.storage.setItem(self.storageKey, JSON.stringify(self.data));
+    this.storage.setItem(this.storageKey, JSON.stringify(this.data));
 };

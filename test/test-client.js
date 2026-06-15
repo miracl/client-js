@@ -1,106 +1,107 @@
+import { afterEach, before, describe, it } from "mocha";
 import Client from "../src/client.js";
+import { expect } from "chai";
 import { readFileSync } from "fs";
 import sinon from "sinon";
-import { expect } from "chai";
 import testConfig from "./config.js";
 
 const pkg = JSON.parse(readFileSync("./package.json"));
 
-describe("Client", function() {
-    it("should throw Error w/o options", function () {
-        expect(function () {
+describe("Client", () => {
+    it("should throw Error w/o options", () => {
+        expect(() => {
             new Client();
         }).to.throw("Invalid configuration");
     });
 
-    it("should throw Error w/o project ID", function () {
-        var config = testConfig();
+    it("should throw Error w/o project ID", () => {
+        const config = testConfig();
         delete config["projectId"];
 
-        expect(function () {
+        expect(() => {
             new Client(config);
         }).to.throw("Empty project ID");
     });
 
-    it("should throw Error w/o user storage", function () {
-        var config = testConfig();
+    it("should throw Error w/o user storage", () => {
+        const config = testConfig();
         delete config["userStorage"];
 
-        expect(function () {
+        expect(() => {
             new Client(config);
         }).to.throw("Invalid user storage");
     });
 
-    it("should return client instance", function () {
-        var client = new Client(testConfig());
+    it("should return client instance", () => {
+        const client = new Client(testConfig());
         expect(client).to.be.an.instanceof(Client);
     });
 
-    it("should set default server address if there is no projectUrl", function () {
-        var config = testConfig();
+    it("should set default server address if there is no projectUrl", () => {
+        const config = testConfig();
         delete config["projectUrl"];
-        var client = new Client(config);
+        const client = new Client(config);
         expect(client.options.projectUrl).to.equal("https://api.mpin.io");
     });
 
-    it("should set default PIN length to 4 if there is none", function () {
-        var config = testConfig();
+    it("should set default PIN length to 4 if there is none", () => {
+        const config = testConfig();
         delete config["defaultPinLength"];
-        var client = new Client(config);
+        const client = new Client(config);
         expect(client.options.defaultPinLength).to.equal(4);
     });
 
-    it("should set default PIN length to 4 if less than 4", function () {
-        var config = testConfig();
+    it("should set default PIN length to 4 if less than 4", () => {
+        const config = testConfig();
         config.defaultPinLength = 3;
-        var client = new Client(config);
+        const client = new Client(config);
         expect(client.options.defaultPinLength).to.equal(4);
     });
 
-    it("should set default PIN length to 4 if more than 6", function () {
-        var config = testConfig();
+    it("should set default PIN length to 4 if more than 6", () => {
+        const config = testConfig();
         config.defaultPinLength = 7;
-        var client = new Client(config);
+        const client = new Client(config);
         expect(client.options.defaultPinLength).to.equal(4);
     });
 
-    it("should set default PIN length to provided value within range", function () {
-        var config = testConfig();
+    it("should set default PIN length to provided value within range", () => {
+        const config = testConfig();
         config.defaultPinLength = 5;
-        var client = new Client(config);
+        const client = new Client(config);
         expect(client.options.defaultPinLength).to.equal(5);
     });
 
-    it("should set clientName", function () {
-        var client = new Client(testConfig());
+    it("should set clientName", () => {
+        const client = new Client(testConfig());
         expect(client.options.clientName).to.equal("MIRACL Client.js/" + pkg.version);
     });
 
-    it("should set clientName with application info", function () {
-        var config = testConfig();
+    it("should set clientName with application info", () => {
+        const config = testConfig();
         config.applicationInfo = "Test Application";
-        var client = new Client(config);
+        const client = new Client(config);
         expect(client.options.clientName).to.equal("MIRACL Client.js/" + pkg.version + " Test Application");
     });
 });
 
-describe("Client setAccessId", function () {
-    var client;
+describe("Client setAccessId", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
     });
 
-    it("should set access id", function () {
+    it("should set access id", () => {
         client.setAccessId("test");
         expect(client.session.accessId).to.equal("test");
     });
 });
 
-describe("Client fetchAccessId", function () {
-    var client, sessionInfo;
+describe("Client fetchAccessId", () => {
+    let client, sessionInfo;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
 
         sessionInfo = {
@@ -111,125 +112,125 @@ describe("Client fetchAccessId", function () {
         };
     });
 
-    it("should make a request for access ID", function () {
+    it("should make a request for access ID", () => {
         sinon.stub(client.http, "request").yields(null, sessionInfo);
 
-        client.fetchAccessId("test@example.com", function (err, data) {
+        client.fetchAccessId("test@example.com", (err, data) => {
             expect(data).to.deep.equal(sessionInfo);
         });
     });
 
-    it("should fail when request fails", function () {
+    it("should fail when request fails", () => {
         sinon.stub(client.http, "request").yields(new Error("Error"), null);
 
-        client.fetchAccessId("test@example.com", function (err, data) {
+        client.fetchAccessId("test@example.com", (err, data) => {
             expect(err).to.exist;
             expect(data).to.be.null;
         });
     });
 
-    it("should store session info", function () {
+    it("should store session info", () => {
         sinon.stub(client.http, "request").yields(null, sessionInfo);
 
-        client.fetchAccessId("test@example.com", function (err, data) {
+        client.fetchAccessId("test@example.com", (err, data) => {
             expect(err).to.be.null;
             expect(data).to.deep.equal(sessionInfo);
             expect(client.session).to.deep.equal(sessionInfo);
         });
     });
 
-    it("should set the access ID", function () {
+    it("should set the access ID", () => {
         sinon.stub(client.http, "request").yields(null, sessionInfo);
 
-        client.fetchAccessId("test@example.com", function (err, data) {
+        client.fetchAccessId("test@example.com", (err, data) => {
             expect(err).to.be.null;
             expect(data).to.deep.equal(sessionInfo);
             expect(client.session.accessId).to.equal("accessID");
         });
     });
 
-    afterEach(function() {
+    afterEach(() => {
         client.http.request.restore && client.http.request.restore();
     });
 });
 
-describe("Client fetchStatus", function() {
-    var client;
+describe("Client fetchStatus", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
     });
 
-    it("should make a request for session status", function () {
+    it("should make a request for session status", () => {
         sinon.stub(client.http, "request").yields(null, { status: "new" });
 
-        client.fetchStatus(function (err, data) {
+        client.fetchStatus((err, data) => {
             expect(data.status).to.equal("new");
         });
     });
 
-    it("should fail when request fails", function () {
+    it("should fail when request fails", () => {
         sinon.stub(client.http, "request").yields(new Error("Error"), null);
 
-        client.fetchStatus(function (err, data) {
+        client.fetchStatus((err, data) => {
             expect(err).to.exist;
             expect(data).to.be.null;
         });
     });
 
-    afterEach(function() {
+    afterEach(() => {
         client.http.request.restore && client.http.request.restore();
     });
 });
 
-describe("Client sendPushNotificationForAuth", function () {
-    var client;
+describe("Client sendPushNotificationForAuth", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         const config = testConfig();
         config.oidc = {
-            client_id: "testClientID"
+            client_id: "testClientID" // eslint-disable-line camelcase
         };
         client = new Client(config);
     });
 
-    it("should make a request to the pushauth endpoint", function () {
-        var requestStub = sinon.stub(client.http, "request").yields(null, { webOTT: "test" });
+    it("should make a request to the pushauth endpoint", () => {
+        const requestStub = sinon.stub(client.http, "request").yields(null, { webOTT: "test" });
 
-        client.sendPushNotificationForAuth("test@example.com", function (err, data) {
+        client.sendPushNotificationForAuth("test@example.com", (err, data) => {
             expect(data).to.exist;
             expect(requestStub.firstCall.args[0].url).to.equal("https://project.miracl.io/pushauth?client_id=testClientID");
             expect(data.webOTT).to.equal("test");
         });
     });
 
-    it("should fail when the request fails", function () {
+    it("should fail when the request fails", () => {
         sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400 });
 
-        client.sendPushNotificationForAuth("test@example.com", function (err, data) {
+        client.sendPushNotificationForAuth("test@example.com", (err, data) => {
             expect(err).to.exist;
             expect(data).to.be.null;
         });
     });
 
-    it("should fail when the request fails", function () {
+    it("should fail when the request fails", () => {
         sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400, error: "NO_PUSH_TOKEN" });
 
-        client.sendPushNotificationForAuth("test@example.com", function (err, data) {
+        client.sendPushNotificationForAuth("test@example.com", (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("No push token");
             expect(data).to.be.null;
         });
     });
 
-    it("should return an error without an user ID", function () {
-        client.sendPushNotificationForAuth(null, function (err, data) {
+    it("should return an error without an user ID", () => {
+        client.sendPushNotificationForAuth(null, (err, data) => {
             expect(err).to.exist;
             expect(data).to.be.null;
         });
     });
 
-    afterEach(function() {
+    afterEach(() => {
         client.http.request.restore && client.http.request.restore();
     });
 });

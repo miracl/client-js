@@ -1,12 +1,13 @@
+import { afterEach, before, describe, it } from "mocha";
 import Client from "../src/client.js";
-import sinon from "sinon";
 import { expect } from "chai";
+import sinon from "sinon";
 import testConfig from "./config.js";
 
-describe("Client sign", function () {
-    var client;
+describe("Client sign", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
@@ -15,8 +16,8 @@ describe("Client sign", function () {
         });
     });
 
-    it("should fail w/o user ID", function (done) {
-        client.sign("", "1234", "message", "timestamp", function (err, result) {
+    it("should fail w/o user ID", (done) => {
+        client.sign("", "1234", "message", "timestamp", (err, result) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty user ID");
             expect(result).to.be.null;
@@ -24,8 +25,8 @@ describe("Client sign", function () {
         });
     });
 
-    it("should fail w/o message", function (done) {
-        client.sign("test@example.com", "1234", "", "timestamp", function (err, result) {
+    it("should fail w/o message", (done) => {
+        client.sign("test@example.com", "1234", "", "timestamp", (err, result) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty message");
             expect(result).to.be.null;
@@ -33,8 +34,8 @@ describe("Client sign", function () {
         });
     });
 
-    it("should fail for missing user", function (done) {
-        client.sign("missing@example.com", "1234", "message", "timestamp", function (err, result) {
+    it("should fail for missing user", (done) => {
+        client.sign("missing@example.com", "1234", "message", "timestamp", (err, result) => {
             expect(err).to.exist;
             expect(err.message).to.equal("User not found");
             expect(result).to.be.null;
@@ -42,13 +43,13 @@ describe("Client sign", function () {
         });
     });
 
-    it("should fail when user doesn't have a publid key", function (done) {
+    it("should fail when user doesn't have a publid key", (done) => {
         client.users.write("nopublickey@example.com", {
             mpinId: "exampleMpinId",
             state: "REGISTERED"
         });
 
-        client.sign("nopublickey@example.com", "1234", "message", "timestamp", function (err, result) {
+        client.sign("nopublickey@example.com", "1234", "message", "timestamp", (err, result) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty public key");
             expect(result).to.be.null;
@@ -56,11 +57,11 @@ describe("Client sign", function () {
         });
     });
 
-    it("should return U and V", function (done) {
+    it("should return U and V", (done) => {
         sinon.stub(client, "_authentication").yields(null, true);
         sinon.stub(client.crypto, "sign").returns({U: "", V: ""});
 
-        client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
+        client.sign("test@example.com", "1234", "message", "timestamp", (err, result) => {
             expect(err).to.be.null;
             expect(result.u).to.equal("");
             expect(result.v).to.equal("");
@@ -68,11 +69,11 @@ describe("Client sign", function () {
         });
     });
 
-    it("should fail when authentication fails", function (done) {
+    it("should fail when authentication fails", (done) => {
         sinon.stub(client, "_authentication").yields(new Error("Authentication fail", { cause: new Error("Request error") }), null);
         sinon.stub(client.crypto, "sign").returns({U: "", V: ""});
 
-        client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
+        client.sign("test@example.com", "1234", "message", "timestamp", (err, result) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Signing fail");
             expect(err.cause.message).to.equal("Request error");
@@ -81,11 +82,11 @@ describe("Client sign", function () {
         });
     });
 
-    it("should fail on unsuccessful authentication", function (done) {
+    it("should fail on unsuccessful authentication", (done) => {
         sinon.stub(client, "_authentication").yields(new Error("Unsuccessful authentication"), null);
         sinon.stub(client.crypto, "sign").returns({U: "", V: ""});
 
-        client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
+        client.sign("test@example.com", "1234", "message", "timestamp", (err, result) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Unsuccessful authentication");
             expect(result).to.be.null;
@@ -93,11 +94,11 @@ describe("Client sign", function () {
         });
     });
 
-    it("should fail on revoked MPIN ID", function (done) {
+    it("should fail on revoked MPIN ID", (done) => {
         sinon.stub(client, "_authentication").yields(new Error("Revoked"), null);
         sinon.stub(client.crypto, "sign").returns({U: "", V: ""});
 
-        client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
+        client.sign("test@example.com", "1234", "message", "timestamp", (err, result) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Revoked");
             expect(result).to.be.null;
@@ -105,11 +106,11 @@ describe("Client sign", function () {
         });
     });
 
-    it("should fail on crypto failure", function (done) {
+    it("should fail on crypto failure", (done) => {
         sinon.stub(client, "_authentication").yields(null, true);
         sinon.stub(client.crypto, "sign").throws(new Error("Cryptography error"));
 
-        client.sign("test@example.com", "1234", "message", "timestamp", function (err, result) {
+        client.sign("test@example.com", "1234", "message", "timestamp", (err, result) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Signing fail");
             expect(err.cause.message).to.equal("Cryptography error");
@@ -118,7 +119,7 @@ describe("Client sign", function () {
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client._authentication.restore && client._authentication.restore();
         client.crypto.sign.restore && client.crypto.sign.restore();
     });
