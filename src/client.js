@@ -1,6 +1,6 @@
 import Crypto from "./crypto.js";
-import Users from "./users.js";
 import HTTP from "./http.js";
+import Users from "./users.js";
 
 /**
  * @class
@@ -21,8 +21,6 @@ import HTTP from "./http.js";
  * @param {string} options.applicationInfo - Set additional information that will be sent via X-MIRACL-CLIENT HTTP header
  */
 export default function Client(options) {
-    var self = this;
-
     if (!options) {
         throw new Error("Invalid configuration");
     }
@@ -58,13 +56,13 @@ export default function Client(options) {
     // Set the client name using the current lib version and provided application info
     options.clientName = "MIRACL Client.js/8.8.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
-    self.options = options;
+    this.options = options;
 
-    self.http = new HTTP(options.requestTimeout, options.clientName, options.projectId, options.cors);
+    this.http = new HTTP(options.requestTimeout, options.clientName, options.projectId, options.cors);
 
-    self.crypto = new Crypto(options.seed);
+    this.crypto = new Crypto(options.seed);
 
-    self.users = new Users(options.userStorage, options.projectId, "mfa");
+    this.users = new Users(options.userStorage, options.projectId, "mfa");
 }
 
 Client.prototype.options = {};
@@ -87,24 +85,21 @@ Client.prototype.setAccessId = function (accessId) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.fetchAccessId = function (userId, callback) {
-    var self = this,
-        reqData;
-
-    reqData = {
-        url: self.options.projectUrl + "/rps/v2/session",
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/session",
         type: "POST",
         data: {
-            projectId: self.options.projectId,
+            projectId: this.options.projectId,
             userId: userId
         }
     };
 
-    self.http.request(reqData, function (error, res) {
+    this.http.request(reqData, (error, res) => {
         if (error) {
             return callback(error, null);
         }
 
-        self.session = res;
+        this.session = res;
 
         callback(null, res);
     });
@@ -116,18 +111,15 @@ Client.prototype.fetchAccessId = function (userId, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.fetchStatus = function (callback) {
-    var self = this,
-        reqData;
-
-    reqData = {
-        url: self.options.projectUrl + "/rps/v2/access",
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/access",
         type: "POST",
         data: {
-            webOTT: self.session.webOTT
+            webOTT: this.session.webOTT
         }
     };
 
-    self.http.request(reqData, function (error, data) {
+    this.http.request(reqData, (error, data) => {
         if (error) {
             return callback(error, null);
         }
@@ -143,22 +135,19 @@ Client.prototype.fetchStatus = function (callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
-    var self = this,
-        reqData;
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    reqData = {
-        url: self.options.projectUrl + "/pushauth?" + self._urlEncode(self.options.oidc),
+    const reqData = {
+        url: this.options.projectUrl + "/pushauth?" + this._urlEncode(this.options.oidc),
         type: "POST",
         data: {
             prerollId: userId
         }
     };
 
-    self.http.request(reqData, function (err, result) {
+    this.http.request(reqData, (err, result) => {
         if (err) {
             if (result && result.error === "NO_PUSH_TOKEN") {
                 return callback(new Error("No push token", { cause: err }), null);
@@ -167,7 +156,7 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
             return callback(err, null);
         }
 
-        self.session.webOTT = result.webOTT;
+        this.session.webOTT = result.webOTT;
 
         callback(null, result);
     });
@@ -180,29 +169,28 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.sendVerificationEmail = function (userId, callback) {
-    var self = this,
-        reqData = {};
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    reqData.url = self.options.projectUrl + "/verification/email";
-    reqData.type = "POST";
-    reqData.data = {
-        userId: userId,
-        mpinId: self.users.get(userId, "mpinId"),
-        projectId: self.options.projectId,
-        accessId: self.session.accessId,
-        deviceName: self._getDeviceName(),
-        clientId: self.options.oidc["client_id"],
-        redirectURI: self.options.oidc["redirect_uri"],
-        scope: self.options.oidc["scope"] ? self.options.oidc["scope"].split(" ") : [],
-        state: self.options.oidc["state"],
-        nonce: self.options.oidc["nonce"]
+    const reqData = {
+        url: this.options.projectUrl + "/verification/email",
+        type: "POST",
+        data: {
+            userId: userId,
+            mpinId: this.users.get(userId, "mpinId"),
+            projectId: this.options.projectId,
+            accessId: this.session.accessId,
+            deviceName: this._getDeviceName(),
+            clientId: this.options.oidc["client_id"],
+            redirectURI: this.options.oidc["redirect_uri"],
+            scope: this.options.oidc["scope"] ? this.options.oidc["scope"].split(" ") : [],
+            state: this.options.oidc["state"],
+            nonce: this.options.oidc["nonce"]
+        }
     };
 
-    self.http.request(reqData, function (err, result) {
+    this.http.request(reqData, (err, result) => {
         if (err) {
             if (result && result.error === "REQUEST_BACKOFF") {
                 return callback(new Error("Request backoff", { cause: err }), result);
@@ -222,11 +210,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.getActivationToken = function (verificationURI, callback) {
-    var self = this,
-        reqData = {},
-        params;
-
-    params = self._parseUriParams(verificationURI);
+    const params = this._parseUriParams(verificationURI);
 
     if (!params["user_id"]) {
         return callback(new Error("Empty user ID"), null);
@@ -236,14 +220,16 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
         return callback(new Error("Empty verification code"), null);
     }
 
-    reqData.url = self.options.projectUrl + "/verification/confirmation";
-    reqData.type = "POST";
-    reqData.data = {
-        userId: params["user_id"],
-        code: params["code"]
+    const reqData = {
+        url: this.options.projectUrl + "/verification/confirmation",
+        type: "POST",
+        data: {
+            userId: params["user_id"],
+            code: params["code"]
+        }
     };
 
-    self.http.request(reqData, function (err, result) {
+    this.http.request(reqData, (err, result) => {
         if (err) {
             if (result && result.error === "UNSUCCESSFUL_VERIFICATION") {
                 return callback(new Error("Unsuccessful verification", { cause: err }), result);
@@ -266,9 +252,6 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.register = function (userId, activationToken, pinCallback, callback) {
-    var self = this,
-        keypair;
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
@@ -277,9 +260,9 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
         return callback(new Error("Empty activation token"), null);
     }
 
-    keypair = self.crypto.generateKeypair("BN254CX");
+    const keypair = this.crypto.generateKeypair("BN254CX");
 
-    self._createMPinID(userId, activationToken, keypair, function (err, identityData) {
+    this._createMPinID(userId, activationToken, keypair, (err, identityData) => {
         if (err) {
             if (identityData && identityData.error === "INVALID_ACTIVATION_TOKEN") {
                 return callback(new Error("Invalid activation token", { cause: err }), null);
@@ -288,32 +271,28 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
             return callback(new Error("Registration fail", { cause: err }), null);
         }
 
-        if (identityData.projectId !== self.options.projectId) {
+        if (identityData.projectId !== this.options.projectId) {
             return callback(new Error("Project mismatch"), null);
         }
 
-        self._getSecret(identityData.secretUrls[0], function (err, sec1Data) {
+        this._getSecret(identityData.secretUrls[0], (err, sec1Data) => {
             if (err) {
                 return callback(new Error("Registration fail", { cause: err }), null);
             }
 
-            self._getSecret(identityData.secretUrls[1], function (err, sec2Data) {
+            this._getSecret(identityData.secretUrls[1], (err, sec2Data) => {
                 if (err) {
                     return callback(new Error("Registration fail", { cause: err }), null);
                 }
 
-                var pinLength,
-                    passPin;
-
-                pinLength = identityData.pinLength;
+                let pinLength = identityData.pinLength;
                 if (!pinLength) {
-                    pinLength = self.options.defaultPinLength;
+                    pinLength = this.options.defaultPinLength;
                 }
 
-                // should be called to continue the flow
-                // after a PIN was provided
-                passPin = function (userPin) {
-                    self._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
+                // Should be called to continue the flow after a PIN was provided
+                const passPin = (userPin) => {
+                    this._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
                 };
 
                 pinCallback(passPin, pinLength);
@@ -323,47 +302,45 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
 };
 
 Client.prototype._createMPinID = function (userId, activationToken, keypair, callback) {
-    var self = this,
-        regData = {};
-
-    regData.url = self.options.projectUrl + "/registration";
-    regData.type = "POST";
-    regData.data = {
-        userId: userId,
-        deviceName: self._getDeviceName(),
-        activationToken: activationToken,
-        publicKey: keypair.publicKey
+    const regData = {
+        url: this.options.projectUrl + "/registration",
+        type: "POST",
+        data: {
+            userId: userId,
+            deviceName: this._getDeviceName(),
+            activationToken: activationToken,
+            publicKey: keypair.publicKey
+        }
     };
 
-    self.http.request(regData, function (err, result) {
+    this.http.request(regData, (err, result) => {
         if (err) {
             return callback(err, result);
         }
 
-        self.users.write(userId, { state: self.users.states.start });
+        this.users.write(userId, { state: this.users.states.start });
 
         callback(null, result);
     });
 };
 
 Client.prototype._getDeviceName = function () {
-    var self = this;
-
-    if (self.options.deviceName) {
-        return self.options.deviceName;
+    if (this.options.deviceName) {
+        return this.options.deviceName;
     }
 
     return "Browser";
 };
 
 Client.prototype._getSecret = function (secretUrl, callback) {
-    var self = this,
-        requestData = { url: secretUrl };
+    const requestData = {
+        url: secretUrl
+    };
 
-    self.http.request(requestData, function (err, result) {
+    this.http.request(requestData, (err, result) => {
         if (err) {
             if (err.message === "The request was aborted") {
-                self.http.request(requestData, callback);
+                this.http.request(requestData, callback);
             } else {
                 callback(err, result);
             }
@@ -376,19 +353,16 @@ Client.prototype._getSecret = function (secretUrl, callback) {
 };
 
 Client.prototype._createIdentity = function (userId, userPin, identityData, sec1Data, sec2Data, keypair, callback) {
-    var self = this,
-        userData,
-        csHex,
-        token;
+    let csHex, token;
 
     try {
-        csHex = self.crypto.addShares(keypair.privateKey, sec1Data.dvsClientSecret, sec2Data.dvsClientSecret, identityData.curve);
-        token = self.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex, identityData.curve);
+        csHex = this.crypto.addShares(keypair.privateKey, sec1Data.dvsClientSecret, sec2Data.dvsClientSecret, identityData.curve);
+        token = this.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex, identityData.curve);
     } catch (err) {
         return callback(err, null);
     }
 
-    userData = {
+    const userData = {
         mpinId: identityData.mpinId,
         token: token,
         curve: identityData.curve,
@@ -397,11 +371,11 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
         pinLength: identityData.pinLength,
         projectId: identityData.projectId,
         verificationType: identityData.verificationType,
-        state: self.users.states.register,
+        state: this.users.states.register,
         nowTime: identityData.nowTime,
         updated: Math.floor(Date.now() / 1000)
     };
-    self.users.write(userId, userData);
+    this.users.write(userId, userData);
 
     callback(null, userData);
 };
@@ -467,22 +441,20 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
  * @param {function(Error, Object)} callback
  */
 Client.prototype.generateQuickCode = function (userId, userPin, callback) {
-    var self = this;
-
-    self._authentication(userId, userPin, ["reg-code"], function (err, result) {
+    this._authentication(userId, userPin, ["reg-code"], (err, result) => {
         if (err) {
             return callback(err, null);
         }
 
-        self.http.request({
-            url: self.options.projectUrl + "/verification/quickcode",
+        this.http.request({
+            url: this.options.projectUrl + "/verification/quickcode",
             type: "POST",
             data: {
-                projectId: self.options.projectId,
+                projectId: this.options.projectId,
                 jwt: result.jwt,
-                deviceName: self._getDeviceName()
+                deviceName: this._getDeviceName()
             }
-        }, function (err, result) {
+        }, (err, result) => {
             if (err) {
                 return callback(err, null);
             }
@@ -499,44 +471,41 @@ Client.prototype.generateQuickCode = function (userId, userPin, callback) {
 };
 
 Client.prototype._authentication = function (userId, userPin, scope, callback) {
-    var self = this,
-        identityData,
-        SEC = [],
-        X = [];
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    if (!self.users.exists(userId)) {
+    if (!this.users.exists(userId)) {
         return callback(new Error("User not found"), null);
     }
 
-    identityData = self.users.get(userId);
+    const identityData = this.users.get(userId);
 
-    self._getPass1(identityData, userPin, scope, X, SEC, function (err, pass1Data) {
+    const SEC = [], X = [];
+
+    this._getPass1(identityData, userPin, scope, X, SEC, (err, pass1Data) => {
         if (err) {
             if (pass1Data && pass1Data.error === "EXPIRED_MPINID") {
-                self.users.write(userId, { state: self.users.states.revoked });
+                this.users.write(userId, { state: this.users.states.revoked });
                 return callback(new Error("Revoked", { cause: err }), null);
             }
 
             return callback(new Error("Authentication fail", { cause: err }), null);
         }
 
-        self._getPass2(identityData, scope, pass1Data.y, X, SEC, function (err, pass2Data) {
+        this._getPass2(identityData, scope, pass1Data.y, X, SEC, (err, pass2Data) => {
             if (err) {
                 return callback(new Error("Authentication fail", { cause: err }), null);
             }
 
-            self._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, function (err, result) {
+            this._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, (err, result) => {
                 if (err) {
                     if (result && result.error === "UNSUCCESSFUL_AUTHENTICATION") {
                         return callback(new Error("Unsuccessful authentication", { cause: err }), null);
                     }
 
                     if (result && result.error === "REVOKED_MPINID") {
-                        self.users.write(userId, { state: self.users.states.revoked });
+                        this.users.write(userId, { state: this.users.states.revoked });
                         return callback(new Error("Revoked", { cause: err }), null);
                     }
 
@@ -570,26 +539,24 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
  * @private
  */
 Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, callback) {
-    var self = this,
-        res,
-        requestData;
+    let res;
 
     try {
-        res = self.crypto.calculatePass1(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC);
+        res = this.crypto.calculatePass1(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC);
     } catch (err) {
         return callback(err, null);
     }
 
-    requestData = {
+    const requestData = {
         scope: scope,
-        mpin_id: identityData.mpinId,
-        dtas: identityData.dtas,
+        mpin_id: identityData.mpinId, // eslint-disable-line camelcase
+        dtas: identityData.dtas, // eslint-disable-line camelcase
         publicKey: identityData.publicKey,
         UT: res.UT,
         U: res.U
     };
 
-    self.http.request({ url: self.options.projectUrl + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
+    this.http.request({ url: this.options.projectUrl + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
 };
 
 /**
@@ -608,76 +575,68 @@ Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, cal
  * @private
  */
 Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callback) {
-    var self = this,
-        vHex,
-        requestData;
+    let vHex;
 
     try {
-        vHex = self.crypto.calculatePass2(identityData.curve, X, yHex, SEC);
+        vHex = this.crypto.calculatePass2(identityData.curve, X, yHex, SEC);
     } catch (err) {
         return callback(err, null);
     }
 
-    requestData = {
-        mpin_id: identityData.mpinId,
-        WID: self.session.accessId,
+    const requestData = {
+        mpin_id: identityData.mpinId, // eslint-disable-line camelcase
+        WID: this.session.accessId,
         V: vHex
     };
 
-    self.http.request({ url: self.options.projectUrl + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
+    this.http.request({ url: this.options.projectUrl + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
 };
 
 Client.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
-    var self = this,
-        requestData;
-
-    requestData = {
+    const requestData = {
         "authOTT": authOTT,
         "wam": "dvs"
     };
 
-    self.http.request({ url: self.options.projectUrl + "/rps/v2/authenticate", type: "POST", data: requestData }, function (err, result) {
+    this.http.request({ url: this.options.projectUrl + "/rps/v2/authenticate", type: "POST", data: requestData }, (err, result) => {
         if (err) {
             return callback(err, result);
         }
 
         if (result.dvsRegister) {
-            self._renewSecret(userId, userPin, result.dvsRegister, function(err) {
+            this._renewSecret(userId, userPin, result.dvsRegister, (err) => {
                 if (err) {
                     return callback(err, null);
                 }
 
-                self._authentication(userId, userPin, scope, callback);
+                this._authentication(userId, userPin, scope, callback);
             });
         } else {
-            self.users.updateLastUsed(userId);
+            this.users.updateLastUsed(userId);
             callback(null, result);
         }
     });
 };
 
 Client.prototype._renewSecret = function (userId, userPin, activationData, callback) {
-    var self = this,
-        keypair;
+    const keypair = this.crypto.generateKeypair(activationData.curve);
 
-    keypair = self.crypto.generateKeypair(activationData.curve);
-
-    self._createMPinID(userId, activationData.token, keypair, function (err, identityData) {
+    this._createMPinID(userId, activationData.token, keypair, (err, identityData) => {
         if (err) {
             return callback(err, null);
         }
 
-        self._getSecret(identityData.secretUrls[0], function (err, sec1Data) {
+        this._getSecret(identityData.secretUrls[0], (err, sec1Data) => {
             if (err) {
                 return callback(err, null);
             }
 
-            self._getSecret(identityData.secretUrls[1], function (err, sec2Data) {
+            this._getSecret(identityData.secretUrls[1], (err, sec2Data) => {
                 if (err) {
                     return callback(err, null);
                 }
 
-                self._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
+                this._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
             });
         });
     });
@@ -693,14 +652,11 @@ Client.prototype._renewSecret = function (userId, userPin, activationData, callb
  * @param {function(Error, Object)} callback
  */
 Client.prototype.sign = function (userId, userPin, message, timestamp, callback) {
-    var self = this,
-        identityData;
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    if (!self.users.exists(userId)) {
+    if (!this.users.exists(userId)) {
         return callback(new Error("User not found"), null);
     }
 
@@ -708,16 +664,13 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         return callback(new Error("Empty message"), null);
     }
 
-    identityData = self.users.get(userId);
+    const identityData = this.users.get(userId);
 
     if (!identityData.publicKey) {
         return callback(new Error("Empty public key"), null);
     }
 
-    this._authentication(userId, userPin, ["dvs-auth"], function (err) {
-        var res,
-            signatureData;
-
+    this._authentication(userId, userPin, ["dvs-auth"], (err) => {
         if (err) {
             switch (err.message) {
                 case "Unsuccessful authentication":
@@ -729,13 +682,15 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
             }
         }
 
+        let res;
+
         try {
-            res = self.crypto.sign(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
+            res = this.crypto.sign(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
         } catch (err) {
             return callback(new Error("Signing fail", { cause: err }), null);
         }
 
-        signatureData = {
+        const signatureData = {
             hash: message,
             u: res.U,
             v: res.V,
@@ -749,10 +704,9 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
 };
 
 Client.prototype._urlEncode = function (obj) {
-    var str = [],
-        p;
+    const str = [];
 
-    for (p in obj) {
+    for (const p in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, p)) {
             str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
         }
@@ -762,18 +716,17 @@ Client.prototype._urlEncode = function (obj) {
 };
 
 Client.prototype._parseUriParams = function (uri) {
-    var query = uri.split("?").pop(),
-        queryArr = query.split("&"),
-        params = {},
-        pairArr,
-        i;
+    const query = uri.split("?").pop();
+    const queryArr = query.split("&");
+
+    const params = {};
 
     if (!query.length || !queryArr.length) {
         return params;
     }
 
-    for (i = 0; i < queryArr.length; i++) {
-        pairArr = queryArr[i].split("=");
+    for (let i = 0; i < queryArr.length; i++) {
+        const pairArr = queryArr[i].split("=");
         params[pairArr[0]] = decodeURIComponent(pairArr[1].replace(/\+/g, " "));
     }
 

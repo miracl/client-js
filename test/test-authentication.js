@@ -1,20 +1,21 @@
+import { afterEach, before, describe, it } from "mocha";
 import Client from "../src/client.js";
-import sinon from "sinon";
 import { expect } from "chai";
+import sinon from "sinon";
 import testConfig from "./config.js";
 
-describe("Client _getPass1", function () {
-    var client;
+describe("Client _getPass1", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
     });
 
-    it("shoud make a request for first pass", function (done) {
-        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
+    it("shoud make a request for first pass", (done) => {
+        const requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
-        client._getPass1({}, "1234", ["oidc"], [], [], function () {
+        client._getPass1({}, "1234", ["oidc"], [], [], () => {
             expect(requestStub.calledOnce).to.be.true;
             expect(requestStub.firstCall.args[0].url).to.equal("https://project.miracl.io/rps/v2/pass1");
             expect(requestStub.firstCall.args[0].type).to.equal("POST");
@@ -22,22 +23,22 @@ describe("Client _getPass1", function () {
         });
     });
 
-    it("should pass response to callback", function (done) {
+    it("should pass response to callback", (done) => {
         sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
-        client._getPass1({}, "1234", ["oidc"], [], [], function (err, data) {
+        client._getPass1({}, "1234", ["oidc"], [], [], (err, data) => {
             expect(data).to.exist;
             expect(data.success).to.be.true;
             done();
         });
     });
 
-    it("should pass error to callback", function (done) {
+    it("should pass error to callback", (done) => {
         sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass1").throws(new Error("Cryptography error: -14"));
 
-        client._getPass1({}, "1234", ["oidc"], [], [], function (err, data) {
+        client._getPass1({}, "1234", ["oidc"], [], [], (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Cryptography error: -14");
             expect(data).to.be.null;
@@ -45,11 +46,11 @@ describe("Client _getPass1", function () {
         });
     });
 
-    it("should handle dvs scope", function (done) {
-        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
+    it("should handle dvs scope", (done) => {
+        const requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass1").returns({U: "", UT: ""});
 
-        client._getPass1({}, "1234", ["dvs-auth"], [], [], function (err, data) {
+        client._getPass1({}, "1234", ["dvs-auth"], [], [], (err, data) => {
             expect(err).to.be.null;
             expect(data).to.deep.equal({ success: true });
             expect(requestStub.firstCall.args[0].data.scope).to.deep.equal(["dvs-auth"]);
@@ -57,24 +58,24 @@ describe("Client _getPass1", function () {
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client.http.request.restore && client.http.request.restore();
         client.crypto.calculatePass1.restore && client.crypto.calculatePass1.restore();
     });
 });
 
-describe("Client _getPass2", function () {
-    var client;
+describe("Client _getPass2", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
     });
 
-    it("shoud make a request for second pass", function (done) {
-        var stub = sinon.stub(client.http, "request").yields(null, { success: true });
+    it("shoud make a request for second pass", (done) => {
+        const stub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass2").returns();
 
-        client._getPass2({}, ["oidc"], "yHex", [], [], function () {
+        client._getPass2({}, ["oidc"], "yHex", [], [], () => {
             expect(stub.calledOnce).to.be.true;
             expect(stub.firstCall.args[0].url).to.equal("https://project.miracl.io/rps/v2/pass2");
             expect(stub.firstCall.args[0].type).to.equal("POST");
@@ -82,22 +83,22 @@ describe("Client _getPass2", function () {
         });
     });
 
-    it("should pass response to callback", function (done) {
+    it("should pass response to callback", (done) => {
         sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass2").returns();
 
-        client._getPass2({}, ["oidc"], "yHex", [], [], function (err, data) {
+        client._getPass2({}, ["oidc"], "yHex", [], [], (err, data) => {
             expect(data).to.exist;
             expect(data.success).to.be.true;
             done();
         });
     });
 
-    it("should pass error to callback", function (done) {
+    it("should pass error to callback", (done) => {
         sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client.crypto, "calculatePass2").throws(new Error("Cryptography error"));
 
-        client._getPass2({}, ["oidc"], "yHex", [], [], function (err, data) {
+        client._getPass2({}, ["oidc"], "yHex", [], [], (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Cryptography error");
             expect(data).to.be.null;
@@ -105,84 +106,87 @@ describe("Client _getPass2", function () {
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client.http.request.restore && client.http.request.restore();
         client.crypto.calculatePass2.restore && client.crypto.calculatePass2.restore();
     });
 });
 
-describe("Client _finishAuthentication", function () {
-    var client;
+describe("Client _finishAuthentication", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
     });
 
-    it("should call error callback when request fails", function (done) {
+    it("should call error callback when request fails", (done) => {
         sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400 });
 
-        client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (err, data) {
+        client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", (err, data) => {
             expect(err).to.exist;
             expect(data).to.deep.equal({ status: 400 });
             done();
         });
     });
 
-    it("should call the success callback after successful request", function (done) {
+    it("should call the success callback after successful request", (done) => {
         sinon.stub(client.http, "request").yields(null, { success: true });
 
-        client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", function (err, data) {
+        client._finishAuthentication("test@example.com", 1234, ["oidc"], "authOTT", (err, data) => {
             expect(err).to.be.null;
             expect(data).to.exist;
             done();
         });
     });
 
-    it("should renew client secret if requested", function(done) {
+    it("should renew client secret if requested", (done) => {
         sinon.stub(client.http, "request").yields(null, { success: true, dvsRegister: { test: 1 } });
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null);
-        var renewSecretStub = sinon.stub(client, "_renewSecret").yields(null);
+        const authenticationStub = sinon.stub(client, "_authentication").yields(null, { auth: true });
+        const renewSecretStub = sinon.stub(client, "_renewSecret").yields(null);
 
-        client._finishAuthentication("test@example.com", 1234, ["dvs-auth"], "authOTT", function (err) {
+        client._finishAuthentication("test@example.com", 1234, ["dvs-auth"], "authOTT", (err, data) => {
             expect(err).to.be.null;
+            expect(data).to.deep.equal({ auth: true });
             expect(renewSecretStub.calledOnce).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
             done();
         });
     });
 
-    it("should return error when _renewSecret fails", function(done) {
+    it("should return error when _renewSecret fails", (done) => {
         sinon.stub(client.http, "request").yields(null, { success: true, dvsRegister: { test: 1 } });
         sinon.stub(client, "_renewSecret").yields(new Error("Renew secret error"));
 
-        client._finishAuthentication("test@example.com", 1234, ["dvs-auth"], "authOTT", function (err) {
+        client._finishAuthentication("test@example.com", 1234, ["dvs-auth"], "authOTT", (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Renew secret error");
+            expect(data).to.be.null;
             done();
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client.http.request.restore && client.http.request.restore();
         client._renewSecret.restore && client._renewSecret.restore();
         client._authentication.restore && client._authentication.restore();
     });
 });
 
-describe("Client _renewSecret", function () {
-    var client;
+describe("Client _renewSecret", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
     });
 
-    it("should renew the identity secret", function (done) {
-        var createMPinIDStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        var getSecretStub = sinon.stub(client, "_getSecret").yields(null, true);
-        var createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, true);
+    it("should renew the identity secret", (done) => {
+        const createMPinIDStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
+        const getSecretStub = sinon.stub(client, "_getSecret").yields(null, { secret: true });
+        const createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, { createIdentity: true });
 
-        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
+        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, (err, data) => {
             expect(err).to.be.null;
+            expect(data).to.deep.equal({ createIdentity: true });
             expect(createMPinIDStub.calledOnce).to.be.true;
             expect(getSecretStub.calledTwice).to.be.true;
             expect(createIdentityStub.calledOnce).to.be.true;
@@ -190,63 +194,67 @@ describe("Client _renewSecret", function () {
         });
     });
 
-    it("should call error callback on _createMPinID failure", function (done) {
+    it("should call error callback on _createMPinID failure", (done) => {
         sinon.stub(client, "_createMPinID").yields(new Error("Request error"));
 
-        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
+        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Request error");
+            expect(data).to.be.null;
             done();
         });
     });
 
-    it("should call error callback on first _getSecret failure", function (done) {
+    it("should call error callback on first _getSecret failure", (done) => {
         sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
         sinon.stub(client, "_getSecret").yields(new Error("Request error"));
 
-        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
+        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Request error");
+            expect(data).to.be.null;
             done();
         });
     });
 
-    it("should call error callback on second _getSecret failure", function (done) {
+    it("should call error callback on second _getSecret failure", (done) => {
         sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        var getSecretStub = sinon.stub(client, "_getSecret");
+        const getSecretStub = sinon.stub(client, "_getSecret");
         getSecretStub.onFirstCall().yields(null);
         getSecretStub.onSecondCall().yields(new Error("Request error"));
 
-        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
+        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Request error");
+            expect(data).to.be.null;
             done();
         });
     });
 
-    it("should call error callback on createIdentity error", function (done) {
+    it("should call error callback on createIdentity error", (done) => {
         sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
         sinon.stub(client, "_getSecret").yields(null, true);
-        sinon.stub(client, "_createIdentity").yields(new Error("Request error"));
+        sinon.stub(client, "_createIdentity").yields(new Error("Request error"), null);
 
-        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, function (err) {
+        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Request error");
+            expect(data).to.be.null;
             done();
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client._createMPinID.restore && client._createMPinID.restore();
         client._getSecret.restore && client._getSecret.restore();
         client._createIdentity.restore && client._createIdentity.restore();
     });
 });
 
-describe("Client _authentication", function () {
-    var client;
+describe("Client _authentication", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
@@ -254,28 +262,30 @@ describe("Client _authentication", function () {
         });
     });
 
-    it("should fail w/o userId", function (done) {
-        client._authentication("", "", ["jwt"], function (err) {
+    it("should fail w/o userId", (done) => {
+        client._authentication("", "", ["jwt"], (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Empty user ID");
+            expect(data).to.be.null;
             done();
         });
     });
 
-    it("should fail when user does not exist", function (done) {
-        client._authentication("missing@example.com", "", ["jwt"], function (err) {
+    it("should fail when user does not exist", (done) => {
+        client._authentication("missing@example.com", "", ["jwt"], (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("User not found");
+            expect(data).to.be.null;
             done();
         });
     });
 
-    it("should go through the authentication flow", function (done) {
-        var getPass1Stub = sinon.stub(client, "_getPass1").yields(null, {});
-        var getPass2Stub = sinon.stub(client, "_getPass2").yields(null, {});
-        var finishAuthenticationStub = sinon.stub(client, "_finishAuthentication").yields(null, { success: true });
+    it("should go through the authentication flow", (done) => {
+        const getPass1Stub = sinon.stub(client, "_getPass1").yields(null, {});
+        const getPass2Stub = sinon.stub(client, "_getPass2").yields(null, {});
+        const finishAuthenticationStub = sinon.stub(client, "_finishAuthentication").yields(null, { success: true });
 
-        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], (err, data) => {
             expect(err).to.be.null;
             expect(data).to.deep.equal({ success: true });
             expect(getPass1Stub.calledOnce).to.be.true;
@@ -285,20 +295,20 @@ describe("Client _authentication", function () {
         });
     });
 
-    it("should call callback with error when _getPass1 fails", function (done) {
+    it("should call callback with error when _getPass1 fails", (done) => {
         sinon.stub(client, "_getPass1").yields(new Error("Request error"), null);
 
-        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], (err, data) => {
             expect(err).to.exist;
             expect(data).to.be.null;
             done();
         });
     });
 
-    it("should call callback with error when MPIN ID has expired", function (done) {
+    it("should call callback with error when MPIN ID has expired", (done) => {
         sinon.stub(client, "_getPass1").yields(new Error("Request error"), { error: "EXPIRED_MPINID" });
 
-        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Revoked");
             expect(data).to.be.null;
@@ -306,33 +316,33 @@ describe("Client _authentication", function () {
         });
     });
 
-    it("should call callback with error when _getPass1 fails", function (done) {
+    it("should call callback with error when _getPass1 fails", (done) => {
         sinon.stub(client, "_getPass1").yields(new Error("Request error"), null);
 
-        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], (err, data) => {
             expect(err).to.exist;
             expect(data).to.be.null;
             done();
         });
     });
 
-    it("should call callback with error when _getPass2 fails", function (done) {
+    it("should call callback with error when _getPass2 fails", (done) => {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(new Error("Request error"), null);
 
-        client._authentication("test@example.com", "1234", ["oidc"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["oidc"], (err, data) => {
             expect(err).to.exist;
             expect(data).to.be.null;
             done();
         });
     });
 
-    it("should call the success callback after getting the passes", function (done) {
-        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
+    it("should call the success callback after getting the passes", (done) => {
+        const requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
-        client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["jwt"], (err, data) => {
             expect(err).to.be.null;
             expect(requestStub.callCount).to.equal(1);
             expect(data).to.exist;
@@ -340,14 +350,14 @@ describe("Client _authentication", function () {
         });
     });
 
-    it("should call the error callback on authenticate error", function (done) {
+    it("should call the error callback on authenticate error", (done) => {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
-        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
+        const requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         requestStub.onFirstCall().yields(new Error("Request error"), { status: 400 });
 
-        client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["jwt"], (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Authentication fail");
             expect(data).to.be.null;
@@ -355,14 +365,14 @@ describe("Client _authentication", function () {
         });
     });
 
-    it("should call the error callback on unsuccessful authentication", function (done) {
+    it("should call the error callback on unsuccessful authentication", (done) => {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
-        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
+        const requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         requestStub.onFirstCall().yields(new Error("Request error"), { error: "UNSUCCESSFUL_AUTHENTICATION" });
 
-        client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["jwt"], (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Unsuccessful authentication");
             expect(data).to.be.null;
@@ -370,16 +380,16 @@ describe("Client _authentication", function () {
         });
     });
 
-    it("should mark the identity as revoked on authenticate error REVOKED_MPINID", function (done) {
+    it("should mark the identity as revoked on authenticate error REVOKED_MPINID", (done) => {
         sinon.stub(client, "_getPass1").yields(null, { success: true });
         sinon.stub(client, "_getPass2").yields(null, { success: true });
 
-        var requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
+        const requestStub = sinon.stub(client.http, "request").yields(null, { success: true });
         requestStub.onFirstCall().yields(new Error("Request error"), { status: 410, error: "REVOKED_MPINID" });
 
-        var userWriteSpy = sinon.spy(client.users, "write");
+        const userWriteSpy = sinon.spy(client.users, "write");
 
-        client._authentication("test@example.com", "1234", ["jwt"], function (err, data) {
+        client._authentication("test@example.com", "1234", ["jwt"], (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Revoked");
             expect(data).to.be.null;
@@ -390,7 +400,7 @@ describe("Client _authentication", function () {
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client.http.request.restore && client.http.request.restore();
         client._getPass1.restore && client._getPass1.restore();
         client._getPass2.restore && client._getPass2.restore();
@@ -398,10 +408,10 @@ describe("Client _authentication", function () {
     });
 });
 
-describe("Client authenticate", function () {
-    var client;
+describe("Client authenticate", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
@@ -409,10 +419,10 @@ describe("Client authenticate", function () {
         });
     });
 
-    it("should call _authentication with scope 'jwt'", function (done) {
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
+    it("should call _authentication with scope 'jwt'", (done) => {
+        const authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
 
-        client.authenticate("test@example.com", "1234", function (err, data) {
+        client.authenticate("test@example.com", "1234", (err, data) => {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
@@ -423,15 +433,15 @@ describe("Client authenticate", function () {
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client._authentication.restore && client._authentication.restore();
     });
 });
 
-describe("Client authenticateWithQRCode", function () {
-    var client;
+describe("Client authenticateWithQRCode", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
@@ -439,10 +449,10 @@ describe("Client authenticateWithQRCode", function () {
         });
     });
 
-    it("should call _authentication with scope 'oidc'", function (done) {
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
+    it("should call _authentication with scope 'oidc'", (done) => {
+        const authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
 
-        client.authenticateWithQRCode("test@example.com", "https://example.com/mobile/auth#accessID", "1234", function (err, data) {
+        client.authenticateWithQRCode("test@example.com", "https://example.com/mobile/auth#accessID", "1234", (err, data) => {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
@@ -453,15 +463,15 @@ describe("Client authenticateWithQRCode", function () {
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client._authentication.restore && client._authentication.restore();
     });
 });
 
-describe("Client authenticateWithAppLink", function () {
-    var client;
+describe("Client authenticateWithAppLink", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
@@ -469,10 +479,10 @@ describe("Client authenticateWithAppLink", function () {
         });
     });
 
-    it("should call _authentication with scope 'oidc'", function (done) {
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
+    it("should call _authentication with scope 'oidc'", (done) => {
+        const authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
 
-        client.authenticateWithAppLink("test@example.com", "https://example.com/mobile/auth#accessID", "1234", function (err, data) {
+        client.authenticateWithAppLink("test@example.com", "https://example.com/mobile/auth#accessID", "1234", (err, data) => {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
@@ -483,15 +493,15 @@ describe("Client authenticateWithAppLink", function () {
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client._authentication.restore && client._authentication.restore();
     });
 });
 
-describe("Client authenticateWithNotificationPayload", function () {
-    var client;
+describe("Client authenticateWithNotificationPayload", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
@@ -499,10 +509,10 @@ describe("Client authenticateWithNotificationPayload", function () {
         });
     });
 
-    it("should call _authentication with scope 'oidc'", function (done) {
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
+    it("should call _authentication with scope 'oidc'", (done) => {
+        const authenticationStub = sinon.stub(client, "_authentication").yields(null, { success: true });
 
-        client.authenticateWithNotificationPayload({userID: "test@example.com", qrURL: "https://example.com/mobile/auth#accessID"}, "1234", function (err, data) {
+        client.authenticateWithNotificationPayload({userID: "test@example.com", qrURL: "https://example.com/mobile/auth#accessID"}, "1234", (err, data) => {
             expect(err).to.be.null;
             expect(data.success).to.be.true;
             expect(authenticationStub.calledOnce).to.be.true;
@@ -513,8 +523,8 @@ describe("Client authenticateWithNotificationPayload", function () {
         });
     });
 
-    it("should fail w/o user ID", function (done) {
-        client.authenticateWithNotificationPayload({qrURL: "https://example.com/mobile/auth#accessID"}, "1234", function (err, data) {
+    it("should fail w/o user ID", (done) => {
+        client.authenticateWithNotificationPayload({qrURL: "https://example.com/mobile/auth#accessID"}, "1234", (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Invalid push notification payload");
             expect(data).to.be.null;
@@ -522,8 +532,8 @@ describe("Client authenticateWithNotificationPayload", function () {
         });
     });
 
-    it("should fail w/o QR URL", function (done) {
-        client.authenticateWithNotificationPayload({userID: "test@example.com"}, "1234", function (err, data) {
+    it("should fail w/o QR URL", (done) => {
+        client.authenticateWithNotificationPayload({userID: "test@example.com"}, "1234", (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Invalid push notification payload");
             expect(data).to.be.null;
@@ -531,15 +541,15 @@ describe("Client authenticateWithNotificationPayload", function () {
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client._authentication.restore && client._authentication.restore();
     });
 });
 
-describe("Client generateQuickCode", function () {
-    var client;
+describe("Client generateQuickCode", () => {
+    let client;
 
-    before(function () {
+    before(() => {
         client = new Client(testConfig());
         client.users.write("test@example.com", {
             mpinId: "exampleMpinId",
@@ -547,11 +557,11 @@ describe("Client generateQuickCode", function () {
         });
     });
 
-    it("should call _authentication with scope 'reg-code'", function (done) {
-        var authenticationStub = sinon.stub(client, "_authentication").yields(null, {});
+    it("should call _authentication with scope 'reg-code'", (done) => {
+        const authenticationStub = sinon.stub(client, "_authentication").yields(null, {});
         sinon.stub(client.http, "request").yields(null, { code: "123456", ttlSeconds: 60, expireTime: 1737520575 });
 
-        client.generateQuickCode("test@example.com", "1234", function (err, data) {
+        client.generateQuickCode("test@example.com", "1234", (err, data) => {
             expect(err).to.be.null;
             expect(authenticationStub.calledOnce).to.be.true;
             expect(authenticationStub.firstCall.args[2]).to.deep.equal(["reg-code"]);
@@ -563,10 +573,10 @@ describe("Client generateQuickCode", function () {
         });
     });
 
-    it("should fail on _authentication error", function (done) {
+    it("should fail on _authentication error", (done) => {
         sinon.stub(client, "_authentication").yields(new Error("Authentication fail"), null);
 
-        client.generateQuickCode("test@example.com", "1234", function (err, data) {
+        client.generateQuickCode("test@example.com", "1234", (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Authentication fail");
             expect(data).to.be.null;
@@ -574,11 +584,11 @@ describe("Client generateQuickCode", function () {
         });
     });
 
-    it("should fail on verification/quickcode request error", function (done) {
+    it("should fail on verification/quickcode request error", (done) => {
         sinon.stub(client, "_authentication").yields(null, {});
         sinon.stub(client.http, "request").yields(new Error("Request error"), null);
 
-        client.generateQuickCode("test@example.com", "1234", function (err, data) {
+        client.generateQuickCode("test@example.com", "1234", (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Request error");
             expect(data).to.be.null;
@@ -586,7 +596,7 @@ describe("Client generateQuickCode", function () {
         });
     });
 
-    afterEach(function () {
+    afterEach(() => {
         client._authentication.restore && client._authentication.restore();
         client.http.request.restore && client.http.request.restore();
     });

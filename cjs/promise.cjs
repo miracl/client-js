@@ -23362,19 +23362,16 @@ function CTX(input_parameter) {
     }
 }
 
-var CryptoContexts = {};
+const CryptoContexts = {};
 
 function Crypto(seed) {
-    var self = this,
-        entropyBytes;
-
     // Initialize RNG
-    self.rng = new (self._crypto().RAND)();
-    self.rng.clean();
+    this.rng = new (this._crypto().RAND)();
+    this.rng.clean();
 
     // Seed the RNG
-    entropyBytes = self._hexToBytes(seed);
-    self.rng.seed(entropyBytes.length, entropyBytes);
+    const entropyBytes = this._hexToBytes(seed);
+    this.rng.seed(entropyBytes.length, entropyBytes);
 }
 
 Crypto.prototype._crypto = function (curve) {
@@ -23390,7 +23387,7 @@ Crypto.prototype._crypto = function (curve) {
         // Change maximum PIN length to 6 digits
         CryptoContexts[curve].MPIN.MAXPIN = 1000000;
 
-        // Modify MPIN settings
+        // Modify M-PIN settings
         CryptoContexts[curve].MPIN.PBLEN = 20;
         CryptoContexts[curve].MPIN.TRAP = 2000;
     }
@@ -23399,96 +23396,79 @@ Crypto.prototype._crypto = function (curve) {
 };
 
 Crypto.prototype.generateKeypair = function (curve) {
-    var self = this,
-        privateKeyBytes = [],
-        publicKeyBytes = [],
-        errorCode;
+    const privateKeyBytes = [];
+    const publicKeyBytes = [];
 
-    errorCode = self._crypto(curve).MPIN.GET_DVS_KEYPAIR(self.rng, privateKeyBytes, publicKeyBytes);
-    if (errorCode != 0) {
+    const errorCode = this._crypto(curve).MPIN.GET_DVS_KEYPAIR(this.rng, privateKeyBytes, publicKeyBytes);
+    if (errorCode !== 0) {
         throw new Error("Could not generate key pair: " + errorCode);
     }
 
-    return { publicKey: self._bytesToHex(publicKeyBytes), privateKey: self._bytesToHex(privateKeyBytes) };
+    return { publicKey: this._bytesToHex(publicKeyBytes), privateKey: this._bytesToHex(privateKeyBytes) };
 };
 
 /**
  * Add two points on the curve that are originally in hex format
- * This function is used to add client secret shares.
- * Returns a hex encoded sum of the shares
+ * This function is used to add Client Secret shares.
+ * Returns a hex-encoded sum of the shares
  * @private
  */
 Crypto.prototype.addShares = function (privateKeyHex, share1Hex, share2Hex, curve) {
-    var self = this,
-        privateKeyBytes = [],
-        share1Bytes = [],
-        share2Bytes = [],
-        clientSecretBytes = [],
-        errorCode;
+    const privateKeyBytes = this._hexToBytes(privateKeyHex);
+    const share1Bytes = this._hexToBytes(share1Hex);
+    const share2Bytes = this._hexToBytes(share2Hex);
+    const clientSecretBytes = [];
 
-    privateKeyBytes = self._hexToBytes(privateKeyHex);
-    share1Bytes = self._hexToBytes(share1Hex);
-    share2Bytes = self._hexToBytes(share2Hex);
-
-    errorCode = self._crypto(curve).MPIN.RECOMBINE_G1(share1Bytes, share2Bytes, clientSecretBytes);
-    if (errorCode !== 0) {
-        throw new Error("Could not combine the client secret shares: " + errorCode);
+    const errorCodeRecombine = this._crypto(curve).MPIN.RECOMBINE_G1(share1Bytes, share2Bytes, clientSecretBytes);
+    if (errorCodeRecombine !== 0) {
+        throw new Error("Could not combine the client secret shares: " + errorCodeRecombine);
     }
 
-    errorCode = self._crypto(curve).MPIN.GET_G1_MULTIPLE(null, 0, privateKeyBytes, clientSecretBytes, clientSecretBytes);
-    if (errorCode != 0) {
-        throw new Error("Could not combine private key with client secret: " + errorCode);
+    const errorCodeG1 = this._crypto(curve).MPIN.GET_G1_MULTIPLE(null, 0, privateKeyBytes, clientSecretBytes, clientSecretBytes);
+    if (errorCodeG1 !== 0) {
+        throw new Error("Could not combine private key with client secret: " + errorCodeG1);
     }
 
-    return self._bytesToHex(clientSecretBytes);
+    return this._bytesToHex(clientSecretBytes);
 };
 
 /**
- * Calculates the MPin Token
- * This function maps the M-Pin ID to a point on the curve,
- * multiplies this value by PIN and then subtractsit from
- * the client secret curve point to generate the M-Pin token.
- * Returns a hex encoded M-Pin Token
+ * Calculates the M-PIN Token
+ * This function maps the M-PIN ID to a point on the curve,
+ * multiplies this value by PIN and then subtracts it from
+ * the Client Secret curve point to generate the M-PIN token.
+ * Returns a hex-encoded M-PIN Token
  * @private
  */
 Crypto.prototype.extractPin = function (mpinId, publicKey, PIN, clientSecretHex, curve) {
-    var self = this,
-        clientSecretBytes = [],
-        mpinIdBytes = [],
-        errorCode;
+    const clientSecretBytes = this._hexToBytes(clientSecretHex);
+    const mpinIdBytes = this._hexToBytes(this._mpinIdWithPublicKey(mpinId, publicKey));
 
-    clientSecretBytes = self._hexToBytes(clientSecretHex);
-    mpinIdBytes = self._hexToBytes(self._mpinIdWithPublicKey(mpinId, publicKey));
-
-    errorCode = self._crypto(curve).MPIN.EXTRACT_PIN(self._crypto(curve).MPIN.SHA256, mpinIdBytes, PIN, clientSecretBytes);
+    const errorCode = this._crypto(curve).MPIN.EXTRACT_PIN(this._crypto(curve).MPIN.SHA256, mpinIdBytes, PIN, clientSecretBytes);
     if (errorCode !== 0) {
         throw new Error("Could not extract PIN from client secret: " + errorCode);
     }
 
-    return self._bytesToHex(clientSecretBytes);
+    return this._bytesToHex(clientSecretBytes);
 };
 
 Crypto.prototype.calculatePass1 = function (curve, mpinId, publicKey, token, userPin, X, SEC) {
-    var self = this,
-        mpinIdHex,
-        errorCode,
-        U = [],
-        UT = [];
+    const U = [], UT = [];
 
-    mpinIdHex = self._mpinIdWithPublicKey(mpinId, publicKey);
+    const mpinIdHex = this._mpinIdWithPublicKey(mpinId, publicKey);
 
-    errorCode = self._crypto(curve).MPIN.CLIENT_1(
-        self._crypto(curve).MPIN.SHA256,
+    const errorCode = this._crypto(curve).MPIN.CLIENT_1(
+        this._crypto(curve).MPIN.SHA256,
         0,
-        self._hexToBytes(mpinIdHex),
-        self.rng,
+        this._hexToBytes(mpinIdHex),
+        this.rng,
         X,
         userPin,
-        self._hexToBytes(token),
+        this._hexToBytes(token),
         SEC,
         U,
         UT,
-        self._hexToBytes(0)
+        this._hexToBytes(0)
     );
 
     if (errorCode !== 0) {
@@ -23496,71 +23476,62 @@ Crypto.prototype.calculatePass1 = function (curve, mpinId, publicKey, token, use
     }
 
     return {
-        UT: self._bytesToHex(UT),
-        U: self._bytesToHex(U)
+        UT: this._bytesToHex(UT),
+        U: this._bytesToHex(U)
     };
 };
 
 Crypto.prototype.calculatePass2 = function (curve, X, yHex, SEC) {
-    var self = this,
-        errorCode;
-
-    errorCode = self._crypto(curve).MPIN.CLIENT_2(X, self._hexToBytes(yHex), SEC);
-
+    const errorCode = this._crypto(curve).MPIN.CLIENT_2(X, this._hexToBytes(yHex), SEC);
     if (errorCode !== 0) {
         throw new Error("Could not calculate pass 2 request data: " + errorCode);
     }
 
-    return self._bytesToHex(SEC);
+    return this._bytesToHex(SEC);
 };
 
 Crypto.prototype.sign = function (curve, mpinId, publicKey, token, userPin, message, timestamp) {
-    var self = this,
-        mpinIdHex,
-        errorCode,
-        SEC = [],
-        X = [],
-        Y1 = [],
-        U = [];
+    const SEC = [];
+    const X = [];
+    const Y1 = [];
+    const U = [];
 
-    mpinIdHex = self._mpinIdWithPublicKey(mpinId, publicKey);
+    const mpinIdHex = this._mpinIdWithPublicKey(mpinId, publicKey);
 
-    errorCode = self._crypto(curve).MPIN.CLIENT(
-        self._crypto(curve).MPIN.SHA256,
+    const errorCode = this._crypto(curve).MPIN.CLIENT(
+        this._crypto(curve).MPIN.SHA256,
         0,
-        self._hexToBytes(mpinIdHex),
-        self.rng,
+        this._hexToBytes(mpinIdHex),
+        this.rng,
         X,
         userPin,
-        self._hexToBytes(token),
+        this._hexToBytes(token),
         SEC,
         U,
         null,
         null,
         timestamp,
         Y1,
-        self._hexToBytes(message)
+        this._hexToBytes(message)
     );
 
-    if (errorCode != 0) {
+    if (errorCode !== 0) {
         throw new Error("Could not sign message: " + errorCode);
     }
 
     return {
-        U: self._bytesToHex(U),
-        V: self._bytesToHex(SEC)
+        U: this._bytesToHex(U),
+        V: this._bytesToHex(SEC)
     };
 };
 
 /**
- * Returns the public key bytes appended to the MPin ID bytes in hex encoding
+ * Returns the public key bytes appended to the M-PIN ID bytes in hex encoding
  * @private
  */
 Crypto.prototype._mpinIdWithPublicKey = function (mpinId, publicKey) {
-    var self = this,
-        mpinIdBytes = self._hexToBytes(mpinId),
-        publicKeyBytes = self._hexToBytes(publicKey),
-        i;
+    const mpinIdBytes = this._hexToBytes(mpinId);
+    const publicKeyBytes = this._hexToBytes(publicKey);
 
     if (!mpinIdBytes) {
         return;
@@ -23570,24 +23541,21 @@ Crypto.prototype._mpinIdWithPublicKey = function (mpinId, publicKey) {
         return mpinId;
     }
 
-    for (i = 0; i < publicKeyBytes.length; i++) {
+    for (let i = 0; i < publicKeyBytes.length; i++) {
         mpinIdBytes.push(publicKeyBytes[i]);
     }
 
-    return self._bytesToHex(mpinIdBytes);
+    return this._bytesToHex(mpinIdBytes);
 };
 
 Crypto.prototype._hexToBytes = function (hexValue) {
-    var len, byteValue, i;
-
     if (!hexValue) {
         return;
     }
 
-    len = hexValue.length;
-    byteValue = [];
+    const byteValue = [];
 
-    for (i = 0; i < len; i += 2) {
+    for (let i = 0; i < hexValue.length; i += 2) {
         byteValue[(i / 2)] = parseInt(hexValue.substr(i, 2), 16);
     }
 
@@ -23595,221 +23563,15 @@ Crypto.prototype._hexToBytes = function (hexValue) {
 };
 
 Crypto.prototype._bytesToHex = function (b) {
-    var s = "",
-        len = b.length,
-        ch, i;
+    let s = "";
 
-    for (i = 0; i < len; i++) {
-        ch = b[i];
+    for (let i = 0; i < b.length; i++) {
+        const ch = b[i];
         s += ((ch >>> 4) & 15).toString(16);
         s += (ch & 15).toString(16);
     }
 
     return s;
-};
-
-/**
- * User management utility. Initialized by {@link Client}
- * @class
- *
- * @param {Object} storage
- * @param {string} projectId
- * @param {string} storageKey
- */
-function Users(storage, projectId, storageKey) {
-    var self = this;
-
-    if (typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
-        throw new Error("Invalid user storage object");
-    }
-
-    if (!projectId) {
-        throw new Error("Project ID must be provided when configuring storage");
-    }
-
-    if (!storageKey) {
-        throw new Error("Storage key must be provided when configuring storage");
-    }
-
-    self.storage = storage;
-    self.projectId = projectId;
-    self.storageKey = storageKey;
-
-    self.loadData();
-}
-
-Users.prototype.data = [],
-
-Users.prototype.states = {
-    start: "STARTED",
-    register: "REGISTERED",
-    revoked: "REVOKED"
-};
-
-Users.prototype.loadData = function () {
-    var self = this;
-
-    self.data = JSON.parse(self.storage.getItem(self.storageKey)) || [];
-
-    self.store();
-
-    // Sort list by last used timestamp
-    self.data.sort(function (a, b) {
-        if (a.lastUsed && (!b.lastUsed || a.lastUsed > b.lastUsed)) {
-            return 1;
-        }
-
-        if (b.lastUsed && (!a.lastUsed || a.lastUsed < b.lastUsed)) {
-            return -1;
-        }
-
-        return 0;
-    });
-};
-
-Users.prototype.write = function (userId, userData) {
-    var self = this, i, uKey;
-
-    if (!self.exists(userId)) {
-        self.data.push({
-            userId: userId,
-            projectId: self.projectId,
-            state: self.states.invalid,
-            created: Math.round(new Date().getTime() / 1000)
-        });
-    }
-
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].userId === userId && (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId)) {
-            for (uKey in userData) {
-                if (userData[uKey]) {
-                    self.data[i][uKey] = userData[uKey];
-                }
-            }
-        }
-    }
-
-    self.store();
-};
-
-Users.prototype.updateLastUsed = function (userId) {
-    this.write(userId, { lastUsed: new Date().getTime() });
-};
-
-/**
- * Check if an user with the specified user ID exists
- * @param {string} userId - The ID of the user
- * @returns {boolean}
- */
-Users.prototype.exists = function (userId) {
-    return typeof this.get(userId, "userId") !== "undefined";
-};
-
-/**
- * Check if an user is in a specific state
- * @param {string} userId - The ID of the user
- * @param {string} state - The state to check for
- * @returns {boolean} - Returns true if the state of the user matches the state argument
- */
-Users.prototype.is = function (userId, state) {
-    return this.get(userId, "state") === state;
-};
-
-/**
- * Get a property of the user
- * @param {string} userId - The ID of the user
- * @param {string} userProperty - The name of the property to be fetched
- * @returns {string} - The value of the user property. Will return undefined if property doesn't exist
- */
-Users.prototype.get = function (userId, userProperty) {
-    var self = this, i;
-
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].userId === userId && (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId)) {
-            if (userProperty) {
-                // Return requested property
-                return self.data[i][userProperty] || "";
-            } else {
-                // Return the whole user data if no property is requested
-                return self.data[i];
-            }
-        }
-    }
-};
-
-/**
- * List all identities
- * @returns {Object}
- */
-Users.prototype.list = function () {
-    var self = this, usersList = {}, i;
-
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId) {
-            usersList[self.data[i].userId] = self.data[i].state;
-        }
-    }
-
-    return usersList;
-};
-
-/**
- * Returns an array of all user objects
- * @returns {Array}
- */
-Users.prototype.all = function () {
-    var self = this,
-        users = [],
-        i;
-
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId) {
-            users.push(self.data[i]);
-        }
-    }
-
-    return users;
-};
-
-/**
- * Returns the number of registered identities
- * @return {number}
- */
-Users.prototype.count = function () {
-    return Object.keys(this.list()).length;
-};
-
-/**
- * Remove an identity
- * @param {string} userId - The ID of the user
- */
-Users.prototype.remove = function (userId) {
-    var self = this, i;
-
-    if (!self.exists(userId)) {
-        return;
-    }
-
-    for (i = 0; i < self.data.length; ++i) {
-        if (self.data[i].userId === userId && (self.data[i].projectId === self.projectId || self.data[i].customerId === self.projectId)) {
-            self.data.splice(i, 1);
-        }
-    }
-
-    self.store();
-};
-
-Users.prototype.store = function () {
-    var self = this,
-        i;
-
-    // Ensure that there is no sensitive data before storing it
-    for (i = 0; i < self.data.length; ++i) {
-        delete self.data[i].csHex;
-        delete self.data[i].regOTT;
-    }
-
-    self.storage.setItem(self.storageKey, JSON.stringify(self.data));
 };
 
 function HTTP(timeout, clientName, projectId, cors) {
@@ -23824,8 +23586,6 @@ function HTTP(timeout, clientName, projectId, cors) {
  * @private
  */
 HTTP.prototype.request = function (options, callback) {
-    var self = this, url, type, request;
-
     if (typeof callback !== "function") {
         throw new Error("Bad or missing callback");
     }
@@ -23834,13 +23594,10 @@ HTTP.prototype.request = function (options, callback) {
         throw new Error("Missing URL for request");
     }
 
-    request = new XMLHttpRequest();
-
-    url = options.url;
-    type = options.type || "GET";
+    const request = new XMLHttpRequest();
 
     request.onreadystatechange = function () {
-        var response;
+        let response;
 
         if (request.readyState === 4 && request.status === 200) {
             try {
@@ -23871,17 +23628,19 @@ HTTP.prototype.request = function (options, callback) {
         }
     };
 
-
-    if (self.cors) {
-        url += (url.indexOf("?") !== -1 ? "&" : "?") + "project_id=" + self.projectId;
+    let url = options.url;
+    if (this.cors) {
+        url += (url.indexOf("?") !== -1 ? "&" : "?") + "project_id=" + this.projectId;
     }
+
+    const type = options.type || "GET";
 
     request.open(type, url, true);
 
-    request.timeout = self.requestTimeout;
+    request.timeout = this.requestTimeout;
 
-    request.setRequestHeader("X-MIRACL-CID", self.projectId);
-    request.setRequestHeader("X-MIRACL-CLIENT", self.clientName);
+    request.setRequestHeader("X-MIRACL-CID", this.projectId);
+    request.setRequestHeader("X-MIRACL-CLIENT", this.clientName);
 
     // Set authorization header if provided
     if (options.authorization) {
@@ -23899,26 +23658,211 @@ HTTP.prototype.request = function (options, callback) {
 };
 
 /**
+ * User management utility. Initialized by {@link Client}
+ * @class
+ *
+ * @param {Object} storage
+ * @param {string} projectId
+ * @param {string} storageKey
+ */
+function Users(storage, projectId, storageKey) {
+    if (typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
+        throw new Error("Invalid user storage object");
+    }
+
+    if (!projectId) {
+        throw new Error("Project ID must be provided when configuring storage");
+    }
+
+    if (!storageKey) {
+        throw new Error("Storage key must be provided when configuring storage");
+    }
+
+    this.storage = storage;
+    this.projectId = projectId;
+    this.storageKey = storageKey;
+
+    this.loadData();
+}
+
+Users.prototype.data = [],
+
+Users.prototype.states = {
+    start: "STARTED",
+    register: "REGISTERED",
+    revoked: "REVOKED"
+};
+
+Users.prototype.loadData = function () {
+    this.data = JSON.parse(this.storage.getItem(this.storageKey)) || [];
+
+    this.store();
+
+    // Sort list by last used timestamp
+    this.data.sort((a, b) => {
+        if (a.lastUsed && (!b.lastUsed || a.lastUsed > b.lastUsed)) {
+            return 1;
+        }
+
+        if (b.lastUsed && (!a.lastUsed || a.lastUsed < b.lastUsed)) {
+            return -1;
+        }
+
+        return 0;
+    });
+};
+
+Users.prototype.write = function (userId, userData) {
+    if (!this.exists(userId)) {
+        this.data.push({
+            userId: userId,
+            projectId: this.projectId,
+            state: this.states.invalid,
+            created: Math.round(new Date().getTime() / 1000)
+        });
+    }
+
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].userId === userId && (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId)) {
+            for (const uKey in userData) {
+                if (userData[uKey]) {
+                    this.data[i][uKey] = userData[uKey];
+                }
+            }
+        }
+    }
+
+    this.store();
+};
+
+Users.prototype.updateLastUsed = function (userId) {
+    this.write(userId, { lastUsed: new Date().getTime() });
+};
+
+/**
+ * Check if an user with the specified User ID exists
+ * @param {string} userId - The ID of the user
+ * @returns {boolean}
+ */
+Users.prototype.exists = function (userId) {
+    return typeof this.get(userId, "userId") !== "undefined";
+};
+
+/**
+ * Check if an user is in a specific state
+ * @param {string} userId - The ID of the user
+ * @param {string} state - The state to check for
+ * @returns {boolean} - Returns true if the state of the user matches the state argument
+ */
+Users.prototype.is = function (userId, state) {
+    return this.get(userId, "state") === state;
+};
+
+/**
+ * Get a property of the user
+ * @param {string} userId - The ID of the user
+ * @param {string} userProperty - The name of the property to be fetched
+ * @returns {string} - The value of the user property. Will return undefined if property doesn't exist
+ */
+Users.prototype.get = function (userId, userProperty) {
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].userId === userId && (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId)) {
+            if (userProperty) {
+                // Return requested property
+                return this.data[i][userProperty] || "";
+            } else {
+                // Return the whole user data if no property is requested
+                return this.data[i];
+            }
+        }
+    }
+};
+
+/**
+ * List all identities
+ * @returns {Object}
+ */
+Users.prototype.list = function () {
+    const usersList = {};
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId) {
+            usersList[this.data[i].userId] = this.data[i].state;
+        }
+    }
+
+    return usersList;
+};
+
+/**
+ * Returns an array of all user objects
+ * @returns {Array}
+ */
+Users.prototype.all = function () {
+    const users = [];
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId) {
+            users.push(this.data[i]);
+        }
+    }
+
+    return users;
+};
+
+/**
+ * Returns the number of registered identities
+ * @return {number}
+ */
+Users.prototype.count = function () {
+    return Object.keys(this.list()).length;
+};
+
+/**
+ * Remove an identity
+ * @param {string} userId - The ID of the user
+ */
+Users.prototype.remove = function (userId) {
+    if (!this.exists(userId)) {
+        return;
+    }
+
+    for (let i = 0; i < this.data.length; ++i) {
+        if (this.data[i].userId === userId && (this.data[i].projectId === this.projectId || this.data[i].customerId === this.projectId)) {
+            this.data.splice(i, 1);
+        }
+    }
+
+    this.store();
+};
+
+Users.prototype.store = function () {
+    // Ensure that there is no sensitive data before storing it
+    for (let i = 0; i < this.data.length; ++i) {
+        delete this.data[i].csHex;
+        delete this.data[i].regOTT;
+    }
+
+    this.storage.setItem(this.storageKey, JSON.stringify(this.data));
+};
+
+/**
  * @class
  * @param {Object} options
- * @param {string} options.projectUrl - MIRACL Trust Project URL that is used for communication with the MIRACL Trust API
+ * @param {string} options.projectUrl - MIRACL Trust Project URL used for communication with the MIRACL Trust API
  * @param {string} options.projectId - MIRACL Trust Project ID
- * @param {string} options.seed - Hex encoded random number generator seed
+ * @param {string} options.seed - Hex-encoded random number generator seed
  * @param {string} options.deviceName - Name of the current device
  * @param {Object} options.userStorage - Storage for saving user data
  * @param {Object} options.oidc - Parameters for initializing an OIDC auth session
- * @param {string} options.oidc.client_id - OIDC client ID
+ * @param {string} options.oidc.client_id - OIDC Client ID
  * @param {string} options.oidc.redirect_uri - OIDC redirect URI
  * @param {string} options.oidc.response_type - OIDC response type. Only 'code' is supported
  * @param {string} options.oidc.scope - OIDC scope. Must include 'openid'
  * @param {string} options.oidc.state - OIDC state
  * @param {bool}   options.cors - Enable CORS requests if set to 'true'
- * @param {number} options.requestTimeout - Time before a HTTP request times out in miliseconds
- * @param {string} options.applicationInfo - Sets additional information that will be sent via X-MIRACL-CLIENT HTTP header
+ * @param {number} options.requestTimeout - Time before an HTTP request times out in milliseconds
+ * @param {string} options.applicationInfo - Set additional information that will be sent via X-MIRACL-CLIENT HTTP header
  */
 function Client(options) {
-    var self = this;
-
     if (!options) {
         throw new Error("Invalid configuration");
     }
@@ -23934,11 +23878,11 @@ function Client(options) {
     if (!options.projectUrl) {
         options.projectUrl = "https://api.mpin.io";
     } else {
-        // remove trailing slash from url, if there is one
+        // Remove trailing slash from URL, if there is one
         options.projectUrl = options.projectUrl.replace(/\/$/, "");
     }
 
-    // Ensure that default PIN lenght is between 4 and 6
+    // Ensure the default PIN length is between 4 and 6
     if (!options.defaultPinLength || options.defaultPinLength > 6 || options.defaultPinLength < 4) {
         options.defaultPinLength = 4;
     }
@@ -23954,13 +23898,13 @@ function Client(options) {
     // Set the client name using the current lib version and provided application info
     options.clientName = "MIRACL Client.js/8.8.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
-    self.options = options;
+    this.options = options;
 
-    self.http = new HTTP(options.requestTimeout, options.clientName, options.projectId, options.cors);
+    this.http = new HTTP(options.requestTimeout, options.clientName, options.projectId, options.cors);
 
-    self.crypto = new Crypto(options.seed);
+    this.crypto = new Crypto(options.seed);
 
-    self.users = new Users(options.userStorage, options.projectId, "mfa");
+    this.users = new Users(options.userStorage, options.projectId, "mfa");
 }
 
 Client.prototype.options = {};
@@ -23968,7 +23912,7 @@ Client.prototype.options = {};
 Client.prototype.session = {};
 
 /**
- * Set the access(session) ID
+ * Set the access/session ID
  *
  * @param {string} accessId
  */
@@ -23977,53 +23921,47 @@ Client.prototype.setAccessId = function (accessId) {
 };
 
 /**
- * Make a request to start a new session and fetch the access(session) ID
+ * Make a request to start a new session and fetch the access/session ID
  *
  * @param {string} userId - The unique identifier of the user that will be authenticating (not required)
  * @param {function(Error, Object)} callback
  */
 Client.prototype.fetchAccessId = function (userId, callback) {
-    var self = this,
-        reqData;
-
-    reqData = {
-        url: self.options.projectUrl + "/rps/v2/session",
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/session",
         type: "POST",
         data: {
-            projectId: self.options.projectId,
+            projectId: this.options.projectId,
             userId: userId
         }
     };
 
-    self.http.request(reqData, function (error, res) {
+    this.http.request(reqData, (error, res) => {
         if (error) {
             return callback(error, null);
         }
 
-        self.session = res;
+        this.session = res;
 
         callback(null, res);
     });
 };
 
 /**
- * Request for changes in status
+ * Get session status
  *
  * @param {function(Error, Object)} callback
  */
 Client.prototype.fetchStatus = function (callback) {
-    var self = this,
-        reqData;
-
-    reqData = {
-        url: self.options.projectUrl + "/rps/v2/access",
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/access",
         type: "POST",
         data: {
-            webOTT: self.session.webOTT
+            webOTT: this.session.webOTT
         }
     };
 
-    self.http.request(reqData, function (error, data) {
+    this.http.request(reqData, (error, data) => {
         if (error) {
             return callback(error, null);
         }
@@ -24039,66 +23977,62 @@ Client.prototype.fetchStatus = function (callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
-    var self = this,
-        reqData;
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    reqData = {
-        url: self.options.projectUrl + "/pushauth?" + self._urlEncode(self.options.oidc),
+    const reqData = {
+        url: this.options.projectUrl + "/pushauth?" + this._urlEncode(this.options.oidc),
         type: "POST",
         data: {
             prerollId: userId
         }
     };
 
-    self.http.request(reqData, function (err, result) {
+    this.http.request(reqData, (err, result) => {
         if (err) {
             if (result && result.error === "NO_PUSH_TOKEN") {
-                return callback(new Error("No push token", { cause: err }));
+                return callback(new Error("No push token", { cause: err }), null);
             }
 
             return callback(err, null);
         }
 
-        self.session.webOTT = result.webOTT;
+        this.session.webOTT = result.webOTT;
 
         callback(null, result);
     });
 };
 
 /**
- * Start the verification process for a specified user ID (must be email)
+ * Start the verification process for a specified User ID (must be an email address)
  *
- * @param {string} userId - The email to start verification for
+ * @param {string} userId - The email address for which to start verification
  * @param {function(Error, Object)} callback
  */
 Client.prototype.sendVerificationEmail = function (userId, callback) {
-    var self = this,
-        reqData = {};
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    reqData.url = self.options.projectUrl + "/verification/email";
-    reqData.type = "POST";
-    reqData.data = {
-        userId: userId,
-        mpinId: self.users.get(userId, "mpinId"),
-        projectId: self.options.projectId,
-        accessId: self.session.accessId,
-        deviceName: self._getDeviceName(),
-        clientId: self.options.oidc["client_id"],
-        redirectURI: self.options.oidc["redirect_uri"],
-        scope: self.options.oidc["scope"] ? self.options.oidc["scope"].split(" ") : [],
-        state: self.options.oidc["state"],
-        nonce: self.options.oidc["nonce"]
+    const reqData = {
+        url: this.options.projectUrl + "/verification/email",
+        type: "POST",
+        data: {
+            userId: userId,
+            mpinId: this.users.get(userId, "mpinId"),
+            projectId: this.options.projectId,
+            accessId: this.session.accessId,
+            deviceName: this._getDeviceName(),
+            clientId: this.options.oidc["client_id"],
+            redirectURI: this.options.oidc["redirect_uri"],
+            scope: this.options.oidc["scope"] ? this.options.oidc["scope"].split(" ") : [],
+            state: this.options.oidc["state"],
+            nonce: this.options.oidc["nonce"]
+        }
     };
 
-    self.http.request(reqData, function (err, result) {
+    this.http.request(reqData, (err, result) => {
         if (err) {
             if (result && result.error === "REQUEST_BACKOFF") {
                 return callback(new Error("Request backoff", { cause: err }), result);
@@ -24118,11 +24052,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.getActivationToken = function (verificationURI, callback) {
-    var self = this,
-        reqData = {},
-        params;
-
-    params = self._parseUriParams(verificationURI);
+    const params = this._parseUriParams(verificationURI);
 
     if (!params["user_id"]) {
         return callback(new Error("Empty user ID"), null);
@@ -24132,14 +24062,16 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
         return callback(new Error("Empty verification code"), null);
     }
 
-    reqData.url = self.options.projectUrl + "/verification/confirmation";
-    reqData.type = "POST";
-    reqData.data = {
-        userId: params["user_id"],
-        code: params["code"]
+    const reqData = {
+        url: this.options.projectUrl + "/verification/confirmation",
+        type: "POST",
+        data: {
+            userId: params["user_id"],
+            code: params["code"]
+        }
     };
 
-    self.http.request(reqData, function (err, result) {
+    this.http.request(reqData, (err, result) => {
         if (err) {
             if (result && result.error === "UNSUCCESSFUL_VERIFICATION") {
                 return callback(new Error("Unsuccessful verification", { cause: err }), result);
@@ -24154,7 +24086,7 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
 };
 
 /**
- * Create an identity for the specified user ID
+ * Create an identity for the specified User ID
  *
  * @param {string} userId - The unique identifier of the user
  * @param {string} activationToken - The code received from the verification process
@@ -24162,9 +24094,6 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.register = function (userId, activationToken, pinCallback, callback) {
-    var self = this,
-        keypair;
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
@@ -24173,9 +24102,9 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
         return callback(new Error("Empty activation token"), null);
     }
 
-    keypair = self.crypto.generateKeypair("BN254CX");
+    const keypair = this.crypto.generateKeypair("BN254CX");
 
-    self._createMPinID(userId, activationToken, keypair, function (err, identityData) {
+    this._createMPinID(userId, activationToken, keypair, (err, identityData) => {
         if (err) {
             if (identityData && identityData.error === "INVALID_ACTIVATION_TOKEN") {
                 return callback(new Error("Invalid activation token", { cause: err }), null);
@@ -24184,32 +24113,28 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
             return callback(new Error("Registration fail", { cause: err }), null);
         }
 
-        if (identityData.projectId !== self.options.projectId) {
+        if (identityData.projectId !== this.options.projectId) {
             return callback(new Error("Project mismatch"), null);
         }
 
-        self._getSecret(identityData.secretUrls[0], function (err, sec1Data) {
+        this._getSecret(identityData.secretUrls[0], (err, sec1Data) => {
             if (err) {
                 return callback(new Error("Registration fail", { cause: err }), null);
             }
 
-            self._getSecret(identityData.secretUrls[1], function (err, sec2Data) {
+            this._getSecret(identityData.secretUrls[1], (err, sec2Data) => {
                 if (err) {
                     return callback(new Error("Registration fail", { cause: err }), null);
                 }
 
-                var pinLength,
-                    passPin;
-
-                pinLength = identityData.pinLength;
+                let pinLength = identityData.pinLength;
                 if (!pinLength) {
-                    pinLength = self.options.defaultPinLength;
+                    pinLength = this.options.defaultPinLength;
                 }
 
-                // should be called to continue the flow
-                // after a PIN was provided
-                passPin = function (userPin) {
-                    self._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
+                // Should be called to continue the flow after a PIN was provided
+                const passPin = (userPin) => {
+                    this._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
                 };
 
                 pinCallback(passPin, pinLength);
@@ -24219,47 +24144,45 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
 };
 
 Client.prototype._createMPinID = function (userId, activationToken, keypair, callback) {
-    var self = this,
-        regData = {};
-
-    regData.url = self.options.projectUrl + "/registration";
-    regData.type = "POST";
-    regData.data = {
-        userId: userId,
-        deviceName: self._getDeviceName(),
-        activationToken: activationToken,
-        publicKey: keypair.publicKey
+    const regData = {
+        url: this.options.projectUrl + "/registration",
+        type: "POST",
+        data: {
+            userId: userId,
+            deviceName: this._getDeviceName(),
+            activationToken: activationToken,
+            publicKey: keypair.publicKey
+        }
     };
 
-    self.http.request(regData, function (err, result) {
+    this.http.request(regData, (err, result) => {
         if (err) {
             return callback(err, result);
         }
 
-        self.users.write(userId, { state: self.users.states.start });
+        this.users.write(userId, { state: this.users.states.start });
 
         callback(null, result);
     });
 };
 
 Client.prototype._getDeviceName = function () {
-    var self = this;
-
-    if (self.options.deviceName) {
-        return self.options.deviceName;
+    if (this.options.deviceName) {
+        return this.options.deviceName;
     }
 
     return "Browser";
 };
 
 Client.prototype._getSecret = function (secretUrl, callback) {
-    var self = this,
-        requestData = { url: secretUrl };
+    const requestData = {
+        url: secretUrl
+    };
 
-    self.http.request(requestData, function (err, result) {
+    this.http.request(requestData, (err, result) => {
         if (err) {
             if (err.message === "The request was aborted") {
-                self.http.request(requestData, callback);
+                this.http.request(requestData, callback);
             } else {
                 callback(err, result);
             }
@@ -24272,19 +24195,16 @@ Client.prototype._getSecret = function (secretUrl, callback) {
 };
 
 Client.prototype._createIdentity = function (userId, userPin, identityData, sec1Data, sec2Data, keypair, callback) {
-    var self = this,
-        userData,
-        csHex,
-        token;
+    let csHex, token;
 
     try {
-        csHex = self.crypto.addShares(keypair.privateKey, sec1Data.dvsClientSecret, sec2Data.dvsClientSecret, identityData.curve);
-        token = self.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex, identityData.curve);
+        csHex = this.crypto.addShares(keypair.privateKey, sec1Data.dvsClientSecret, sec2Data.dvsClientSecret, identityData.curve);
+        token = this.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex, identityData.curve);
     } catch (err) {
         return callback(err, null);
     }
 
-    userData = {
+    const userData = {
         mpinId: identityData.mpinId,
         token: token,
         curve: identityData.curve,
@@ -24293,17 +24213,17 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
         pinLength: identityData.pinLength,
         projectId: identityData.projectId,
         verificationType: identityData.verificationType,
-        state: self.users.states.register,
+        state: this.users.states.register,
         nowTime: identityData.nowTime,
         updated: Math.floor(Date.now() / 1000)
     };
-    self.users.write(userId, userData);
+    this.users.write(userId, userData);
 
     callback(null, userData);
 };
 
 /**
- * Authenticate the user with the specified user ID
+ * Authenticate the user with the specified User ID
  *
  * @param {string} userId - The unique identifier of the user
  * @param {string} userPin - The PIN associated with the userId
@@ -24356,29 +24276,27 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
 };
 
 /**
- * Fetch a registration (bootstrap) code for the specified user ID
+ * Fetch a registration (bootstrap) code for the specified User ID
  *
  * @param {string} userId - The unique identifier of the user
  * @param {string} userPin - The PIN associated with the userId
  * @param {function(Error, Object)} callback
  */
 Client.prototype.generateQuickCode = function (userId, userPin, callback) {
-    var self = this;
-
-    self._authentication(userId, userPin, ["reg-code"], function (err, result) {
+    this._authentication(userId, userPin, ["reg-code"], (err, result) => {
         if (err) {
             return callback(err, null);
         }
 
-        self.http.request({
-            url: self.options.projectUrl + "/verification/quickcode",
+        this.http.request({
+            url: this.options.projectUrl + "/verification/quickcode",
             type: "POST",
             data: {
-                projectId: self.options.projectId,
+                projectId: this.options.projectId,
                 jwt: result.jwt,
-                deviceName: self._getDeviceName()
+                deviceName: this._getDeviceName()
             }
-        }, function (err, result) {
+        }, (err, result) => {
             if (err) {
                 return callback(err, null);
             }
@@ -24395,44 +24313,41 @@ Client.prototype.generateQuickCode = function (userId, userPin, callback) {
 };
 
 Client.prototype._authentication = function (userId, userPin, scope, callback) {
-    var self = this,
-        identityData,
-        SEC = [],
-        X = [];
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    if (!self.users.exists(userId)) {
+    if (!this.users.exists(userId)) {
         return callback(new Error("User not found"), null);
     }
 
-    identityData = self.users.get(userId);
+    const identityData = this.users.get(userId);
 
-    self._getPass1(identityData, userPin, scope, X, SEC, function (err, pass1Data) {
+    const SEC = [], X = [];
+
+    this._getPass1(identityData, userPin, scope, X, SEC, (err, pass1Data) => {
         if (err) {
             if (pass1Data && pass1Data.error === "EXPIRED_MPINID") {
-                self.users.write(userId, { state: self.users.states.revoked });
+                this.users.write(userId, { state: this.users.states.revoked });
                 return callback(new Error("Revoked", { cause: err }), null);
             }
 
             return callback(new Error("Authentication fail", { cause: err }), null);
         }
 
-        self._getPass2(identityData, scope, pass1Data.y, X, SEC, function (err, pass2Data) {
+        this._getPass2(identityData, scope, pass1Data.y, X, SEC, (err, pass2Data) => {
             if (err) {
                 return callback(new Error("Authentication fail", { cause: err }), null);
             }
 
-            self._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, function (err, result) {
+            this._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, (err, result) => {
                 if (err) {
                     if (result && result.error === "UNSUCCESSFUL_AUTHENTICATION") {
                         return callback(new Error("Unsuccessful authentication", { cause: err }), null);
                     }
 
                     if (result && result.error === "REVOKED_MPINID") {
-                        self.users.write(userId, { state: self.users.states.revoked });
+                        this.users.write(userId, { state: this.users.states.revoked });
                         return callback(new Error("Revoked", { cause: err }), null);
                     }
 
@@ -24446,134 +24361,124 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
 };
 
 /**
- * Make a request for pass one of the M-Pin protocol
+ * Make a request for pass one of the M-PIN protocol
  *
- * This function assigns to the property X a random value. It assigns to
- * the property SEC the sum of the client secret and time permit. It also
+ * This function assigns a random value to the property X. It assigns the sum of the Client Secret
+ * and time permit to the property SEC. It also
  * calculates the values U and UT which are required for M-Pin authentication,
  * where U = X.(map_to_curve(MPIN_ID)) and UT = X.(map_to_curve(MPIN_ID) + map_to_curve(DATE|sha256(MPIN_ID))
- * UT is called the commitment. U is the required for finding the PIN error.
+ * UT is called the commitment. U is required for finding the PIN error.
  *
  * Request data has the following structure:
  * {
- *    mpin_id: mpinIdHex,   // Hex encoded M-Pin ID
+ *    mpin_id: mpinIdHex,   // Hex-encoded M-PIN ID
  *    dtas: dtaList         // Identifier of the DTAs used for this identity
- *    UT: UT_hex,           // Hex encoded UT
- *    U: U_hex,             // Hex encoded U
+ *    UT: UT_hex,           // Hex-encoded UT
+ *    U: U_hex,             // Hex-encoded U
  *    publicKey: publicKey, // The public key used for DVS
  *    scope: ['oidc']       // Scope of the authentication
  * }
  * @private
  */
 Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, callback) {
-    var self = this,
-        res,
-        requestData;
+    let res;
 
     try {
-        res = self.crypto.calculatePass1(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC);
+        res = this.crypto.calculatePass1(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC);
     } catch (err) {
         return callback(err, null);
     }
 
-    requestData = {
+    const requestData = {
         scope: scope,
-        mpin_id: identityData.mpinId,
-        dtas: identityData.dtas,
+        mpin_id: identityData.mpinId, // eslint-disable-line camelcase
+        dtas: identityData.dtas, // eslint-disable-line camelcase
         publicKey: identityData.publicKey,
         UT: res.UT,
         U: res.U
     };
 
-    self.http.request({ url: self.options.projectUrl + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
+    this.http.request({ url: this.options.projectUrl + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
 };
 
 /**
  * Make a request for pass two of the M-Pin protocol
  *
  * This function uses the random value y from the server, property X
- * and the combined client secret and time permit to calculate
- * the value V which is sent to the M-Pin server.
+ * and the combined Client Secret and time permit to calculate
+ * the value V which is sent to the M-PIN server.
  *
  * Request data has the following structure:
  * {
- *    mpin_id: mpinIdHex, // Hex encoded M-Pin ID
+ *    mpin_id: mpinIdHex, // Hex-encoded M-PIN ID
  *    V: V_hex,           // Value required by the server to authenticate user
  *    WID: accessNumber   // Number required for mobile authentication
  * }
  * @private
  */
 Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callback) {
-    var self = this,
-        vHex,
-        requestData;
+    let vHex;
 
     try {
-        vHex = self.crypto.calculatePass2(identityData.curve, X, yHex, SEC);
+        vHex = this.crypto.calculatePass2(identityData.curve, X, yHex, SEC);
     } catch (err) {
         return callback(err, null);
     }
 
-    requestData = {
-        mpin_id: identityData.mpinId,
-        WID: self.session.accessId,
+    const requestData = {
+        mpin_id: identityData.mpinId, // eslint-disable-line camelcase
+        WID: this.session.accessId,
         V: vHex
     };
 
-    self.http.request({ url: self.options.projectUrl + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
+    this.http.request({ url: this.options.projectUrl + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
 };
 
 Client.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
-    var self = this,
-        requestData;
-
-    requestData = {
+    const requestData = {
         "authOTT": authOTT,
         "wam": "dvs"
     };
 
-    self.http.request({ url: self.options.projectUrl + "/rps/v2/authenticate", type: "POST", data: requestData }, function (err, result) {
+    this.http.request({ url: this.options.projectUrl + "/rps/v2/authenticate", type: "POST", data: requestData }, (err, result) => {
         if (err) {
             return callback(err, result);
         }
 
         if (result.dvsRegister) {
-            self._renewSecret(userId, userPin, result.dvsRegister, function(err) {
+            this._renewSecret(userId, userPin, result.dvsRegister, (err) => {
                 if (err) {
                     return callback(err, null);
                 }
 
-                self._authentication(userId, userPin, scope, callback);
+                this._authentication(userId, userPin, scope, callback);
             });
         } else {
-            self.users.updateLastUsed(userId);
+            this.users.updateLastUsed(userId);
             callback(null, result);
         }
     });
 };
 
 Client.prototype._renewSecret = function (userId, userPin, activationData, callback) {
-    var self = this,
-        keypair;
+    const keypair = this.crypto.generateKeypair(activationData.curve);
 
-    keypair = self.crypto.generateKeypair(activationData.curve);
-
-    self._createMPinID(userId, activationData.token, keypair, function (err, identityData) {
+    this._createMPinID(userId, activationData.token, keypair, (err, identityData) => {
         if (err) {
             return callback(err, null);
         }
 
-        self._getSecret(identityData.secretUrls[0], function (err, sec1Data) {
+        this._getSecret(identityData.secretUrls[0], (err, sec1Data) => {
             if (err) {
                 return callback(err, null);
             }
 
-            self._getSecret(identityData.secretUrls[1], function (err, sec2Data) {
+            this._getSecret(identityData.secretUrls[1], (err, sec2Data) => {
                 if (err) {
                     return callback(err, null);
                 }
 
-                self._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
+                this._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
             });
         });
     });
@@ -24589,14 +24494,11 @@ Client.prototype._renewSecret = function (userId, userPin, activationData, callb
  * @param {function(Error, Object)} callback
  */
 Client.prototype.sign = function (userId, userPin, message, timestamp, callback) {
-    var self = this,
-        identityData;
-
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
 
-    if (!self.users.exists(userId)) {
+    if (!this.users.exists(userId)) {
         return callback(new Error("User not found"), null);
     }
 
@@ -24604,16 +24506,13 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         return callback(new Error("Empty message"), null);
     }
 
-    identityData = self.users.get(userId);
+    const identityData = this.users.get(userId);
 
     if (!identityData.publicKey) {
         return callback(new Error("Empty public key"), null);
     }
 
-    this._authentication(userId, userPin, ["dvs-auth"], function (err) {
-        var res,
-            signatureData;
-
+    this._authentication(userId, userPin, ["dvs-auth"], (err) => {
         if (err) {
             switch (err.message) {
                 case "Unsuccessful authentication":
@@ -24625,13 +24524,15 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
             }
         }
 
+        let res;
+
         try {
-            res = self.crypto.sign(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
+            res = this.crypto.sign(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
         } catch (err) {
             return callback(new Error("Signing fail", { cause: err }), null);
         }
 
-        signatureData = {
+        const signatureData = {
             hash: message,
             u: res.U,
             v: res.V,
@@ -24645,10 +24546,9 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
 };
 
 Client.prototype._urlEncode = function (obj) {
-    var str = [],
-        p;
+    const str = [];
 
-    for (p in obj) {
+    for (const p in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, p)) {
             str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
         }
@@ -24658,18 +24558,17 @@ Client.prototype._urlEncode = function (obj) {
 };
 
 Client.prototype._parseUriParams = function (uri) {
-    var query = uri.split("?").pop(),
-        queryArr = query.split("&"),
-        params = {},
-        pairArr,
-        i;
+    const query = uri.split("?").pop();
+    const queryArr = query.split("&");
+
+    const params = {};
 
     if (!query.length || !queryArr.length) {
         return params;
     }
 
-    for (i = 0; i < queryArr.length; i++) {
-        pairArr = queryArr[i].split("=");
+    for (let i = 0; i < queryArr.length; i++) {
+        const pairArr = queryArr[i].split("=");
         params[pairArr[0]] = decodeURIComponent(pairArr[1].replace(/\+/g, " "));
     }
 
@@ -24728,7 +24627,7 @@ class PromiseInterface extends Client {
 
 function promisify (original, ...args) {
     return new Promise((resolve, reject) => {
-        original(...args, function (err, result) {
+        original(...args, (err, result) => {
             if (err) {
                 reject(err);
                 return;

@@ -52,7 +52,7 @@ export default class PromiseInterface extends Client {
 
 function promisify (original, ...args) {
     return new Promise((resolve, reject) => {
-        original(...args, function (err, result) {
+        original(...args, (err, result) => {
             if (err) {
                 reject(err);
                 return;

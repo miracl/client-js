@@ -10,8 +10,6 @@ export default function HTTP(timeout, clientName, projectId, cors) {
  * @private
  */
 HTTP.prototype.request = function (options, callback) {
-    var self = this, url, type, request;
-
     if (typeof callback !== "function") {
         throw new Error("Bad or missing callback");
     }
@@ -20,13 +18,10 @@ HTTP.prototype.request = function (options, callback) {
         throw new Error("Missing URL for request");
     }
 
-    request = new XMLHttpRequest();
-
-    url = options.url;
-    type = options.type || "GET";
+    const request = new XMLHttpRequest();
 
     request.onreadystatechange = function () {
-        var response;
+        let response;
 
         if (request.readyState === 4 && request.status === 200) {
             try {
@@ -57,17 +52,19 @@ HTTP.prototype.request = function (options, callback) {
         }
     };
 
-
-    if (self.cors) {
-        url += (url.indexOf("?") !== -1 ? "&" : "?") + "project_id=" + self.projectId;
+    let url = options.url;
+    if (this.cors) {
+        url += (url.indexOf("?") !== -1 ? "&" : "?") + "project_id=" + this.projectId;
     }
+
+    const type = options.type || "GET";
 
     request.open(type, url, true);
 
-    request.timeout = self.requestTimeout;
+    request.timeout = this.requestTimeout;
 
-    request.setRequestHeader("X-MIRACL-CID", self.projectId);
-    request.setRequestHeader("X-MIRACL-CLIENT", self.clientName);
+    request.setRequestHeader("X-MIRACL-CID", this.projectId);
+    request.setRequestHeader("X-MIRACL-CLIENT", this.clientName);
 
     // Set authorization header if provided
     if (options.authorization) {

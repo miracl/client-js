@@ -1,40 +1,41 @@
+import { before, beforeEach, describe, it } from "mocha";
+import { expect } from "chai";
 import HTTP from "../src/http.js";
 import sinon from "sinon";
-import { expect } from "chai";
 
-describe("HTTP request", function() {
-    var client, requests;
+describe("HTTP request", () => {
+    let client, requests;
 
-    before(function () {
-        var xhr = global.XMLHttpRequest = sinon.useFakeXMLHttpRequest();
-        xhr.onCreate = function (xhr) {
-            requests.push(xhr);
+    before(() => {
+        const xhr = global.XMLHttpRequest = sinon.useFakeXMLHttpRequest();
+        xhr.onCreate = function (req) {
+            requests.push(req);
         };
     });
 
-    beforeEach(function () {
+    beforeEach(() => {
         requests = [];
         client = new HTTP(4000, "clientName", "projectID", false);
     });
 
-    it("should throw error missing callback", function () {
-        expect(function () {
+    it("should throw error missing callback", () => {
+        expect(() => {
             client.request({ url: "reqUrl" });
         }).to.throw("Bad or missing callback");
 
-        expect(function () {
+        expect(() => {
             client.request({ url: "reqUrl" }, "string");
         }).to.throw("Bad or missing callback");
     });
 
-    it("should throw error missing URL", function () {
-        expect(function () {
-            client.request({}, function () {});
+    it("should throw error missing URL", () => {
+        expect(() => {
+            client.request({}, () => {});
         }).to.throw("Missing URL for request");
     });
 
-    it("should handle successful JSON response", function () {
-        var callback = sinon.spy();
+    it("should handle successful JSON response", () => {
+        const callback = sinon.spy();
         client.request({
             url: "/test-json-get"
         }, callback);
@@ -46,8 +47,8 @@ describe("HTTP request", function() {
         sinon.assert.calledWith(callback, null, { test: 1 });
     });
 
-    it("should handle JSON error response", function () {
-        var callback = sinon.spy();
+    it("should handle JSON error response", () => {
+        const callback = sinon.spy();
         client.request({
             url: "/test-json-get"
         }, callback);
@@ -63,8 +64,8 @@ describe("HTTP request", function() {
         expect(callback.firstCall.args[1].context).to.deep.equal({requestID: "REQUEST_ID"});
     });
 
-    it("should handle successful text response", function () {
-        var callback = sinon.spy();
+    it("should handle successful text response", () => {
+        const callback = sinon.spy();
         client.request({
             url: "/test-json-get"
         }, callback);
@@ -76,8 +77,8 @@ describe("HTTP request", function() {
         sinon.assert.calledWith(callback, null, "test");
     });
 
-    it("should make a post request", function () {
-        var callback = sinon.spy();
+    it("should make a post request", () => {
+        const callback = sinon.spy();
         client.request({
             url: "/test-json-get",
             type: "POST",
@@ -90,8 +91,8 @@ describe("HTTP request", function() {
         expect(callback.callCount).to.equal(1);
     });
 
-    it("should set Authorization Header", function () {
-        var callback = sinon.spy();
+    it("should set Authorization Header", () => {
+        const callback = sinon.spy();
         client.request({
             url: "/test-auth",
             authorization: "Bearer test"
@@ -105,8 +106,8 @@ describe("HTTP request", function() {
         expect(callback.callCount).to.equal(1);
     });
 
-    it("should handle error response", function () {
-        var callback = sinon.spy();
+    it("should handle error response", () => {
+        const callback = sinon.spy();
         client.request({
             url: "/test-error"
         }, callback);
@@ -119,8 +120,8 @@ describe("HTTP request", function() {
         expect(callback.firstCall.args[1].status).to.equal(400);
     });
 
-    it("should handle aborted request", function () {
-        var callback = sinon.spy();
+    it("should handle aborted request", () => {
+        const callback = sinon.spy();
         client.request({
             url: "/test-abort"
         }, callback);
@@ -135,31 +136,31 @@ describe("HTTP request", function() {
         expect(callback.firstCall.args[1].status).to.equal(0);
     });
 
-    it("should set project ID header", function () {
+    it("should set project ID header", () => {
         client.request({
             url: "/test-project-id-header",
-        }, function () {});
+        }, () => {});
 
         expect(requests.length).to.equal(1);
         expect(requests[0].requestHeaders).to.have.property("X-MIRACL-CID");
         expect(requests[0].requestHeaders["X-MIRACL-CID"]).to.equal("projectID");
     });
 
-    it("should add project ID parameter for CORS requests", function () {
+    it("should add project ID parameter for CORS requests", () => {
         client = new HTTP(4000, "clientName", "projectID", true);
 
         client.request({
             url: "/test-project-id-parameter",
-        }, function () {});
+        }, () => {});
 
         expect(requests.length).to.equal(1);
         expect(requests[0].url).to.contain("?project_id=projectID");
     });
 
-    it("should set client version header", function () {
+    it("should set client version header", () => {
         client.request({
             url: "/test-client-version-header",
-        }, function () {});
+        }, () => {});
 
         expect(requests.length).to.equal(1);
         expect(requests[0].requestHeaders).to.have.property("X-MIRACL-CLIENT");
