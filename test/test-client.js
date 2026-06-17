@@ -1,4 +1,4 @@
-import { afterEach, before, describe, it } from "mocha";
+import { afterEach, before, beforeEach, describe, it } from "mocha";
 import Client from "../src/client.js";
 import { expect } from "chai";
 import { readFileSync } from "fs";
@@ -232,5 +232,37 @@ describe("Client sendPushNotificationForAuth", () => {
 
     afterEach(() => {
         client.http.request.restore && client.http.request.restore();
+    });
+});
+
+describe("Client _getDeviceTag", () => {
+    let client, storage;
+
+    beforeEach(() => {
+        const config = testConfig();
+        storage = config.userStorage;
+        client = new Client(config);
+    });
+
+    it("should generate a new device tag", () => {
+        expect(storage.getItem("miraclDeviceTag")).to.be.null;
+
+        const tag = client._getDeviceTag();
+
+        expect(storage.getItem("miraclDeviceTag")).to.equal(tag);
+    });
+
+    it("should get the existing device tag", () => {
+        storage.setItem("miraclDeviceTag", "tagvalue");
+
+        expect(client._getDeviceTag()).to.equal("tagvalue");
+    });
+
+    it("should return an empty string on crypto failure", () => {
+        sinon.stub(client.crypto, "randomString").throws(new Error("Cryptography error"));
+
+        expect(client._getDeviceTag()).to.equal("");
+
+        client.crypto.randomString.restore && client.crypto.randomString.restore();
     });
 });

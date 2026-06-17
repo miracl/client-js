@@ -54,7 +54,7 @@ export default function Client(options) {
     }
 
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.8.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.9.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     this.options = options;
 
@@ -225,7 +225,8 @@ Client.prototype.getActivationToken = function (verificationURI, callback) {
         type: "POST",
         data: {
             userId: params["user_id"],
-            code: params["code"]
+            code: params["code"],
+            deviceTag: this._getDeviceTag()
         }
     };
 
@@ -308,6 +309,7 @@ Client.prototype._createMPinID = function (userId, activationToken, keypair, cal
         data: {
             userId: userId,
             deviceName: this._getDeviceName(),
+            deviceTag: this._getDeviceTag(),
             activationToken: activationToken,
             publicKey: keypair.publicKey
         }
@@ -330,6 +332,23 @@ Client.prototype._getDeviceName = function () {
     }
 
     return "Browser";
+};
+
+Client.prototype._getDeviceTag = function () {
+    const tag = this.options.userStorage.getItem("miraclDeviceTag");
+    if (tag) {
+        return tag;
+    }
+
+    let newTag;
+    try {
+        newTag = this.crypto.randomString(16);
+        this.options.userStorage.setItem("miraclDeviceTag", newTag);
+    } catch (err) {
+        newTag = "";
+    }
+
+    return newTag;
 };
 
 Client.prototype._getSecret = function (secretUrl, callback) {
