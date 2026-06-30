@@ -163,6 +163,15 @@ Crypto.prototype.sign = function (curve, mpinId, publicKey, token, userPin, mess
     };
 };
 
+Crypto.prototype.randomString = function (len) {
+    const byteArr = new Array(len);
+    for (let i = 0; i < len; ++i) {
+        byteArr[i] = this.rng.getByte();
+    }
+
+    return this._bytesToHex(byteArr);
+};
+
 /**
  * Returns the public key bytes appended to the M-PIN ID bytes in hex encoding
  * @private

@@ -165,6 +165,32 @@ describe("Crypto sign", () => {
     });
 });
 
+describe("Crypto randomString", () => {
+    let crypto;
+
+    before(() => {
+        crypto = new Crypto("0f");
+    });
+
+    it("should generate a hex string", () => {
+        const str = crypto.randomString(16);
+
+        expect(/^[0-9a-f]{32}$/.test(str)).to.be.true;
+    });
+
+    it("should generate random strings", () => {
+        const pool = [];
+
+        for (let i = 0; i < 1000; ++i) {
+            const s = crypto.randomString(16);
+
+            expect(pool.includes(s)).to.be.false;
+
+            pool.push(s);
+        }
+    });
+});
+
 describe("Crypto _mpinIdWithPublicKey", () => {
     let crypto;
 
