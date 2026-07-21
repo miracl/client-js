@@ -23906,7 +23906,7 @@ function Client(options) {
     }
 
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.9.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.10.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     this.options = options;
 
@@ -24034,6 +24034,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
             projectId: this.options.projectId,
             accessId: this.session.accessId,
             deviceName: this._getDeviceName(),
+            deviceTag: this._getDeviceTag(),
             clientId: this.options.oidc["client_id"],
             redirectURI: this.options.oidc["redirect_uri"],
             scope: this.options.oidc["scope"] ? this.options.oidc["scope"].split(" ") : [],
