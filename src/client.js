@@ -58,7 +58,7 @@ export default function Client(options) {
 
     this.options = options;
 
-    this.http = new HTTP(options.requestTimeout, options.clientName, options.projectId, options.cors);
+    this.http = new HTTP(options.requestTimeout, options.clientName, this._getDeviceName(), this._getDeviceTag(), options.projectId, options.cors);
 
     this.crypto = new Crypto(options.seed);
 

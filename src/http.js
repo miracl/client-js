@@ -1,6 +1,8 @@
-export default function HTTP(timeout, clientName, projectId, cors) {
+export default function HTTP(timeout, clientName, deviceName, deviceTag, projectId, cors) {
     this.requestTimeout = timeout;
     this.clientName = clientName;
+    this.deviceName = deviceName;
+    this.deviceTag = deviceTag;
     this.projectId = projectId;
     this.cors = cors;
 }
@@ -63,8 +65,9 @@ HTTP.prototype.request = function (options, callback) {
 
     request.timeout = this.requestTimeout;
 
-    request.setRequestHeader("X-MIRACL-CID", this.projectId);
-    request.setRequestHeader("X-MIRACL-CLIENT", this.clientName);
+    request.setRequestHeader("X-Miracl-Client", this.clientName);
+    request.setRequestHeader("X-Miracl-Device-Name", this.deviceName);
+    request.setRequestHeader("X-Miracl-Device-Tag", this.deviceTag);
 
     // Set authorization header if provided
     if (options.authorization) {

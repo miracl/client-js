@@ -15,7 +15,7 @@ describe("HTTP request", () => {
 
     beforeEach(() => {
         requests = [];
-        client = new HTTP(4000, "clientName", "projectID", false);
+        client = new HTTP(4000, "clientName", "deviceName", "deviceTag", "projectID", false);
     });
 
     it("should throw error missing callback", () => {
@@ -136,18 +136,8 @@ describe("HTTP request", () => {
         expect(callback.firstCall.args[1].status).to.equal(0);
     });
 
-    it("should set project ID header", () => {
-        client.request({
-            url: "/test-project-id-header",
-        }, () => {});
-
-        expect(requests.length).to.equal(1);
-        expect(requests[0].requestHeaders).to.have.property("X-MIRACL-CID");
-        expect(requests[0].requestHeaders["X-MIRACL-CID"]).to.equal("projectID");
-    });
-
     it("should add project ID parameter for CORS requests", () => {
-        client = new HTTP(4000, "clientName", "projectID", true);
+        client = new HTTP(4000, "clientName", "deviceName", "deviceTag", "projectID", true);
 
         client.request({
             url: "/test-project-id-parameter",
@@ -163,7 +153,27 @@ describe("HTTP request", () => {
         }, () => {});
 
         expect(requests.length).to.equal(1);
-        expect(requests[0].requestHeaders).to.have.property("X-MIRACL-CLIENT");
-        expect(requests[0].requestHeaders["X-MIRACL-CLIENT"]).to.equal("clientName");
+        expect(requests[0].requestHeaders).to.have.property("X-Miracl-Client");
+        expect(requests[0].requestHeaders["X-Miracl-Client"]).to.equal("clientName");
+    });
+
+    it("should set device name header", () => {
+        client.request({
+            url: "/test-device-name-header",
+        }, () => {});
+
+        expect(requests.length).to.equal(1);
+        expect(requests[0].requestHeaders).to.have.property("X-Miracl-Device-Name");
+        expect(requests[0].requestHeaders["X-Miracl-Device-Name"]).to.equal("deviceName");
+    });
+
+    it("should set device tag header", () => {
+        client.request({
+            url: "/test-device-tag-header",
+        }, () => {});
+
+        expect(requests.length).to.equal(1);
+        expect(requests[0].requestHeaders).to.have.property("X-Miracl-Device-Tag");
+        expect(requests[0].requestHeaders["X-Miracl-Device-Tag"]).to.equal("deviceTag");
     });
 });
