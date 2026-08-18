@@ -560,7 +560,7 @@ Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, cal
     let res;
 
     try {
-        res = this.crypto.calculatePass1(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC);
+        res = this.crypto.calculatePass1(identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC, identityData.curve);
     } catch (err) {
         return callback(err, null);
     }
@@ -596,7 +596,7 @@ Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callba
     let vHex;
 
     try {
-        vHex = this.crypto.calculatePass2(identityData.curve, X, yHex, SEC);
+        vHex = this.crypto.calculatePass2(X, yHex, SEC, identityData.curve);
     } catch (err) {
         return callback(err, null);
     }
@@ -703,7 +703,7 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         let res;
 
         try {
-            res = this.crypto.sign(identityData.curve, identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
+            res = this.crypto.sign(identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp, identityData.curve);
         } catch (err) {
             return callback(new Error("Signing fail", { cause: err }), null);
         }

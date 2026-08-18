@@ -90,7 +90,7 @@ Crypto.prototype.extractPin = function (mpinId, publicKey, PIN, clientSecretHex,
     return this._bytesToHex(clientSecretBytes);
 };
 
-Crypto.prototype.calculatePass1 = function (curve, mpinId, publicKey, token, userPin, X, SEC) {
+Crypto.prototype.calculatePass1 = function (mpinId, publicKey, token, userPin, X, SEC, curve) {
     const U = [], UT = [];
 
     const mpinIdHex = this._mpinIdWithPublicKey(mpinId, publicKey);
@@ -119,7 +119,7 @@ Crypto.prototype.calculatePass1 = function (curve, mpinId, publicKey, token, use
     };
 };
 
-Crypto.prototype.calculatePass2 = function (curve, X, yHex, SEC) {
+Crypto.prototype.calculatePass2 = function (X, yHex, SEC, curve) {
     const errorCode = this._crypto(curve).MPIN.CLIENT_2(X, this._hexToBytes(yHex), SEC);
     if (errorCode !== 0) {
         throw new Error("Could not calculate pass 2 request data: " + errorCode);
@@ -128,7 +128,7 @@ Crypto.prototype.calculatePass2 = function (curve, X, yHex, SEC) {
     return this._bytesToHex(SEC);
 };
 
-Crypto.prototype.sign = function (curve, mpinId, publicKey, token, userPin, message, timestamp) {
+Crypto.prototype.sign = function (mpinId, publicKey, token, userPin, message, timestamp, curve) {
     const SEC = [];
     const X = [];
     const Y1 = [];
