@@ -97,14 +97,14 @@ describe("Crypto calculatePass1", () => {
     it("should calculate pass 1", () => {
         sinon.stub(crypto._crypto().MPIN, "CLIENT_1").returns(0);
 
-        crypto.calculatePass1("BN254CX", "0f", "0f", "00", "1111", [], []);
+        crypto.calculatePass1("0f", "0f", "00", "1111", [], [], "BN254CX");
     });
 
     it("should throw an error when calculations fail", () => {
         sinon.stub(crypto._crypto().MPIN, "CLIENT_1").returns(-14);
 
         expect(() => {
-            crypto.calculatePass1("BN254CX", "0f", "0f", "00", "1111", [], []);
+            crypto.calculatePass1("0f", "0f", "00", "1111", [], [], "BN254CX");
         }).to.throw("Could not calculate pass 1 request data: -14");
     });
 
@@ -123,14 +123,14 @@ describe("Crypto calculatePass2", () => {
     it("should calculate pass 2", () => {
         sinon.stub(crypto._crypto().MPIN, "CLIENT_2").returns(0);
 
-        crypto.calculatePass2("BN254CX", "0f", "0f", "00", "1111", [], []);
+        crypto.calculatePass2("0f", "0f", "00", "BN254CX");
     });
 
     it("should throw an error when calculations fail", () => {
         sinon.stub(crypto._crypto().MPIN, "CLIENT_2").returns(-14);
 
         expect(() => {
-            crypto.calculatePass2("BN254CX", "0f", "0f", "00", "1111", [], []);
+            crypto.calculatePass2("0f", "0f", "00", "BN254CX");
         }).to.throw("Could not calculate pass 2 request data: -14");
     });
 
@@ -149,14 +149,14 @@ describe("Crypto sign", () => {
     it("should calculate signature", () => {
         sinon.stub(crypto._crypto().MPIN, "CLIENT").returns(0);
 
-        crypto.sign("BN254CX", "0f", "0f", "00", "1111", [], []);
+        crypto.sign("0f", "0f", "00", "1111", [], [], "BN254CX");
     });
 
     it("should throw an error when calculations fail", () => {
         sinon.stub(crypto._crypto().MPIN, "CLIENT").returns(-14);
 
         expect(() => {
-            crypto.sign("BN254CX", "0f", "0f", "00", "1111", [], []);
+            crypto.sign("0f", "0f", "00", "1111", [], [], "BN254CX");
         }).to.throw("Could not sign message: -14");
     });
 
