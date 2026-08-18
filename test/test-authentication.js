@@ -180,15 +180,15 @@ describe("Client _renewSecret", () => {
     });
 
     it("should renew the identity secret", (done) => {
-        const createMPinIDStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        const getSecretStub = sinon.stub(client, "_getSecret").yields(null, { secret: true });
+        const createMPinIDStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+        const getSharesStub = sinon.stub(client, "_getTAShares").yields(null, [{ share: 1 }, { share: 2 }]);
         const createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, { createIdentity: true });
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, (err, data) => {
             expect(err).to.be.null;
             expect(data).to.deep.equal({ createIdentity: true });
             expect(createMPinIDStub.calledOnce).to.be.true;
-            expect(getSecretStub.calledTwice).to.be.true;
+            expect(getSharesStub.calledOnce).to.be.true;
             expect(createIdentityStub.calledOnce).to.be.true;
             done();
         });
@@ -205,35 +205,21 @@ describe("Client _renewSecret", () => {
         });
     });
 
-    it("should call error callback on first _getSecret failure", (done) => {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        sinon.stub(client, "_getSecret").yields(new Error("Request error"));
+    it("should call error callback on _getTAShares failure", (done) => {
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+        sinon.stub(client, "_getTAShares").yields(new Error("Failed to get shares"));
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, (err, data) => {
             expect(err).to.exist;
-            expect(err.message).to.equal("Request error");
-            expect(data).to.be.null;
-            done();
-        });
-    });
-
-    it("should call error callback on second _getSecret failure", (done) => {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        const getSecretStub = sinon.stub(client, "_getSecret");
-        getSecretStub.onFirstCall().yields(null);
-        getSecretStub.onSecondCall().yields(new Error("Request error"));
-
-        client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, (err, data) => {
-            expect(err).to.exist;
-            expect(err.message).to.equal("Request error");
+            expect(err.message).to.equal("Failed to get shares");
             expect(data).to.be.null;
             done();
         });
     });
 
     it("should call error callback on createIdentity error", (done) => {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        sinon.stub(client, "_getSecret").yields(null, true);
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+        sinon.stub(client, "_getTAShares").yields(null, [{ share: 1 }, { share: 2 }]);
         sinon.stub(client, "_createIdentity").yields(new Error("Request error"), null);
 
         client._renewSecret("test@example.com", "1234", { token: "token", curve: "BN254CX" }, (err, data) => {
@@ -246,7 +232,7 @@ describe("Client _renewSecret", () => {
 
     afterEach(() => {
         client._createMPinID.restore && client._createMPinID.restore();
-        client._getSecret.restore && client._getSecret.restore();
+        client._getTAShares.restore && client._getTAShares.restore();
         client._createIdentity.restore && client._createIdentity.restore();
     });
 });

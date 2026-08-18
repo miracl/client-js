@@ -262,7 +262,7 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
         return callback(new Error("Empty activation token"), null);
     }
 
-    const keypair = this.crypto.generateKeypair("BN254CX");
+    const keypair = this.crypto.generateKeypair();
 
     this._createMPinID(userId, activationToken, keypair, (err, identityData) => {
         if (err) {
@@ -277,28 +277,22 @@ Client.prototype.register = function (userId, activationToken, pinCallback, call
             return callback(new Error("Project mismatch"), null);
         }
 
-        this._getSecret(identityData.secretUrls[0], (err, sec1Data) => {
+        let pinLength = identityData.pinLength;
+        if (!pinLength) {
+            pinLength = this.options.defaultPinLength;
+        }
+
+        this._getTAShares(identityData.designatedTAs, identityData.mpinId, keypair.publicKey, (err, secData) => {
             if (err) {
                 return callback(new Error("Registration fail", { cause: err }), null);
             }
 
-            this._getSecret(identityData.secretUrls[1], (err, sec2Data) => {
-                if (err) {
-                    return callback(new Error("Registration fail", { cause: err }), null);
-                }
+            // Should be called to continue the flow after a PIN was provided
+            const passPin = (userPin) => {
+                this._createIdentity(userId, userPin, identityData, secData[0], secData[1], keypair, callback);
+            };
 
-                let pinLength = identityData.pinLength;
-                if (!pinLength) {
-                    pinLength = this.options.defaultPinLength;
-                }
-
-                // Should be called to continue the flow after a PIN was provided
-                const passPin = (userPin) => {
-                    this._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
-                };
-
-                pinCallback(passPin, pinLength);
-            });
+            pinCallback(passPin, pinLength);
         });
     });
 };
@@ -312,7 +306,8 @@ Client.prototype._createMPinID = function (userId, activationToken, keypair, cal
             deviceName: this._getDeviceName(),
             deviceTag: this._getDeviceTag(),
             activationToken: activationToken,
-            publicKey: keypair.publicKey
+            publicKey: keypair.publicKey,
+            ver: 2
         }
     };
 
@@ -350,20 +345,45 @@ Client.prototype._getDeviceTag = function () {
     return newTag;
 };
 
-Client.prototype._getSecret = function (secretUrl, callback) {
+Client.prototype._getTAShares = function (designatedTas, mpinId, publicKey, callback) {
+    const results = [];
+    const errors = [];
+
+    let pending = designatedTas.length;
+
+    for (let i = 0; i < designatedTas.length; i++) {
+        this._getTAShare(designatedTas[i], mpinId, publicKey, (err, result) => {
+            if (err) {
+                errors.push(err);
+            } else {
+                results[i] = result;
+            }
+
+            if (--pending === 0) {
+                if (errors.length > 0) {
+                    return callback(new Error("Failed to get shares", { cause: errors }), null);
+                }
+
+                callback(null, results);
+            }
+        });
+    }
+};
+
+Client.prototype._getTAShare = function (designatedTa, mpinId, publicKey, callback) {
     const requestData = {
-        url: secretUrl
+        type: "POST",
+        url: designatedTa.url,
+        authorization: "Bearer " + designatedTa.token,
+        data: {
+            mpinId: mpinId,
+            pubKey: publicKey
+        }
     };
 
     this.http.request(requestData, (err, result) => {
         if (err) {
-            if (err.message === "The request was aborted") {
-                this.http.request(requestData, callback);
-            } else {
-                callback(err, result);
-            }
-
-            return;
+            return callback(err, null);
         }
 
         callback(null, result);
@@ -374,17 +394,19 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
     let csHex, token;
 
     try {
-        csHex = this.crypto.addShares(keypair.privateKey, sec1Data.dvsClientSecret, sec2Data.dvsClientSecret, identityData.curve);
-        token = this.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex, identityData.curve);
+        csHex = this.crypto.addShares(keypair.privateKey, sec1Data.share, sec2Data.share);
+        token = this.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex);
     } catch (err) {
         return callback(err, null);
     }
 
+    const dtas = btoa(JSON.stringify([sec1Data.node, sec2Data.node]));
+
     const userData = {
         mpinId: identityData.mpinId,
         token: token,
-        curve: identityData.curve,
-        dtas: identityData.dtas,
+        curve: "BN254CX",
+        dtas: dtas,
         publicKey: keypair.publicKey,
         pinLength: identityData.pinLength,
         projectId: identityData.projectId,
@@ -560,7 +582,7 @@ Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, cal
     let res;
 
     try {
-        res = this.crypto.calculatePass1(identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC, identityData.curve);
+        res = this.crypto.calculatePass1(identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC);
     } catch (err) {
         return callback(err, null);
     }
@@ -596,7 +618,7 @@ Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callba
     let vHex;
 
     try {
-        vHex = this.crypto.calculatePass2(X, yHex, SEC, identityData.curve);
+        vHex = this.crypto.calculatePass2(X, yHex, SEC);
     } catch (err) {
         return callback(err, null);
     }
@@ -637,25 +659,19 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
 };
 
 Client.prototype._renewSecret = function (userId, userPin, activationData, callback) {
-    const keypair = this.crypto.generateKeypair(activationData.curve);
+    const keypair = this.crypto.generateKeypair();
 
     this._createMPinID(userId, activationData.token, keypair, (err, identityData) => {
         if (err) {
             return callback(err, null);
         }
 
-        this._getSecret(identityData.secretUrls[0], (err, sec1Data) => {
+        this._getTAShares(identityData.designatedTAs, identityData.mpinId, keypair.publicKey, (err, secData) => {
             if (err) {
                 return callback(err, null);
             }
 
-            this._getSecret(identityData.secretUrls[1], (err, sec2Data) => {
-                if (err) {
-                    return callback(err, null);
-                }
-
-                this._createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback);
-            });
+            this._createIdentity(userId, userPin, identityData, secData[0], secData[1], keypair, callback);
         });
     });
 };
@@ -703,7 +719,7 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         let res;
 
         try {
-            res = this.crypto.sign(identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp, identityData.curve);
+            res = this.crypto.sign(identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
         } catch (err) {
             return callback(new Error("Signing fail", { cause: err }), null);
         }

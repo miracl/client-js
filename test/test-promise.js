@@ -81,7 +81,7 @@ describe("Promises", () => {
 
     it("should call register", () => {
         sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        sinon.stub(client, "_getSecret").yields(null);
+        sinon.stub(client, "_getTAShares").yields(null, [{ share: 1 }, { share: 2 }]);
         sinon.stub(client, "_createIdentity").yields(null, { state: "REGISTERED" });
 
         expect(client.register("test@example.com", "activationToken", (passPin) => {
@@ -89,7 +89,7 @@ describe("Promises", () => {
         })).to.eventually.deep.equal({ state: "REGISTERED" });
 
         client._createMPinID.restore();
-        client._getSecret.restore();
+        client._getTAShares.restore();
         client._createIdentity.restore();
     });
 
