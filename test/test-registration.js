@@ -137,18 +137,6 @@ describe("Client _createMPinID", () => {
         });
     });
 
-    it("should store started user", (done) => {
-        sinon.stub(client.http, "request").yields(null, { projectId: "projectID" });
-
-        client._createMPinID("test@example.com", null, { publicKey: "00" }, (err, data) => {
-            expect(err).to.be.null;
-            expect(data).to.deep.equal({ projectId: "projectID" });
-            expect(client.users.exists("test@example.com")).to.be.true;
-            expect(client.users.get("test@example.com", "state")).to.equal("STARTED");
-            done();
-        });
-    });
-
     afterEach(() => {
         client.http.request.restore && client.http.request.restore();
     });

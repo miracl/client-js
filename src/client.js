@@ -321,8 +321,6 @@ Client.prototype._createMPinID = function (userId, activationToken, keypair, cal
             return callback(err, result);
         }
 
-        this.users.write(userId, { state: this.users.states.start });
-
         callback(null, result);
     });
 };
