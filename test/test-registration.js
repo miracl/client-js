@@ -127,6 +127,17 @@ describe("Client _createMPinID", () => {
         client = new Client(testConfig());
     });
 
+    it("should return designated TAs", (done) => {
+        sinon.stub(client.http, "request").yields(null, { pinLength: 4, projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+
+        client._createMPinID("test@example.com", null, { publicKey: "00" }, (err, data) => {
+            expect(err).to.be.null;
+            expect(data).to.exist;
+            expect(data).to.deep.equal({ pinLength: 4, projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+            done();
+        });
+    });
+
     it("should return error, when register request fail", (done) => {
         sinon.stub(client.http, "request").yields(new Error("Request error"), { status: 400 });
 
@@ -158,63 +169,105 @@ describe("Client _getDeviceName", () => {
     });
 });
 
-describe("Client _getSecret", () => {
+describe("Client _getTAShares", () => {
     let client;
 
     before(() => {
         client = new Client(testConfig());
     });
 
+    it("should return shares", (done) => {
+        const getShareStub = sinon.stub(client, "_getTAShare");
+        getShareStub.onFirstCall().yields(null, { share: 1 });
+        getShareStub.onSecondCall().yields(null, { share: 2 });
+
+        client._getTAShares([{ url: "", token: "" }, { url: "", token: "" }], "mpinId", "00", (err, data) => {
+            expect(err).to.be.null;
+            expect(data).to.exist;
+            expect(data.length).to.equal(2);
+            expect(data[0]).to.deep.equal({ share: 1});
+            expect(data[1]).to.deep.equal({ share: 2});
+            done();
+        });
+    });
+
+    it("should fire callback with error on error with first _getTAShare", (done) => {
+        const reqErr = new Error("Request error");
+
+        sinon.stub(client, "_getTAShare").yields(reqErr);
+
+        client._getTAShares([{ url: "", token: "" }, { url: "", token: "" }], "mpinId", "00", (err, data) => {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Failed to get shares");
+            expect(err.cause).to.contain(reqErr);
+            expect(data).to.be.null;
+            done();
+        });
+    });
+
+    it("should fire callback with error on error with second _getTAShare", (done) => {
+        const reqErr = new Error("Request error");
+
+        const getShareStub = sinon.stub(client, "_getTAShare");
+        getShareStub.onFirstCall().yields(null, { share: 1 });
+        getShareStub.onSecondCall().yields(reqErr);
+
+        client._getTAShares([{ url: "", token: "" }, { url: "", token: "" }], "mpinId", "00", (err, data) => {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Failed to get shares");
+            expect(err.cause).to.contain(reqErr);
+            expect(data).to.be.null;
+            done();
+        });
+    });
+
+    it("should fire callback with aggregated errors from _getTAShare", (done) => {
+        const reqErr1 = new Error("Request error");
+        const reqErr2 = new Error("Request error");
+
+        const getShareStub = sinon.stub(client, "_getTAShare");
+        getShareStub.onFirstCall().yields(reqErr1);
+        getShareStub.onSecondCall().yields(reqErr2);
+
+        client._getTAShares([{ url: "", token: "" }, { url: "", token: "" }], "mpinId", "00", (err, data) => {
+            expect(err).to.exist;
+            expect(err.message).to.equal("Failed to get shares");
+            expect(err.cause).to.contain(reqErr1);
+            expect(err.cause).to.contain(reqErr2);
+            expect(data).to.be.null;
+            done();
+        });
+    });
+
+    afterEach(() => {
+        client._getTAShare.restore && client._getTAShare.restore();
+    });
+});
+
+describe("Client _getTAShare", () => {
+    let client;
+
+    before(() => {
+        client = new Client(testConfig());
+    });
+
+    it("should return share", (done) => {
+        sinon.stub(client.http, "request").yields(null, { share: 1 });
+
+        client._getTAShare("secretUrl", "mpinId", "00", (err, data) => {
+            expect(err).to.be.null;
+            expect(data).to.exist;
+            expect(data).to.deep.equal({ share: 1});
+            done();
+        });
+    });
+
     it("should return error, when signature request fails", (done) => {
         sinon.stub(client.http, "request").yields(new Error("Request failed"), null);
 
-        client._getSecret("secretUrl", (err, data) => {
+        client._getTAShare("secretUrl", "mpinId", "00", (err, data) => {
             expect(err).to.exist;
             expect(err.message).to.equal("Request failed");
-            expect(data).to.be.null;
-            done();
-        });
-    });
-
-    it("should retry if the request was aborted", (done) => {
-        const requestStub = sinon.stub(client.http, "request");
-
-        requestStub.onFirstCall().yields(new Error("The request was aborted"), null);
-        requestStub.onSecondCall().yields(null, { secret: true });
-
-        client._getSecret("secretUrl", (err, data) => {
-            expect(requestStub.calledTwice).to.be.true;
-            expect(err).to.be.null;
-            expect(data).to.deep.equal({ secret: true });
-            done();
-        });
-    });
-
-    it("should return error if the retried request fails", (done) => {
-        const requestStub = sinon.stub(client.http, "request");
-
-        requestStub.onFirstCall().yields(new Error("The request was aborted"), null);
-        requestStub.onSecondCall().yields(new Error("Request failed"), null);
-
-        client._getSecret("secretUrl", (err, data) => {
-            expect(requestStub.calledTwice).to.be.true;
-            expect(err).to.exist;
-            expect(err.message).to.equal("Request failed");
-            expect(data).to.be.null;
-            done();
-        });
-    });
-
-    it("should return error if the retried request is aborted", (done) => {
-        const requestStub = sinon.stub(client.http, "request");
-
-        requestStub.onFirstCall().yields(new Error("The request was aborted"), null);
-        requestStub.onSecondCall().yields(new Error("The request was aborted"), null);
-
-        client._getSecret("secretUrl", (err, data) => {
-            expect(requestStub.calledTwice).to.be.true;
-            expect(err).to.exist;
-            expect(err.message).to.equal("The request was aborted");
             expect(data).to.be.null;
             done();
         });
@@ -241,8 +294,8 @@ describe("Client _createIdentity", () => {
         sinon.stub(client.crypto, "extractPin");
 
         const keypair = { privateKey: "privateKey" };
-        const share1 = { dvsClientSecret: "clientSecretValue1" };
-        const share2 = { dvsClientSecret: "clientSecretValue2" };
+        const share1 = { share: "clientSecretValue1", node: "node1" };
+        const share2 = { share: "clientSecretValue2", node: "node2" };
 
         client._createIdentity("test@example.com", "1234", {}, share1, share2, keypair, (err, data) => {
             expect(err).to.be.null;
@@ -251,6 +304,23 @@ describe("Client _createIdentity", () => {
             expect(addSharesStub.firstCall.args[0]).to.equal("privateKey");
             expect(addSharesStub.firstCall.args[1]).to.equal("clientSecretValue1");
             expect(addSharesStub.firstCall.args[2]).to.equal("clientSecretValue2");
+            done();
+        });
+    });
+
+    it("should pack the TA node list", (done) => {
+        sinon.stub(client.crypto, "addShares");
+        sinon.stub(client.crypto, "extractPin");
+
+        const keypair = { privateKey: "privateKey" };
+        const share1 = { share: "clientSecretValue1", node: "node1" };
+        const share2 = { share: "clientSecretValue2", node: "node2" };
+
+        client._createIdentity("test@example.com", "1234", {}, share1, share2, keypair, (err, data) => {
+            expect(err).to.be.null;
+            expect(data).to.exist;
+            expect(data.dtas).to.exist;
+            expect(data.dtas).to.equal(btoa(JSON.stringify(["node1", "node2"])));
             done();
         });
     });
@@ -329,8 +399,8 @@ describe("Client register", () => {
     });
 
     it("should go through the registration flow", (done) => {
-        const registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        const getSecretStub = sinon.stub(client, "_getSecret").yields(null);
+        const registrationStub = sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+        const getSharesStub = sinon.stub(client, "_getTAShares").yields(null, [{ share: 1 }, { share: 2 }]);
         const createIdentityStub = sinon.stub(client, "_createIdentity").yields(null, { identityData: true });
 
         client.register("test@example.com", "activationToken", (passPin) => {
@@ -339,30 +409,15 @@ describe("Client register", () => {
             expect(err).to.be.null;
             expect(data).to.deep.equal({ identityData: true });
             expect(registrationStub.calledOnce).to.be.true;
-            expect(getSecretStub.calledTwice).to.be.true;
+            expect(getSharesStub.calledOnce).to.be.true;
             expect(createIdentityStub.calledOnce).to.be.true;
             done();
         });
     });
 
-    it("should fire callback with error on error with first _getSecret", (done) => {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        sinon.stub(client, "_getSecret").yields(new Error("Request error"));
-
-        client.register("test@example.com", "activationToken", (passPin) => {
-            passPin("1234");
-        }, (err, data) => {
-            expect(err).to.exist;
-            expect(data).to.be.null;
-            done();
-        });
-    });
-
-    it("should fire callback with error on error with second _getSecret", (done) => {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        const getSecretStub = sinon.stub(client, "_getSecret");
-        getSecretStub.onFirstCall().yields(null);
-        getSecretStub.onSecondCall().yields(new Error("Request error"));
+    it("should fire callback with error on error with _getTAShares", (done) => {
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+        sinon.stub(client, "_getTAShares").yields(new Error("Failed to get shares"));
 
         client.register("test@example.com", "activationToken", (passPin) => {
             passPin("1234");
@@ -386,8 +441,8 @@ describe("Client register", () => {
     });
 
     it("should fire successful callback, when _createMPinID passed successful", (done) => {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        sinon.stub(client, "_getSecret").yields(null);
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 4, projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+        sinon.stub(client, "_getTAShares").yields(null, [{ share: 1 }, { share: 2 }]);
         sinon.stub(client, "_createIdentity").yields(null, {});
 
         client.register("test@example.com", "activationToken", (passPin) => {
@@ -427,8 +482,8 @@ describe("Client register", () => {
     });
 
     it("should pass provided PIN length to the PIN callback", (done) => {
-        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 5, projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        sinon.stub(client, "_getSecret").yields(null);
+        sinon.stub(client, "_createMPinID").yields(null, { pinLength: 5, projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+        sinon.stub(client, "_getTAShares").yields(null, [{ share: 1 }, { share: 2 }]);
         sinon.stub(client, "_createIdentity").yields(null, { identity: true });
 
         client.register("test@example.com", "activationToken", (passPin, pinLength) => {
@@ -442,8 +497,8 @@ describe("Client register", () => {
     });
 
     it("should pass default PIN length to the PIN callback", (done) => {
-        sinon.stub(client, "_createMPinID").yields(null, { projectId: "projectID", secretUrls: ["http://example.com/secret1", "http://example.com/secret2"] });
-        sinon.stub(client, "_getSecret").yields(null);
+        sinon.stub(client, "_createMPinID").yields(null, { projectId: "projectID", designatedTAs: [{url: "http://example.com/secret1", token: ""}, {url: "http://example.com/secret2", token: ""}] });
+        sinon.stub(client, "_getTAShares").yields(null, [{ share: 1 }, { share: 2 }]);
         sinon.stub(client, "_createIdentity").yields(null, { identity: true });
 
         client.register("test@example.com", "activationToken", (passPin, pinLength) => {
@@ -458,7 +513,7 @@ describe("Client register", () => {
 
     afterEach(() => {
         client._createMPinID.restore && client._createMPinID.restore();
-        client._getSecret.restore && client._getSecret.restore();
+        client._getTAShares.restore && client._getTAShares.restore();
         client._createIdentity.restore && client._createIdentity.restore();
         client.users.remove("test@example.com");
     });
