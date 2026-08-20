@@ -20,8 +20,7 @@
     "test": "mocha",
     "cover": "c8 -r text -r html npm run test",
     "lint": "eslint .",
-    "watch": "nodemon --exec 'npm run build' --watch src --watch lib --ext js",
-    "docs": "documentation build src/* -f md -o reference.md --markdown-toc false --shallow --config documentation.yml"
+    "watch": "nodemon --exec 'npm run build' --watch src --watch lib --ext js"
   },
   "mocha": {
     "recursive": true,
@@ -47,7 +46,6 @@
     "c8": "^9.1.0",
     "chai": "^6.2.1",
     "chai-as-promised": "^8.0.2",
-    "documentation": "^14.0.3",
     "eslint": "^8.57.0",
     "mocha": "^11.7.6",
     "nodemon": "^3.1.0",
