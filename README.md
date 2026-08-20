@@ -58,7 +58,6 @@ const mcl = new MIRACLTrust({
   seed: "hexEncodedRandomNumberGeneratorSeed", // required
   userStorage: localStorage, // required
   deviceName: "Name of Device",
-  cors: true,
 });
 ```
 
