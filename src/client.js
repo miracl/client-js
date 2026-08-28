@@ -70,6 +70,8 @@ Client.prototype.options = {};
 Client.prototype.session = {};
 
 /**
+ * @deprecated Operation is now implicit; safe to remove
+ *
  * Set the access/session ID
  *
  * @param {string} accessId
@@ -428,7 +430,7 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticate = function (userId, userPin, callback) {
-    this._authentication(userId, userPin, ["jwt"], callback);
+    this._authentication(userId, userPin, ["jwt"], "", callback);
 };
 
 /**
@@ -440,8 +442,9 @@ Client.prototype.authenticate = function (userId, userPin, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticateWithQRCode = function (userId, qrCode, userPin, callback) {
-    this.setAccessId(qrCode.split("#").pop());
-    this._authentication(userId, userPin, ["oidc"], callback);
+    const accessId = qrCode.split("#").pop();
+
+    this._authentication(userId, userPin, ["oidc"], accessId, callback);
 };
 
 /**
@@ -453,8 +456,9 @@ Client.prototype.authenticateWithQRCode = function (userId, qrCode, userPin, cal
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticateWithAppLink = function (userId, appLink, userPin, callback) {
-    this.setAccessId(appLink.split("#").pop());
-    this._authentication(userId, userPin, ["oidc"], callback);
+    const accessId = appLink.split("#").pop();
+
+    this._authentication(userId, userPin, ["oidc"], accessId, callback);
 };
 
 /**
@@ -469,8 +473,9 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
         return callback(new Error("Invalid push notification payload"), null);
     }
 
-    this.setAccessId(payload["qrURL"].split("#").pop());
-    this._authentication(payload["userID"], userPin, ["oidc"], callback);
+    const accessId = payload["qrURL"].split("#").pop();
+
+    this._authentication(payload["userID"], userPin, ["oidc"], accessId, callback);
 };
 
 /**
@@ -481,7 +486,7 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
  * @param {function(Error, Object)} callback
  */
 Client.prototype.generateQuickCode = function (userId, userPin, callback) {
-    this._authentication(userId, userPin, ["reg-code"], (err, result) => {
+    this._authentication(userId, userPin, ["reg-code"], "", (err, result) => {
         if (err) {
             return callback(err, null);
         }
@@ -510,7 +515,7 @@ Client.prototype.generateQuickCode = function (userId, userPin, callback) {
     });
 };
 
-Client.prototype._authentication = function (userId, userPin, scope, callback) {
+Client.prototype._authentication = function (userId, userPin, scope, accessId, callback) {
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
@@ -533,12 +538,12 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
             return callback(new Error("Authentication fail", { cause: err }), null);
         }
 
-        this._getPass2(identityData, scope, pass1Data.y, X, SEC, (err, pass2Data) => {
+        this._getPass2(identityData, scope, accessId, pass1Data.y, X, SEC, (err, pass2Data) => {
             if (err) {
                 return callback(new Error("Authentication fail", { cause: err }), null);
             }
 
-            this._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, (err, result) => {
+            this._finishAuthentication(userId, userPin, scope, accessId, pass2Data.authOTT, (err, result) => {
                 if (err) {
                     if (result && result.error === "UNSUCCESSFUL_AUTHENTICATION") {
                         return callback(new Error("Unsuccessful authentication", { cause: err }), null);
@@ -614,7 +619,7 @@ Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, cal
  * }
  * @private
  */
-Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callback) {
+Client.prototype._getPass2 = function (identityData, scope, accessId, yHex, X, SEC, callback) {
     let vHex;
 
     try {
@@ -625,14 +630,14 @@ Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callba
 
     const requestData = {
         mpin_id: identityData.mpinId, // eslint-disable-line camelcase
-        WID: this.session.accessId,
+        WID: accessId,
         V: vHex
     };
 
     this.http.request({ url: this.options.projectUrl + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
 };
 
-Client.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
+Client.prototype._finishAuthentication = function (userId, userPin, scope, accessId, authOTT, callback) {
     const requestData = {
         "authOTT": authOTT,
         "wam": "dvs"
@@ -649,7 +654,7 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
                     return callback(err, null);
                 }
 
-                this._authentication(userId, userPin, scope, callback);
+                this._authentication(userId, userPin, scope, accessId, callback);
             });
         } else {
             this.users.updateLastUsed(userId);
@@ -704,7 +709,7 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         return callback(new Error("Empty public key"), null);
     }
 
-    this._authentication(userId, userPin, ["dvs-auth"], (err) => {
+    this._authentication(userId, userPin, ["dvs-auth"], "", (err) => {
         if (err) {
             switch (err.message) {
                 case "Unsuccessful authentication":
