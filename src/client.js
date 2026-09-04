@@ -11,12 +11,6 @@ import Users from "./users.js";
  * @param {string} options.seed - Hex-encoded random number generator seed
  * @param {string} options.deviceName - Name of the current device
  * @param {Object} options.userStorage - Storage for saving user data
- * @param {Object} options.oidc - Parameters for initializing an OIDC auth session
- * @param {string} options.oidc.client_id - OIDC Client ID
- * @param {string} options.oidc.redirect_uri - OIDC redirect URI
- * @param {string} options.oidc.response_type - OIDC response type. Only 'code' is supported
- * @param {string} options.oidc.scope - OIDC scope. Must include 'openid'
- * @param {string} options.oidc.state - OIDC state
  * @param {bool}   options.cors - Enable CORS requests if set to 'true'
  * @param {number} options.requestTimeout - Time before an HTTP request times out in milliseconds
  * @param {string} options.applicationInfo - Set additional information that will be sent via X-MIRACL-CLIENT HTTP header
@@ -48,10 +42,6 @@ export default function Client(options) {
 
     if (!options.requestTimeout || isNaN(options.requestTimeout)) {
         options.requestTimeout = 4000;
-    }
-
-    if (!options.oidc) {
-        options.oidc = {};
     }
 
     // Set the client name using the current lib version and provided application info
@@ -188,16 +178,10 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
         type: "POST",
         data: {
             userId: userId,
-            mpinId: this.users.get(userId, "mpinId"),
             projectId: this.options.projectId,
             accessId: this.session.accessId,
             deviceName: this._getDeviceName(),
-            deviceTag: this._getDeviceTag(),
-            clientId: this.options.oidc["client_id"],
-            redirectURI: this.options.oidc["redirect_uri"],
-            scope: this.options.oidc["scope"] ? this.options.oidc["scope"].split(" ") : [],
-            state: this.options.oidc["state"],
-            nonce: this.options.oidc["nonce"]
+            deviceTag: this._getDeviceTag()
         }
     };
 
