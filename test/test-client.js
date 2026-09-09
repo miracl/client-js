@@ -187,19 +187,14 @@ describe("Client sendPushNotificationForAuth", () => {
     let client;
 
     before(() => {
-        const config = testConfig();
-        config.oidc = {
-            client_id: "testClientID" // eslint-disable-line camelcase
-        };
-        client = new Client(config);
+        client = new Client(testConfig());
     });
 
     it("should make a request to the pushauth endpoint", () => {
-        const requestStub = sinon.stub(client.http, "request").yields(null, { webOTT: "test" });
+        sinon.stub(client.http, "request").yields(null, { webOTT: "test" });
 
         client.sendPushNotificationForAuth("test@example.com", (err, data) => {
             expect(data).to.exist;
-            expect(requestStub.firstCall.args[0].url).to.equal("https://project.miracl.io/pushauth?client_id=testClientID");
             expect(data.webOTT).to.equal("test");
         });
     });

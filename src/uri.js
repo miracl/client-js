@@ -1,15 +1,3 @@
-export function uriEncode (obj) {
-    const str = [];
-
-    for (const p in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, p)) {
-            str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
-        }
-    }
-
-    return str.join("&");
-}
-
 export function parseUriParams (uri) {
     const query = uri.split("?").pop();
     const queryArr = query.split("&");

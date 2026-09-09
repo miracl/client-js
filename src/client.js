@@ -1,6 +1,6 @@
-import { parseUriParams, uriEncode } from "./uri.js";
 import Crypto from "./crypto.js";
 import HTTP from "./http.js";
+import { parseUriParams } from "./uri.js";
 import Users from "./users.js";
 
 /**
@@ -149,9 +149,10 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
     }
 
     const reqData = {
-        url: this.options.projectUrl + "/pushauth?" + uriEncode(this.options.oidc),
+        url: this.options.projectUrl + "/pushauth",
         type: "POST",
         data: {
+            projectId: this.options.projectId,
             prerollId: userId
         }
     };
