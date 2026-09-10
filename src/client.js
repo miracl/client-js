@@ -1,3 +1,4 @@
+import { parseUriParams, uriEncode } from "./uri.js";
 import Crypto from "./crypto.js";
 import HTTP from "./http.js";
 import Users from "./users.js";
@@ -142,7 +143,7 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
     }
 
     const reqData = {
-        url: this.options.projectUrl + "/pushauth?" + this._urlEncode(this.options.oidc),
+        url: this.options.projectUrl + "/pushauth?" + uriEncode(this.options.oidc),
         type: "POST",
         data: {
             prerollId: userId
@@ -213,7 +214,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.getActivationToken = function (verificationURI, callback) {
-    const params = this._parseUriParams(verificationURI);
+    const params = parseUriParams(verificationURI);
 
     if (!params["user_id"]) {
         return callback(new Error("Empty user ID"), null);
@@ -740,34 +741,4 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
 
         callback(null, signatureData);
     });
-};
-
-Client.prototype._urlEncode = function (obj) {
-    const str = [];
-
-    for (const p in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, p)) {
-            str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
-        }
-    }
-
-    return str.join("&");
-};
-
-Client.prototype._parseUriParams = function (uri) {
-    const query = uri.split("?").pop();
-    const queryArr = query.split("&");
-
-    const params = {};
-
-    if (!query.length || !queryArr.length) {
-        return params;
-    }
-
-    for (let i = 0; i < queryArr.length; i++) {
-        const pairArr = queryArr[i].split("=");
-        params[pairArr[0]] = decodeURIComponent(pairArr[1].replace(/\+/g, " "));
-    }
-
-    return params;
 };
