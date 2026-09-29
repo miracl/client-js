@@ -82,6 +82,8 @@ Client.prototype.setAccessId = function (accessId) {
 };
 
 /**
+ * @deprecated Use `createCrossDeviceSession` instead
+ *
  * Make a request to start a new session and fetch the access/session ID
  *
  * @param {string} userId - The unique identifier of the user that will be authenticating (not required)
@@ -109,6 +111,8 @@ Client.prototype.fetchAccessId = function (userId, callback) {
 };
 
 /**
+ * @deprecated Use `checkCrossDeviceSessionStatus` instead
+ *
  * Get session status
  *
  * @param {function(Error, Object)} callback
@@ -132,6 +136,8 @@ Client.prototype.fetchStatus = function (callback) {
 };
 
 /**
+ * @deprecated Use `createCrossDeviceSession` and `sendPushNotification` instead
+ *
  * Start the push authentication flow
  *
  * @param {string} userId - The unique identifier of the user that will be authenticating
@@ -740,5 +746,134 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         };
 
         callback(null, signatureData);
+    });
+};
+
+/**
+ * @typedef {Object} CrossDeviceSession
+ * @property {string} projectId
+ * @property {string} token
+ * @property {string} sessionId
+ * @property {string} url
+ * @property {string} userId
+ * @property {string} description
+ * @property {string} signingHash
+ * @property {number} expireTime
+ */
+
+/**
+ * Create a cross-device session for authentication or signing
+ *
+ * @param {string} [userId] - The unique identifier of the user
+ * @param {string} [description] - Description of the operation
+ * @param {string} [signingHash] - Hash of the message to be signed; only required for signing
+ * @param {function(Error, CrossDeviceSession): void} callback
+ */
+Client.prototype.createCrossDeviceSession = function (userId, description, signingHash, callback) {
+    if (signingHash && !userId) {
+        return callback(new Error("Session for signing must be created with user ID"), null);
+    }
+
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/session",
+        type: "POST",
+        data: {
+            projectId: this.options.projectId,
+            userId: userId,
+            hash: signingHash,
+            description: description
+        }
+    };
+
+    this.http.request(reqData, (error, res) => {
+        if (error) {
+            return callback(error, null);
+        }
+
+        callback(null, {
+            projectId: this.options.projectId,
+            token: res.webOTT,
+            sessionId: res.accessId,
+            url: res.qrURL,
+            userId: userId || null,
+            description: description || null,
+            signingHash: signingHash || null,
+            expireTime: res.expireTime
+        });
+    });
+};
+
+/**
+ * @typedef {Object} CrossDeviceSessionStatus
+ * @property {string} status
+ * @property {string} userId
+ * @property {string} jwt
+ * @property {string} signature
+ */
+
+/**
+ * Check the status of a given cross-device session
+ *
+ * @param {CrossDeviceSession} crossDeviceSession
+ * @param {function(Error, CrossDeviceSessionStatus): void} callback
+ */
+Client.prototype.checkCrossDeviceSessionStatus = function (crossDeviceSession, callback) {
+    if (!crossDeviceSession.token) {
+        return callback(new Error("Invalid cross-device session"), null);
+    }
+
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/access",
+        type: "POST",
+        data: {
+            webOTT: crossDeviceSession.token
+        }
+    };
+
+    this.http.request(reqData, (error, data) => {
+        if (error) {
+            return callback(error, null);
+        }
+
+        callback(null, {
+            status: data.status,
+            userId: data.userId || null,
+            jwt: data.jwt || null,
+            signature: data.signature || null
+        });
+    });
+};
+
+/**
+ * Send push notification for an existing cross-device session
+ *
+ * @param {CrossDeviceSession} crossDeviceSession
+ * @param (function(Error, any): void) callback
+ */
+Client.prototype.sendPushNotification = function (crossDeviceSession, callback) {
+    if (!crossDeviceSession.userId) {
+        return callback(new Error("Cross device session created without user ID"), null);
+    }
+
+    const reqData = {
+        url: this.options.projectUrl + "/push",
+        type: "POST",
+        data: {
+            projectId: this.options.projectId,
+            userId: crossDeviceSession.userId,
+            accessId: crossDeviceSession.sessionId
+        }
+    };
+
+    this.http.request(reqData, (err, result) => {
+        if (err) {
+            if (result && result.error === "NO_PUSH_TOKEN") {
+                return callback(new Error("No push token", { cause: err }), null);
+            }
+
+            return callback(err, null);
+        }
+
+        callback(null, result);
     });
 };

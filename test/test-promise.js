@@ -216,6 +216,64 @@ describe("Promises", () => {
         await expect(client.sign("test@example.com", "1234", "0f", "timestamp")).to.be.rejectedWith("Signing fail");
     });
 
+    it("should call createCrossDeviceSession", async () => {
+        sinon.stub(client.http, "request").yields(null, {
+            webOTT: "token",
+            qrURL: "https://example.com#accessID",
+            accessId: "accessID",
+            expireTime: 1790752588
+        });
+
+        await expect(client.createCrossDeviceSession("test@example.com", "description")).to.eventually.deep.equal({
+            projectId: "projectID",
+            userId: "test@example.com",
+            token: "token",
+            url: "https://example.com#accessID",
+            sessionId: "accessID",
+            description: "description",
+            signingHash: null,
+            expireTime: 1790752588
+        });
+    });
+
+    it("should fail on createCrossDeviceSession error", async () => {
+        const err = new Error("Request error");
+        sinon.stub(client.http, "request").yields(err, null);
+
+        await expect(client.createCrossDeviceSession("test@example.com")).to.be.rejectedWith(err);
+    });
+
+    it("should call checkCrossDeviceSessionStatus", async () => {
+        sinon.stub(client.http, "request").yields(null, { status: "new" });
+
+        await expect(client.checkCrossDeviceSessionStatus({ token: "token" })).to.eventually.deep.equal({
+            status: "new",
+            userId: null,
+            jwt: null,
+            signature: null
+        });
+    });
+
+    it("should fail on checkCrossDeviceSessionStatus error", async () => {
+        const err = new Error("Request error");
+        sinon.stub(client.http, "request").yields(err, null);
+
+        await expect(client.checkCrossDeviceSessionStatus({ token: "token" })).to.be.rejectedWith(err);
+    });
+
+    it("should call sendPushNotification", async () => {
+        sinon.stub(client.http, "request").yields(null, { backoff: 1 });
+
+        await expect(client.sendPushNotification({ userId: "test@example.com", sessionId: "session" })).to.eventually.deep.equal({ backoff: 1 });
+    });
+
+    it("should fail on sendPushNotification error", async () => {
+        const err = new Error("Request error");
+        sinon.stub(client.http, "request").yields(err, null);
+
+        await expect(client.sendPushNotification({ userId: "test@example.com", sessionId: "session" })).to.be.rejectedWith(err);
+    });
+
     afterEach(() => {
         client.http.request.restore && client.http.request.restore();
         client._authentication.restore && client._authentication.restore();
