@@ -1,14 +1,23 @@
 import Client from "./client.js";
 
 export default class PromiseInterface extends Client {
+    /**
+     * @deprecated Use `createCrossDeviceSession` instead
+     */
     fetchAccessId(userId) {
         return promisify(super.fetchAccessId.bind(this), userId);
     }
 
+    /**
+     * @deprecated Use `checkCrossDeviceSessionStatus` instead
+     */
     fetchStatus() {
         return promisify(super.fetchStatus.bind(this));
     }
 
+    /**
+     * @deprecated Use `createCrossDeviceSession` and `sendPushNotification` instead
+     */
     sendPushNotificationForAuth(userId) {
         return promisify(super.sendPushNotificationForAuth.bind(this), userId);
     }
@@ -47,6 +56,18 @@ export default class PromiseInterface extends Client {
 
     sign(userId, userPin, message, timestamp) {
         return promisify(super.sign.bind(this), userId, userPin, message, timestamp);
+    }
+
+    createCrossDeviceSession(userId, description, signingHash) {
+        return promisify(super.createCrossDeviceSession.bind(this), userId, description, signingHash);
+    }
+
+    checkCrossDeviceSessionStatus(crossDeviceSession) {
+        return promisify(super.checkCrossDeviceSessionStatus.bind(this), crossDeviceSession);
+    }
+
+    sendPushNotification(crossDeviceSession) {
+        return promisify(super.sendPushNotification.bind(this), crossDeviceSession);
     }
 }
 
