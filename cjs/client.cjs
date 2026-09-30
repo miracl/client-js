@@ -1,5 +1,35 @@
 'use strict';
 
+function uriEncode (obj) {
+    const str = [];
+
+    for (const p in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, p)) {
+            str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+        }
+    }
+
+    return str.join("&");
+}
+
+function parseUriParams (uri) {
+    const query = uri.split("?").pop();
+    const queryArr = query.split("&");
+
+    const params = {};
+
+    if (!query.length || !queryArr.length) {
+        return params;
+    }
+
+    for (let i = 0; i < queryArr.length; i++) {
+        const pairArr = queryArr[i].split("=");
+        params[pairArr[0]] = decodeURIComponent(pairArr[1].replace(/\+/g, " "));
+    }
+
+    return params;
+}
+
 /*
     Licensed to the Apache Software Foundation (ASF) under one
     or more contributor license agreements.  See the NOTICE file
@@ -23908,7 +23938,7 @@ function Client(options) {
     }
 
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.11.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.12.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     this.options = options;
 
@@ -23924,6 +23954,8 @@ Client.prototype.options = {};
 Client.prototype.session = {};
 
 /**
+ * @deprecated Operation is now implicit; safe to remove
+ *
  * Set the access/session ID
  *
  * @param {string} accessId
@@ -23933,6 +23965,8 @@ Client.prototype.setAccessId = function (accessId) {
 };
 
 /**
+ * @deprecated Use `createCrossDeviceSession` instead
+ *
  * Make a request to start a new session and fetch the access/session ID
  *
  * @param {string} userId - The unique identifier of the user that will be authenticating (not required)
@@ -23960,6 +23994,8 @@ Client.prototype.fetchAccessId = function (userId, callback) {
 };
 
 /**
+ * @deprecated Use `checkCrossDeviceSessionStatus` instead
+ *
  * Get session status
  *
  * @param {function(Error, Object)} callback
@@ -23983,6 +24019,8 @@ Client.prototype.fetchStatus = function (callback) {
 };
 
 /**
+ * @deprecated Use `createCrossDeviceSession` and `sendPushNotification` instead
+ *
  * Start the push authentication flow
  *
  * @param {string} userId - The unique identifier of the user that will be authenticating
@@ -23994,7 +24032,7 @@ Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
     }
 
     const reqData = {
-        url: this.options.projectUrl + "/pushauth?" + this._urlEncode(this.options.oidc),
+        url: this.options.projectUrl + "/pushauth?" + uriEncode(this.options.oidc),
         type: "POST",
         data: {
             prerollId: userId
@@ -24065,7 +24103,7 @@ Client.prototype.sendVerificationEmail = function (userId, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.getActivationToken = function (verificationURI, callback) {
-    const params = this._parseUriParams(verificationURI);
+    const params = parseUriParams(verificationURI);
 
     if (!params["user_id"]) {
         return callback(new Error("Empty user ID"), null);
@@ -24282,7 +24320,7 @@ Client.prototype._createIdentity = function (userId, userPin, identityData, sec1
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticate = function (userId, userPin, callback) {
-    this._authentication(userId, userPin, ["jwt"], callback);
+    this._authentication(userId, userPin, ["jwt"], "", callback);
 };
 
 /**
@@ -24294,8 +24332,9 @@ Client.prototype.authenticate = function (userId, userPin, callback) {
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticateWithQRCode = function (userId, qrCode, userPin, callback) {
-    this.setAccessId(qrCode.split("#").pop());
-    this._authentication(userId, userPin, ["oidc"], callback);
+    const accessId = qrCode.split("#").pop();
+
+    this._authentication(userId, userPin, ["oidc"], accessId, callback);
 };
 
 /**
@@ -24307,8 +24346,9 @@ Client.prototype.authenticateWithQRCode = function (userId, qrCode, userPin, cal
  * @param {function(Error, Object)} callback
  */
 Client.prototype.authenticateWithAppLink = function (userId, appLink, userPin, callback) {
-    this.setAccessId(appLink.split("#").pop());
-    this._authentication(userId, userPin, ["oidc"], callback);
+    const accessId = appLink.split("#").pop();
+
+    this._authentication(userId, userPin, ["oidc"], accessId, callback);
 };
 
 /**
@@ -24323,8 +24363,9 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
         return callback(new Error("Invalid push notification payload"), null);
     }
 
-    this.setAccessId(payload["qrURL"].split("#").pop());
-    this._authentication(payload["userID"], userPin, ["oidc"], callback);
+    const accessId = payload["qrURL"].split("#").pop();
+
+    this._authentication(payload["userID"], userPin, ["oidc"], accessId, callback);
 };
 
 /**
@@ -24335,7 +24376,7 @@ Client.prototype.authenticateWithNotificationPayload = function (payload, userPi
  * @param {function(Error, Object)} callback
  */
 Client.prototype.generateQuickCode = function (userId, userPin, callback) {
-    this._authentication(userId, userPin, ["reg-code"], (err, result) => {
+    this._authentication(userId, userPin, ["reg-code"], "", (err, result) => {
         if (err) {
             return callback(err, null);
         }
@@ -24364,7 +24405,7 @@ Client.prototype.generateQuickCode = function (userId, userPin, callback) {
     });
 };
 
-Client.prototype._authentication = function (userId, userPin, scope, callback) {
+Client.prototype._authentication = function (userId, userPin, scope, accessId, callback) {
     if (!userId) {
         return callback(new Error("Empty user ID"), null);
     }
@@ -24387,12 +24428,12 @@ Client.prototype._authentication = function (userId, userPin, scope, callback) {
             return callback(new Error("Authentication fail", { cause: err }), null);
         }
 
-        this._getPass2(identityData, scope, pass1Data.y, X, SEC, (err, pass2Data) => {
+        this._getPass2(identityData, scope, accessId, pass1Data.y, X, SEC, (err, pass2Data) => {
             if (err) {
                 return callback(new Error("Authentication fail", { cause: err }), null);
             }
 
-            this._finishAuthentication(userId, userPin, scope, pass2Data.authOTT, (err, result) => {
+            this._finishAuthentication(userId, userPin, scope, accessId, pass2Data.authOTT, (err, result) => {
                 if (err) {
                     if (result && result.error === "UNSUCCESSFUL_AUTHENTICATION") {
                         return callback(new Error("Unsuccessful authentication", { cause: err }), null);
@@ -24468,7 +24509,7 @@ Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, cal
  * }
  * @private
  */
-Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callback) {
+Client.prototype._getPass2 = function (identityData, scope, accessId, yHex, X, SEC, callback) {
     let vHex;
 
     try {
@@ -24479,14 +24520,14 @@ Client.prototype._getPass2 = function (identityData, scope, yHex, X, SEC, callba
 
     const requestData = {
         mpin_id: identityData.mpinId, // eslint-disable-line camelcase
-        WID: this.session.accessId,
+        WID: accessId,
         V: vHex
     };
 
     this.http.request({ url: this.options.projectUrl + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
 };
 
-Client.prototype._finishAuthentication = function (userId, userPin, scope, authOTT, callback) {
+Client.prototype._finishAuthentication = function (userId, userPin, scope, accessId, authOTT, callback) {
     const requestData = {
         "authOTT": authOTT,
         "wam": "dvs"
@@ -24503,7 +24544,7 @@ Client.prototype._finishAuthentication = function (userId, userPin, scope, authO
                     return callback(err, null);
                 }
 
-                this._authentication(userId, userPin, scope, callback);
+                this._authentication(userId, userPin, scope, accessId, callback);
             });
         } else {
             this.users.updateLastUsed(userId);
@@ -24558,7 +24599,7 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         return callback(new Error("Empty public key"), null);
     }
 
-    this._authentication(userId, userPin, ["dvs-auth"], (err) => {
+    this._authentication(userId, userPin, ["dvs-auth"], "", (err) => {
         if (err) {
             switch (err.message) {
                 case "Unsuccessful authentication":
@@ -24591,34 +24632,133 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
     });
 };
 
-Client.prototype._urlEncode = function (obj) {
-    const str = [];
+/**
+ * @typedef {Object} CrossDeviceSession
+ * @property {string} projectId
+ * @property {string} token
+ * @property {string} sessionId
+ * @property {string} url
+ * @property {string} userId
+ * @property {string} description
+ * @property {string} signingHash
+ * @property {number} expireTime
+ */
 
-    for (const p in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, p)) {
-            str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
-        }
+/**
+ * Create a cross-device session for authentication or signing
+ *
+ * @param {string} [userId] - The unique identifier of the user
+ * @param {string} [description] - Description of the operation
+ * @param {string} [signingHash] - Hash of the message to be signed; only required for signing
+ * @param {function(Error, CrossDeviceSession): void} callback
+ */
+Client.prototype.createCrossDeviceSession = function (userId, description, signingHash, callback) {
+    if (signingHash && !userId) {
+        return callback(new Error("Session for signing must be created with user ID"), null);
     }
 
-    return str.join("&");
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/session",
+        type: "POST",
+        data: {
+            projectId: this.options.projectId,
+            userId: userId,
+            hash: signingHash,
+            description: description
+        }
+    };
+
+    this.http.request(reqData, (error, res) => {
+        if (error) {
+            return callback(error, null);
+        }
+
+        callback(null, {
+            projectId: this.options.projectId,
+            token: res.webOTT,
+            sessionId: res.accessId,
+            url: res.qrURL,
+            userId: userId || null,
+            description: description || null,
+            signingHash: signingHash || null,
+            expireTime: res.expireTime
+        });
+    });
 };
 
-Client.prototype._parseUriParams = function (uri) {
-    const query = uri.split("?").pop();
-    const queryArr = query.split("&");
+/**
+ * @typedef {Object} CrossDeviceSessionStatus
+ * @property {string} status
+ * @property {string} userId
+ * @property {string} jwt
+ * @property {string} signature
+ */
 
-    const params = {};
-
-    if (!query.length || !queryArr.length) {
-        return params;
+/**
+ * Check the status of a given cross-device session
+ *
+ * @param {CrossDeviceSession} crossDeviceSession
+ * @param {function(Error, CrossDeviceSessionStatus): void} callback
+ */
+Client.prototype.checkCrossDeviceSessionStatus = function (crossDeviceSession, callback) {
+    if (!crossDeviceSession.token) {
+        return callback(new Error("Invalid cross-device session"), null);
     }
 
-    for (let i = 0; i < queryArr.length; i++) {
-        const pairArr = queryArr[i].split("=");
-        params[pairArr[0]] = decodeURIComponent(pairArr[1].replace(/\+/g, " "));
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/access",
+        type: "POST",
+        data: {
+            webOTT: crossDeviceSession.token
+        }
+    };
+
+    this.http.request(reqData, (error, data) => {
+        if (error) {
+            return callback(error, null);
+        }
+
+        callback(null, {
+            status: data.status,
+            userId: data.userId || null,
+            jwt: data.jwt || null,
+            signature: data.signature || null
+        });
+    });
+};
+
+/**
+ * Send push notification for an existing cross-device session
+ *
+ * @param {CrossDeviceSession} crossDeviceSession
+ * @param (function(Error, any): void) callback
+ */
+Client.prototype.sendPushNotification = function (crossDeviceSession, callback) {
+    if (!crossDeviceSession.userId) {
+        return callback(new Error("Cross device session created without user ID"), null);
     }
 
-    return params;
+    const reqData = {
+        url: this.options.projectUrl + "/push",
+        type: "POST",
+        data: {
+            projectId: this.options.projectId,
+            userId: crossDeviceSession.userId,
+            accessId: crossDeviceSession.sessionId
+        }
+    };
+
+    this.http.request(reqData, (err, result) => {
+        if (err) {
+            if (result && result.error === "NO_PUSH_TOKEN") {
+                return callback(new Error("No push token", { cause: err }), null);
+            }
+
+            return callback(err, null);
+        }
+
+        callback(null, result);
+    });
 };
 
 module.exports = Client;
