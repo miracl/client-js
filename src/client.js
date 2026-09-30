@@ -55,7 +55,7 @@ export default function Client(options) {
     }
 
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.11.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.12.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     this.options = options;
 
