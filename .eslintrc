@@ -31,5 +31,16 @@
     },
     "parserOptions": {
         "sourceType": "module"
-    }
+    },
+    "overrides": [
+        {
+            "files": ["test/*.js"],
+            "parserOptions": {
+                "ecmaVersion": "latest"
+            },
+            "env": {
+                "mocha": true
+            }
+        }
+    ]
 }
