@@ -69,6 +69,30 @@ export default class PromiseInterface extends Client {
     sendPushNotification(crossDeviceSession) {
         return promisify(super.sendPushNotification.bind(this), crossDeviceSession);
     }
+
+    getCrossDeviceSessionFromQRCode(qrCode) {
+        return promisify(super.getCrossDeviceSessionFromQRCode.bind(this), qrCode);
+    }
+
+    getCrossDeviceSessionFromLink(link) {
+        return promisify(super.getCrossDeviceSessionFromLink.bind(this), link);
+    }
+
+    getCrossDeviceSessionFromNotificationPayload(payload) {
+        return promisify(super.getCrossDeviceSessionFromNotificationPayload.bind(this), payload);
+    }
+
+    authenticateCrossDeviceSession(crossDeviceSession, userId, userPin) {
+        return promisify(super.authenticateCrossDeviceSession.bind(this), crossDeviceSession, userId, userPin);
+    }
+
+    signCrossDeviceSession(crossDeviceSession, userId, userPin) {
+        return promisify(super.signCrossDeviceSession.bind(this), crossDeviceSession, userId, userPin);
+    }
+
+    abortCrossDeviceSession(crossDeviceSession) {
+        return promisify(super.abortCrossDeviceSession.bind(this), crossDeviceSession);
+    }
 }
 
 function promisify (original, ...args) {

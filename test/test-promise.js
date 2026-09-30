@@ -225,6 +225,7 @@ describe("Promises", () => {
         });
 
         await expect(client.createCrossDeviceSession("test@example.com", "description")).to.eventually.deep.equal({
+            type: "authentication",
             projectId: "projectID",
             userId: "test@example.com",
             token: "token",
@@ -274,8 +275,88 @@ describe("Promises", () => {
         await expect(client.sendPushNotification({ userId: "test@example.com", sessionId: "session" })).to.be.rejectedWith(err);
     });
 
+    it("should call getCrossDeviceSessionFromQRCode", async () => {
+        sinon.stub(client, "_getCrossDeviceSession").yields(null, { projectId: "projectID" });
+
+        await expect(client.getCrossDeviceSessionFromQRCode("https://example.com#accessID")).to.eventually.deep.equal({ projectId: "projectID" });
+    });
+
+    it("should fail on getCrossDeviceSessionFromQRCode error", async () => {
+        const err = new Error("Get cross-device session request failed");
+        sinon.stub(client, "_getCrossDeviceSession").yields(err, null);
+
+        await expect(client.getCrossDeviceSessionFromQRCode("https://example.com#accessID")).to.be.rejectedWith(err);
+    });
+
+    it("should call getCrossDeviceSessionFromLink", async () => {
+        sinon.stub(client, "_getCrossDeviceSession").yields(null, { projectId: "projectID" });
+
+        await expect(client.getCrossDeviceSessionFromLink("https://example.com#accessID")).to.eventually.deep.equal({ projectId: "projectID" });
+    });
+
+    it("should fail on getCrossDeviceSessionFromLink error", async () => {
+        const err = new Error("Get cross-device session request failed");
+        sinon.stub(client, "_getCrossDeviceSession").yields(err, null);
+
+        await expect(client.getCrossDeviceSessionFromLink("https://example.com#accessID")).to.be.rejectedWith(err);
+    });
+
+    it("should call getCrossDeviceSessionFromNotificationPayload", async () => {
+        sinon.stub(client, "_getCrossDeviceSession").yields(null, { projectId: "projectID" });
+
+        await expect(client.getCrossDeviceSessionFromNotificationPayload({ qrURL: "https://example.com#accessID" })).to.eventually.deep.equal({ projectId: "projectID" });
+    });
+
+    it("should fail on getCrossDeviceSessionFromNotificationPayload error", async () => {
+        const err = new Error("Get cross-device session request failed");
+        sinon.stub(client, "_getCrossDeviceSession").yields(err, null);
+
+        await expect(client.getCrossDeviceSessionFromNotificationPayload({ qrURL: "https://example.com#accessID" })).to.be.rejectedWith(err);
+    });
+
+    it("should call authenticateCrossDeviceSession", async () => {
+        sinon.stub(client, "_authentication").yields(null, { message: "OK" });
+
+        await expect(client.authenticateCrossDeviceSession({ sessionId: "accessID" }, "test@example.com", "1234")).to.eventually.deep.equal({ message: "OK" });
+    });
+
+    it("should fail on authenticateCrossDeviceSession error", async () => {
+        const err = new Error("Authentication error");
+        sinon.stub(client, "_authentication").yields(err, null);
+
+        await expect(client.authenticateCrossDeviceSession({ sessionId: "accessID" }, "test@example.com", "1234")).to.be.rejectedWith(err);
+    });
+
+    it("should call signCrossDeviceSession", async () => {
+        sinon.stub(client, "sign").yields(null, { signature: "signature" });
+        sinon.stub(client.http, "request").yields(null, { message: "OK" });
+
+        await expect(client.signCrossDeviceSession({ sessionId: "accessID" }, "test@example.com", "1234")).to.eventually.deep.equal({ message: "OK" });
+    });
+
+    it("should fail on signCrossDeviceSession error", async () => {
+        const err = new Error("Authentication error");
+        sinon.stub(client, "sign").yields(err, null);
+
+        await expect(client.signCrossDeviceSession({ sessionId: "accessID" }, "test@example.com", "1234")).to.be.rejectedWith(err);
+    });
+
+    it("should call abortCrossDeviceSession", async () => {
+        sinon.stub(client.http, "request").yields(null, { message: "OK" });
+
+        await expect(client.abortCrossDeviceSession({ sessionId: "accessID" })).to.eventually.deep.equal({ message: "OK" });
+    });
+
+    it("should fail on abortCrossDeviceSession error", async () => {
+        sinon.stub(client.http, "request").yields(new Error("Request error"), null);
+
+        await expect(client.abortCrossDeviceSession({ sessionId: "accessID" })).to.be.rejectedWith("Aborting cross-device session failed");
+    });
+
     afterEach(() => {
         client.http.request.restore && client.http.request.restore();
         client._authentication.restore && client._authentication.restore();
+        client._getCrossDeviceSession.restore && client._getCrossDeviceSession.restore();
+        client.sign.restore && client.sign.restore();
     });
 });
