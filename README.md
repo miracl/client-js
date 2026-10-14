@@ -78,7 +78,7 @@ function getLocalEntropy() {
 
   let entropyHex = "";
   for (let i = 0; i < buffer.length; i++) {
-    entropyHex = entropyHex + buffer[i].toString(16);
+    entropyHex = entropyHex + buffer[i].toString(16).padStart(8, "0");
   }
 
   return entropyHex;
@@ -87,8 +87,8 @@ function getLocalEntropy() {
 
 ### User ID Verification
 
-To register a new User ID, you need to verify it. MIRACL Trust offers two
-options for that:
+To register a new User ID, you must verify it. MIRACL Trust offers two options
+for that:
 
 - [Custom User Verification](https://miracl.com/resources/docs/guides/custom-user-verification/)
 - Built-in Email Verification
@@ -120,6 +120,7 @@ options for that:
   mcl.sendVerificationEmail(userId, function (err, result) {
     if (err) {
       // Handle any potential errors
+      return;
     }
 
     console.log(result);
@@ -157,12 +158,12 @@ Promise:
 
 ```js
 try {
-  const result = await mcl.getActivationToken(
+  const activationResult = await mcl.getActivationToken(
     "https://yourdomain.com/verification/confirmation?user_id=alice@miracl.com&code=theVerificationCode",
   );
-  console.log(result.actToken);
+  console.log(activationResult.actToken);
 } catch (err) {
-  switch (error.message) {
+  switch (err.message) {
     case "Unsuccessful verification":
       break;
     default:
@@ -176,17 +177,19 @@ Callback:
 ```js
 mcl.getActivationToken(
   "https://yourdomain.com/verification/confirmation?user_id=alice@miracl.com&code=theVerificationCode",
-  function callback(err, result) {
+  function callback(err, activationResult) {
     if (err) {
-      switch (error.message) {
+      switch (err.message) {
         case "Unsuccessful verification":
           break;
         default:
         // Handle any unexpected errors
       }
+
+      return;
     }
 
-    console.log(result.actToken);
+    console.log(activationResult.actToken);
   },
 );
 ```
@@ -201,11 +204,15 @@ Promise:
 
 ```js
 try {
-  const result = await mcl.register(userId, actToken, function (passPin) {
-    // Here you need to prompt the user for their PIN
-    // and then call the passPin argument with the value
-    passPin(pin);
-  });
+  const result = await mcl.register(
+    userId,
+    activationResult.actToken,
+    function (passPin, pinLength) {
+      // Here you must prompt the user for their PIN
+      // and then call the passPin argument with the value
+      passPin(pin);
+    },
+  );
   console.log(result);
 } catch (err) {
   // Handle any potential errors
@@ -217,16 +224,19 @@ Callback:
 ```js
 mcl.register(
   userId,
-  actToken,
-  function (passPin) {
-    // Here you need to prompt the user for their PIN
+  activationResult.actToken,
+  function (passPin, pinLength) {
+    // Here you must prompt the user for their PIN
     // and then call the passPin argument with the value
     passPin(pin);
   },
-  function callback(err) {
+  function callback(err, result) {
     if (err) {
       // Handle any potential errors
+      return;
     }
+
+    console.log(result);
   },
 );
 ```
@@ -237,16 +247,10 @@ authentication PIN code.
 
 ### Authentication
 
-MIRACL Trust Client JS Library offers two options:
-
-- [Authenticate users on the same application](#authenticate-users-on-the-same-application)
-- [Authenticate users on another application](#authenticate-users-on-another-application)
-
-#### Authenticate users on the same application
-
-The `authenticate` method generates a
-[JWT](https://datatracker.ietf.org/doc/html/rfc7519) authentication token for а
-registered user.
+To authenticate users in your application, call the `authenticate` method. If
+the authentication is successful, a
+[JWT](https://datatracker.ietf.org/doc/html/rfc7519) authentication token is
+generated for the registered user.
 
 Promise:
 
@@ -255,7 +259,7 @@ try {
   const result = await mcl.authenticate(userId, pin);
   console.log(result.jwt);
 } catch (err) {
-  switch (error.message) {
+  switch (err.message) {
     case "Unsuccessful authentication":
       break;
     case "Revoked":
@@ -271,7 +275,7 @@ Callback:
 ```js
 mcl.authenticate(userId, pin, function callback(err, result) {
   if (err) {
-    switch (error.message) {
+    switch (err.message) {
       case "Unsuccessful authentication":
         break;
       case "Revoked":
@@ -279,9 +283,11 @@ mcl.authenticate(userId, pin, function callback(err, result) {
       default:
       // Handle any unexpected errors
     }
+
+    return;
   }
 
-  // The JWT in the result needs to be verified by your back end
+  // The JWT in the result must be verified by your back end
   // to ensure that the authentication was successful
   console.log(result.jwt);
 });
@@ -296,54 +302,9 @@ and for any subsequent attempts after the revocation. This error may also occur
 if the device registration has been explicitly revoked by an administrator via
 the MIRACL Trust Console or through the revocation API.
 
-After the JWT authentication token is generated, it needs to be sent to the
-application server for [verification](https://miracl.com/resources/docs/guides/authentication/jwt-verification/).
-
-#### Authenticate users on another application
-
-When using the library to build a hybrid mobile application, you can use it as
-an authenticator to authenticate a user on another application or device. There
-are three options:
-
-- Authenticate with [AppLink](https://developer.android.com/training/app-links)
-
-  Use the `authenticateWithAppLink` method:
-
-  ```js
-  try {
-    await mcl.authenticateWithAppLink(userId, appLink, pin);
-  } catch (err) {
-    // Handle any potential errors
-  }
-  ```
-
-- Authenticate with QR code
-
-  Use the `authenticateWithQRCode` method:
-
-  ```js
-  try {
-    await mcl.authenticateWithQRCode(userId, qrCode, pin);
-  } catch (err) {
-    // Handle any potential errors
-  }
-  ```
-
-- Authenticate with a push notification
-
-  Use the `authenticateWithNotificationPayload` method:
-
-  ```js
-  try {
-    await mcl.authenticateWithNotificationPayload(pushNotificationPayload, pin);
-  } catch (err) {
-    // Handle any potential errors
-  }
-  ```
-
-For more information about authenticating users on separate applications and
-devices, see
-[Cross-Device Authentication](https://miracl.com/resources/docs/guides/how-to/custom-mobile-authentication/).
+After the JWT authentication token is generated, it must be sent to the
+application server for
+[verification](https://miracl.com/resources/docs/guides/authentication/jwt-verification/).
 
 ### Signing
 
@@ -389,11 +350,393 @@ mcl.sign(
 );
 ```
 
-The signature needs to be verified. This is done when the signature is sent to
-the application server, which then makes an HTTP call to the
+The signature must be verified. This is done when the signature is sent to the
+application server, which then makes an HTTP call to the
 [POST /dvs/verify](https://miracl.com/resources/docs/apis-and-libraries/backend-api/verify-dvs-signature/)
 endpoint. If the MIRACL Trust platform returns status code `200`, the
 `certificate` entry in the response body indicates that signing is successful.
+
+### Cross-Device Session
+
+The MIRACL Trust Client JS library provides an API for handling cross-device
+sessions. It allows you to initiate sessions or fetch sessions initiated from
+external applications.
+
+#### Create a Cross-Device Session
+
+A cross-device session is created by calling the `createCrossDeviceSession`
+method.
+
+Promise:
+
+```js
+try {
+  const crossDeviceSession = await mcl.createCrossDeviceSession(
+    userId,
+    description,
+  );
+  console.log(crossDeviceSession);
+} catch (err) {
+  // Handle any potential errors
+}
+```
+
+Callback:
+
+```js
+mcl.createCrossDeviceSession(
+  userId,
+  description,
+  null, // Pass null for signingHash when creating an authentication session
+  function (err, crossDeviceSession) {
+    if (err) {
+      // Handle any potential errors
+      return;
+    }
+
+    console.log(crossDeviceSession);
+  },
+);
+```
+
+To create a session for signing, pass the `signingHash` parameter to
+`createCrossDeviceSession`. The value of `signingHash` must be a SHA-256 hex
+digest of the message for signing.
+
+Promise:
+
+```js
+try {
+  const crossDeviceSession = await mcl.createCrossDeviceSession(
+    userId,
+    description,
+    signingHash,
+  );
+  console.log(crossDeviceSession);
+} catch (err) {
+  // Handle any potential errors
+}
+```
+
+Callback:
+
+```js
+mcl.createCrossDeviceSession(
+  userId,
+  description,
+  signingHash,
+  function (err, crossDeviceSession) {
+    if (err) {
+      // Handle any potential errors
+      return;
+    }
+
+    console.log(crossDeviceSession);
+  },
+);
+```
+
+After creating a session, you can:
+
+- Generate a QR code from `crossDeviceSession.url`.
+- Display `crossDeviceSession.url` directly for linking into a mobile
+  application.
+- Call the `sendPushNotification` method to send a request for
+  authentication/signing to a registered mobile device:
+
+  Promise:
+
+  ```js
+  try {
+    await mcl.sendPushNotification(crossDeviceSession);
+  } catch (err) {
+    // Handle any potential errors
+  }
+  ```
+
+  Callback:
+
+  ```js
+  mcl.sendPushNotification(crossDeviceSession, function (err, result) {
+    if (err) {
+      // Handle any potential errors
+      return;
+    }
+  });
+  ```
+
+#### Check the Cross-Device Session Status
+
+After creating a cross-device session, you can use the
+`checkCrossDeviceSessionStatus` method to check the status of the session from
+the application the session was created on.
+
+Promise:
+
+```js
+let result;
+
+try {
+  result = await mcl.checkCrossDeviceSessionStatus(crossDeviceSession);
+} catch (err) {
+  // Handle any potential errors
+  return;
+}
+
+if (result.status === "authenticated") {
+  // The JWT in the result must be verified by your back end
+  // to ensure that the authentication was successful
+  console.log(result.jwt);
+  return;
+}
+
+if (result.status === "signed") {
+  // If the cross-device session was initialised for signing,
+  // you will receive the signature, which must be sent
+  // to your back end for verification
+  console.log(result.signature);
+  return;
+}
+
+if (result.status === "abort") {
+  console.info("the session was aborted");
+  return;
+}
+
+if (result.status === "expired") {
+  console.info("the session has expired");
+  return;
+}
+```
+
+Callback:
+
+```js
+mcl.checkCrossDeviceSessionStatus(crossDeviceSession, function (err, result) {
+  if (err) {
+    // Handle any potential errors
+    return;
+  }
+
+  if (result.status === "authenticated") {
+    // The JWT in the result must be verified by your back end
+    // to ensure that the authentication was successful
+    console.log(result.jwt);
+    return;
+  }
+
+  if (result.status === "signed") {
+    // If the cross-device session was initialised for signing,
+    // you will receive the signature, which must be sent
+    // to your back end for verification
+    console.log(result.signature);
+    return;
+  }
+
+  if (result.status === "abort") {
+    console.info("the session was aborted");
+    return;
+  }
+
+  if (result.status === "expired") {
+    console.info("the session has expired");
+    return;
+  }
+});
+```
+
+#### Fetch the Cross-Device Session
+
+Depending on how the cross-device session is initiated, there are three options
+to fetch it:
+
+- Via deep linking
+
+  Use the `getCrossDeviceSessionFromLink` method:
+
+  Promise:
+
+  ```js
+  try {
+    const crossDeviceSession = await mcl.getCrossDeviceSessionFromLink(link);
+    console.log(crossDeviceSession);
+  } catch (err) {
+    // Handle any potential errors
+  }
+  ```
+
+  Callback:
+
+  ```js
+  mcl.getCrossDeviceSessionFromLink(
+    link,
+    function callback(err, crossDeviceSession) {
+      if (err) {
+        // Handle any potential errors
+        return;
+      }
+
+      console.log(crossDeviceSession);
+    },
+  );
+  ```
+
+- Via QR code
+
+  Use the `getCrossDeviceSessionFromQRCode` method:
+
+  Promise:
+
+  ```js
+  try {
+    const crossDeviceSession =
+      await mcl.getCrossDeviceSessionFromQRCode(qrCode);
+    console.log(crossDeviceSession);
+  } catch (err) {
+    // Handle any potential errors
+  }
+  ```
+
+  Callback:
+
+  ```js
+  mcl.getCrossDeviceSessionFromQRCode(
+    qrCode,
+    function callback(err, crossDeviceSession) {
+      if (err) {
+        // Handle any potential errors
+        return;
+      }
+
+      console.log(crossDeviceSession);
+    },
+  );
+  ```
+
+- Via push notification
+
+  Use the `getCrossDeviceSessionFromNotificationPayload` method:
+
+  Promise:
+
+  ```js
+  try {
+    const crossDeviceSession =
+      await mcl.getCrossDeviceSessionFromNotificationPayload(payload);
+    console.log(crossDeviceSession);
+  } catch (err) {
+    // Handle any potential errors
+  }
+  ```
+
+  Callback:
+
+  ```js
+  mcl.getCrossDeviceSessionFromNotificationPayload(
+    payload,
+    function callback(err, crossDeviceSession) {
+      if (err) {
+        // Handle any potential errors
+        return;
+      }
+
+      console.log(crossDeviceSession);
+    },
+  );
+  ```
+
+After fetching the cross-device session, you can proceed with either
+authentication or document signing. To determine which operation the session is
+intended for, check its `type` property.
+
+#### Authenticate with the Cross-Device Session
+
+Authenticate using the `authenticateCrossDeviceSession` method:
+
+Promise:
+
+```js
+try {
+  await mcl.authenticateCrossDeviceSession(crossDeviceSession, userId, pin);
+} catch (err) {
+  // Handle any potential errors
+}
+```
+
+Callback:
+
+```js
+mcl.authenticateCrossDeviceSession(
+  crossDeviceSession,
+  userId,
+  pin,
+  function callback(err, result) {
+    if (err) {
+      // Handle any potential errors
+      return;
+    }
+  },
+);
+```
+
+For more information about authenticating users on custom applications, see
+[Cross-Device Authentication](https://miracl.com/resources/docs/guides/how-to/custom-mobile-authentication/).
+
+#### Sign with the Cross-Device Session
+
+Sign a document using the `signCrossDeviceSession` method:
+
+Promise:
+
+```js
+try {
+  await mcl.signCrossDeviceSession(crossDeviceSession, userId, pin);
+} catch (err) {
+  // Handle any potential errors
+}
+```
+
+Callback:
+
+```js
+mcl.signCrossDeviceSession(
+  crossDeviceSession,
+  userId,
+  pin,
+  function callback(err, result) {
+    if (err) {
+      // Handle any potential errors
+      return;
+    }
+  },
+);
+```
+
+#### Abort the Cross-Device Session
+
+To cancel the handling of the cross-device session, call the
+`abortCrossDeviceSession` method:
+
+Promise:
+
+```js
+try {
+  await mcl.abortCrossDeviceSession(crossDeviceSession);
+} catch (err) {
+  // Handle any potential errors
+}
+```
+
+Callback:
+
+```js
+mcl.abortCrossDeviceSession(crossDeviceSession, function callback(err, result) {
+  if (err) {
+    // Handle any potential errors
+    return;
+  }
+});
+```
 
 ### QuickCode
 
@@ -420,6 +763,7 @@ Callback:
 mcl.generateQuickCode(userId, pin, function callback(err, result) {
   if (err) {
     // Handle any potential errors
+    return;
   }
 
   console.log(result.code);
@@ -429,8 +773,8 @@ mcl.generateQuickCode(userId, pin, function callback(err, result) {
 ### User Management
 
 When instantiated, the library automatically initialises a user management
-object, which can be accessed via the MIRACLTrust.users property and includes
-the following methods:
+object, which can be accessed via the `mcl.users` property and includes the
+following methods:
 
 #### List
 
@@ -441,7 +785,7 @@ method:
 const list = mcl.users.list();
 ```
 
-#### Еxists
+#### Exists
 
 To check if a User ID is already registered on the device, use the `exists`
 method:
