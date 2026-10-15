@@ -710,12 +710,6 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         return callback(new Error("Empty message"), null);
     }
 
-    const identityData = this.users.get(userId);
-
-    if (!identityData.publicKey) {
-        return callback(new Error("Empty public key"), null);
-    }
-
     this._authentication(userId, userPin, ["dvs-auth"], "", (err) => {
         if (err) {
             switch (err.message) {
@@ -727,6 +721,8 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
                     return callback(new Error("Signing fail", { cause: err.cause }), null);
             }
         }
+
+        const identityData = this.users.get(userId);
 
         let res;
 

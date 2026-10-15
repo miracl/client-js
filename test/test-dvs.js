@@ -43,20 +43,6 @@ describe("Client sign", () => {
         });
     });
 
-    it("should fail when user doesn't have a publid key", (done) => {
-        client.users.write("nopublickey@example.com", {
-            mpinId: "exampleMpinId",
-            state: "REGISTERED"
-        });
-
-        client.sign("nopublickey@example.com", "1234", "message", "timestamp", (err, result) => {
-            expect(err).to.exist;
-            expect(err.message).to.equal("Empty public key");
-            expect(result).to.be.null;
-            done();
-        });
-    });
-
     it("should return U and V", (done) => {
         sinon.stub(client, "_authentication").yields(null, true);
         sinon.stub(client.crypto, "sign").returns({U: "", V: ""});
