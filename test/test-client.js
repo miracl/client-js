@@ -242,6 +242,9 @@ describe("Client _getDeviceTag", () => {
         const config = testConfig();
         storage = config.userStorage;
         client = new Client(config);
+
+        // Constructor generates tag as a side effect, clear it for consistent tests
+        storage.removeItem("miraclDeviceTag");
     });
 
     it("should generate a new device tag", () => {
