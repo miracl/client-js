@@ -23938,13 +23938,13 @@ function Client(options) {
     }
 
     // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.12.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+    options.clientName = "MIRACL Client.js/8.13.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
 
     this.options = options;
 
-    this.http = new HTTP(options.requestTimeout, options.clientName, this._getDeviceName(), this._getDeviceTag(), options.projectId, options.cors);
-
     this.crypto = new Crypto(options.seed);
+
+    this.http = new HTTP(options.requestTimeout, options.clientName, this._getDeviceName(), this._getDeviceTag(), options.projectId, options.cors);
 
     this.users = new Users(options.userStorage, options.projectId, "mfa");
 }
@@ -24324,6 +24324,8 @@ Client.prototype.authenticate = function (userId, userPin, callback) {
 };
 
 /**
+ * @deprecated Use `getCrossDeviceSessionFromQRCode` and `authenticateCrossDeviceSession` instead
+ *
  * Authenticate the user for the session specified by the qrCode parameter
  *
  * @param {string} userId - The unique identifier of the user
@@ -24338,6 +24340,8 @@ Client.prototype.authenticateWithQRCode = function (userId, qrCode, userPin, cal
 };
 
 /**
+ * @deprecated Use `getCrossDeviceSessionFromLink` and `authenticateCrossDeviceSession` instead
+ *
  * Authenticate the user for the session specified by the appLink parameter
  *
  * @param {string} userId - The unique identifier of the user
@@ -24352,6 +24356,8 @@ Client.prototype.authenticateWithAppLink = function (userId, appLink, userPin, c
 };
 
 /**
+ * @deprecated Use `getCrossDeviceSessionFromNotificationPayload` and `authenticateCrossDeviceSession` instead
+ *
  * Authenticate the session specified by the push notification payload
  *
  * @param {[key: string]: string} payload - The push notification payload
@@ -24593,12 +24599,6 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
         return callback(new Error("Empty message"), null);
     }
 
-    const identityData = this.users.get(userId);
-
-    if (!identityData.publicKey) {
-        return callback(new Error("Empty public key"), null);
-    }
-
     this._authentication(userId, userPin, ["dvs-auth"], "", (err) => {
         if (err) {
             switch (err.message) {
@@ -24610,6 +24610,8 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
                     return callback(new Error("Signing fail", { cause: err.cause }), null);
             }
         }
+
+        const identityData = this.users.get(userId);
 
         let res;
 
@@ -24634,6 +24636,7 @@ Client.prototype.sign = function (userId, userPin, message, timestamp, callback)
 
 /**
  * @typedef {Object} CrossDeviceSession
+ * @property {string} type
  * @property {string} projectId
  * @property {string} token
  * @property {string} sessionId
@@ -24674,6 +24677,7 @@ Client.prototype.createCrossDeviceSession = function (userId, description, signi
         }
 
         callback(null, {
+            type: signingHash ? "signing" : "authentication",
             projectId: this.options.projectId,
             token: res.webOTT,
             sessionId: res.accessId,
@@ -24731,7 +24735,7 @@ Client.prototype.checkCrossDeviceSessionStatus = function (crossDeviceSession, c
  * Send push notification for an existing cross-device session
  *
  * @param {CrossDeviceSession} crossDeviceSession
- * @param (function(Error, any): void) callback
+ * @param {function(Error, any): void} callback
  */
 Client.prototype.sendPushNotification = function (crossDeviceSession, callback) {
     if (!crossDeviceSession.userId) {
@@ -24758,6 +24762,160 @@ Client.prototype.sendPushNotification = function (crossDeviceSession, callback) 
         }
 
         callback(null, result);
+    });
+};
+
+/**
+ * Gets the CrossDeviceSession for a QR code
+ *
+ * @param {string} qrCode - The QR code URL that initiated the session
+ * @param {function(Error, CrossDeviceSession): void} callback
+ */
+Client.prototype.getCrossDeviceSessionFromQRCode = function (qrCode, callback) {
+    this._getCrossDeviceSession(qrCode, callback);
+};
+
+/**
+ * Gets CrossDeviceSession for app link or universal link
+ *
+ * @param {string} link - The app link that initiated the session
+ * @param {function(Error, CrossDeviceSession): void} callback
+ */
+Client.prototype.getCrossDeviceSessionFromLink = function (link, callback) {
+    this._getCrossDeviceSession(link, callback);
+};
+
+/**
+ * Gets the CrossDeviceSession from a notification payload
+ *
+ * @param {[key: string]: string} payload - The push notification payload
+ * @param {function(Error, CrossDeviceSession): void} callback
+ */
+Client.prototype.getCrossDeviceSessionFromNotificationPayload = function (payload, callback) {
+    if (!payload || !payload["qrURL"]) {
+        return callback(new Error("Invalid push notification payload"), null);
+    }
+
+    this._getCrossDeviceSession(payload["qrURL"], callback);
+};
+
+/**
+ * @private
+ *
+ * Get a cross-device session from a session URL
+ *
+ * @param {string} url - The URL of the session
+ * @param {function(Error, CrossDeviceSession): void} callback
+ */
+Client.prototype._getCrossDeviceSession = function (url, callback) {
+    const accessId = url.split("#").pop();
+
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/codeStatus",
+        type: "POST",
+        data: {
+            status: "wid",
+            wid: accessId
+        }
+    };
+
+    this.http.request(reqData, (error, data) => {
+        if (error) {
+            return callback(new Error("Get cross-device session request failed", { cause: error }), null);
+        }
+
+        callback(null, {
+            type: data.hash ? "signing" : "authentication",
+            projectId: data.projectId,
+            token: null,
+            sessionId: accessId,
+            url: url,
+            userId: data.prerollId || null,
+            description: data.description || null,
+            signingHash: data.hash || null,
+            expireTime: data.expireTime
+        });
+    });
+};
+
+/**
+ * Authenticate a cross-device session
+ *
+ * @param {CrossDeviceSession} crossDeviceSession
+ * @param {string} userId - The unique identifier of the user
+ * @param {string} userPin - The PIN associated with the userId
+ * @param {function(Error, any): void} callback
+ */
+Client.prototype.authenticateCrossDeviceSession = function (crossDeviceSession, userId, userPin, callback) {
+    if (crossDeviceSession.userId && crossDeviceSession.userId !== userId) {
+        return callback(new Error("Cross-device session was initiated for different user ID"), null);
+    }
+
+    this._authentication(userId, userPin, ["jwt"], crossDeviceSession.sessionId, callback);
+};
+
+/**
+ * Generates a signature for a hash provided by the crossDeviceSession and updates the session
+ *
+ * @param {CrossDeviceSession} crossDeviceSession
+ * @param {string} userId - The unique identifier of the user
+ * @param {string} userPin - The PIN associated with the userId
+ * @param {function(Error, any): void} callback
+ */
+Client.prototype.signCrossDeviceSession = function (crossDeviceSession, userId, userPin, callback) {
+    if (crossDeviceSession.userId && crossDeviceSession.userId !== userId) {
+        return callback(new Error("Cross-device session was initiated for different user ID"), null);
+    }
+
+    const timestamp = Math.floor(new Date().getTime() / 1000);
+
+    this.sign(userId, userPin, crossDeviceSession.signingHash, timestamp, (error, signature) => {
+        if (error) {
+            return callback(error, null);
+        }
+
+        const reqData = {
+            url: this.options.projectUrl + "/rps/v2/codeStatus",
+            type: "POST",
+            data: {
+                status: "signed",
+                wid: crossDeviceSession.sessionId,
+                signature: btoa(JSON.stringify(signature))
+            }
+        };
+
+        this.http.request(reqData, (error, data) => {
+            if (error) {
+                return callback(new Error("Updating cross-device session failed", { cause: error }), null);
+            }
+
+            callback(null, data);
+        });
+    });
+};
+
+/**
+ * Abort a cross-device session
+ *
+ * @param {CrossDeviceSession} crossDeviceSession - The session to abort
+ * @param {function(Error, any): void} callback
+ */
+Client.prototype.abortCrossDeviceSession = function (crossDeviceSession, callback) {
+    const reqData = {
+        url: this.options.projectUrl + "/rps/v2/codeStatus",
+        type: "POST",
+        data: {
+            status: "abort",
+            wid: crossDeviceSession.sessionId
+        }
+    };
+
+    this.http.request(reqData, (error, data) => {
+        if (error) {
+            return callback(new Error("Aborting cross-device session failed", { cause: error }), null);
+        }
+
+        callback(null, data);
     });
 };
 
