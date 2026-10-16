@@ -19,8 +19,7 @@
     "dist": "npm run build",
     "test": "mocha",
     "cover": "c8 -r text -r html npm run test",
-    "lint": "eslint .",
-    "watch": "nodemon --exec 'npm run build' --watch src --watch lib --ext js"
+    "lint": "eslint ."
   },
   "mocha": {
     "recursive": true,
@@ -47,8 +46,7 @@
     "chai": "^6.2.1",
     "chai-as-promised": "^8.0.2",
     "eslint": "^8.57.0",
-    "mocha": "^11.7.6",
-    "nodemon": "^3.1.0",
+    "mocha": "^12.0.3",
     "rollup": "^4.13.0",
     "sinon": "^17.0.1"
   }
