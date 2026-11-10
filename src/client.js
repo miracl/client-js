@@ -3,1020 +3,1019 @@ import HTTP from "./http.js";
 import { parseUriParams } from "./uri.js";
 import Users from "./users.js";
 
-/**
- * @class
- * @param {Object} options
- * @param {string} options.projectUrl - MIRACL Trust Project URL used for communication with the MIRACL Trust API
- * @param {string} options.projectId - MIRACL Trust Project ID
- * @param {string} options.seed - Hex-encoded random number generator seed
- * @param {string} options.deviceName - Name of the current device
- * @param {Object} options.userStorage - Storage for saving user data
- * @param {bool}   options.cors - Enable CORS requests if set to 'true'
- * @param {number} options.requestTimeout - Time before an HTTP request times out in milliseconds
- * @param {string} options.applicationInfo - Set additional information that will be sent via X-MIRACL-CLIENT HTTP header
- */
-export default function Client(options) {
-    if (!options) {
-        throw new Error("Invalid configuration");
-    }
-
-    if (!options.projectId) {
-        throw new Error("Empty project ID");
-    }
-
-    if (!options.userStorage) {
-        throw new Error("Invalid user storage");
-    }
-
-    if (!options.projectUrl) {
-        options.projectUrl = "https://api.mpin.io";
-    } else {
-        // Remove trailing slash from URL, if there is one
-        options.projectUrl = options.projectUrl.replace(/\/$/, "");
-    }
-
-    // Ensure the default PIN length is between 4 and 6
-    if (!options.defaultPinLength || options.defaultPinLength > 6 || options.defaultPinLength < 4) {
-        options.defaultPinLength = 4;
-    }
-
-    if (!options.requestTimeout || isNaN(options.requestTimeout)) {
-        options.requestTimeout = 4000;
-    }
-
-    // Set the client name using the current lib version and provided application info
-    options.clientName = "MIRACL Client.js/8.13.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
-
-    this.options = options;
-
-    this.crypto = new Crypto(options.seed);
-
-    this.http = new HTTP(options.requestTimeout, options.clientName, this._getDeviceName(), this._getDeviceTag(), options.projectId, options.cors);
-
-    this.users = new Users(options.userStorage, options.projectId, "mfa");
-}
-
-Client.prototype.options = {};
-
-Client.prototype.session = {};
-
-/**
- * @deprecated Operation is now implicit; safe to remove
- *
- * Set the access/session ID
- *
- * @param {string} accessId
- */
-Client.prototype.setAccessId = function (accessId) {
-    this.session.accessId = accessId;
-};
-
-/**
- * @deprecated Use `createCrossDeviceSession` instead
- *
- * Make a request to start a new session and fetch the access/session ID
- *
- * @param {string} userId - The unique identifier of the user that will be authenticating (not required)
- * @param {function(Error, Object)} callback
- */
-Client.prototype.fetchAccessId = function (userId, callback) {
-    const reqData = {
-        url: this.options.projectUrl + "/rps/v2/session",
-        type: "POST",
-        data: {
-            projectId: this.options.projectId,
-            userId: userId
-        }
-    };
-
-    this.http.request(reqData, (error, res) => {
-        if (error) {
-            return callback(error, null);
+export default class Client{
+    /**
+     * @param {Object} options
+     * @param {string} options.projectUrl - MIRACL Trust Project URL used for communication with the MIRACL Trust API
+     * @param {string} options.projectId - MIRACL Trust Project ID
+     * @param {string} options.seed - Hex-encoded random number generator seed
+     * @param {string} options.deviceName - Name of the current device
+     * @param {Object} options.userStorage - Storage for saving user data
+     * @param {bool}   options.cors - Enable CORS requests if set to 'true'
+     * @param {number} options.requestTimeout - Time before an HTTP request times out in milliseconds
+     * @param {string} options.applicationInfo - Set additional information that will be sent via X-MIRACL-CLIENT HTTP header
+     */
+    constructor(options) {
+        if (!options) {
+            throw new Error("Invalid configuration");
         }
 
-        this.session = res;
-
-        callback(null, res);
-    });
-};
-
-/**
- * @deprecated Use `checkCrossDeviceSessionStatus` instead
- *
- * Get session status
- *
- * @param {function(Error, Object)} callback
- */
-Client.prototype.fetchStatus = function (callback) {
-    const reqData = {
-        url: this.options.projectUrl + "/rps/v2/access",
-        type: "POST",
-        data: {
-            webOTT: this.session.webOTT
-        }
-    };
-
-    this.http.request(reqData, (error, data) => {
-        if (error) {
-            return callback(error, null);
+        if (!options.projectId) {
+            throw new Error("Empty project ID");
         }
 
-        callback(null, data);
-    });
-};
+        if (!options.userStorage) {
+            throw new Error("Invalid user storage");
+        }
 
-/**
- * @deprecated Use `createCrossDeviceSession` and `sendPushNotification` instead
- *
- * Start the push authentication flow
- *
- * @param {string} userId - The unique identifier of the user that will be authenticating
- * @param {function(Error, Object)} callback
- */
-Client.prototype.sendPushNotificationForAuth = function (userId, callback) {
-    if (!userId) {
-        return callback(new Error("Empty user ID"), null);
+        if (!options.projectUrl) {
+            options.projectUrl = "https://api.mpin.io";
+        } else {
+            // Remove trailing slash from URL, if there is one
+            options.projectUrl = options.projectUrl.replace(/\/$/, "");
+        }
+
+        // Ensure the default PIN length is between 4 and 6
+        if (!options.defaultPinLength || options.defaultPinLength > 6 || options.defaultPinLength < 4) {
+            options.defaultPinLength = 4;
+        }
+
+        if (!options.requestTimeout || isNaN(options.requestTimeout)) {
+            options.requestTimeout = 4000;
+        }
+
+        // Set the client name using the current lib version and provided application info
+        options.clientName = "MIRACL Client.js/8.13.0" + (options.applicationInfo ? " " + options.applicationInfo : "");
+
+        this.options = options;
+
+        this.crypto = new Crypto(options.seed);
+
+        this.http = new HTTP(options.requestTimeout, options.clientName, this._getDeviceName(), this._getDeviceTag(), options.projectId, options.cors);
+
+        this.users = new Users(options.userStorage, options.projectId, "mfa");
+
+        this.session = {};
     }
 
-    const reqData = {
-        url: this.options.projectUrl + "/pushauth",
-        type: "POST",
-        data: {
-            projectId: this.options.projectId,
-            prerollId: userId
-        }
-    };
-
-    this.http.request(reqData, (err, result) => {
-        if (err) {
-            if (result && result.error === "NO_PUSH_TOKEN") {
-                return callback(new Error("No push token", { cause: err }), null);
-            }
-
-            return callback(err, null);
-        }
-
-        this.session.webOTT = result.webOTT;
-
-        callback(null, result);
-    });
-};
-
-/**
- * Start the verification process for a specified User ID (must be an email address)
- *
- * @param {string} userId - The email address for which to start verification
- * @param {function(Error, Object)} callback
- */
-Client.prototype.sendVerificationEmail = function (userId, callback) {
-    if (!userId) {
-        return callback(new Error("Empty user ID"), null);
+    /**
+     * @deprecated Operation is now implicit; safe to remove
+     *
+     * Set the access/session ID
+     *
+     * @param {string} accessId
+     */
+    setAccessId(accessId) {
+        this.session.accessId = accessId;
     }
 
-    const reqData = {
-        url: this.options.projectUrl + "/verification/email",
-        type: "POST",
-        data: {
-            userId: userId,
-            projectId: this.options.projectId,
-            accessId: this.session.accessId,
-            deviceName: this._getDeviceName(),
-            deviceTag: this._getDeviceTag()
-        }
-    };
-
-    this.http.request(reqData, (err, result) => {
-        if (err) {
-            if (result && result.error === "REQUEST_BACKOFF") {
-                return callback(new Error("Request backoff", { cause: err }), result);
-            }
-
-            return callback(new Error("Verification fail", { cause: err }), result);
-        }
-
-        callback(null, result);
-    });
-};
-
-/**
- * Finish the verification process
- *
- * @param {string} verificationURI - The URI received in the email containing the verification code
- * @param {function(Error, Object)} callback
- */
-Client.prototype.getActivationToken = function (verificationURI, callback) {
-    const params = parseUriParams(verificationURI);
-
-    if (!params["user_id"]) {
-        return callback(new Error("Empty user ID"), null);
-    }
-
-    if (!params["code"]) {
-        return callback(new Error("Empty verification code"), null);
-    }
-
-    const reqData = {
-        url: this.options.projectUrl + "/verification/confirmation",
-        type: "POST",
-        data: {
-            userId: params["user_id"],
-            code: params["code"],
-            deviceTag: this._getDeviceTag()
-        }
-    };
-
-    this.http.request(reqData, (err, result) => {
-        if (err) {
-            if (result && result.error === "UNSUCCESSFUL_VERIFICATION") {
-                return callback(new Error("Unsuccessful verification", { cause: err }), result);
-            }
-
-            return callback(new Error("Get activation token fail", { cause: err }), result);
-        }
-
-        result.userId = params["user_id"];
-        callback(null, result);
-    });
-};
-
-/**
- * Create an identity for the specified User ID
- *
- * @param {string} userId - The unique identifier of the user
- * @param {string} activationToken - The code received from the verification process
- * @param {function} pinCallback - Called when the PIN code needs to be entered
- * @param {function(Error, Object)} callback
- */
-Client.prototype.register = function (userId, activationToken, pinCallback, callback) {
-    if (!userId) {
-        return callback(new Error("Empty user ID"), null);
-    }
-
-    if (!activationToken) {
-        return callback(new Error("Empty activation token"), null);
-    }
-
-    const keypair = this.crypto.generateKeypair();
-
-    this._createMPinID(userId, activationToken, keypair, (err, identityData) => {
-        if (err) {
-            if (identityData && identityData.error === "INVALID_ACTIVATION_TOKEN") {
-                return callback(new Error("Invalid activation token", { cause: err }), null);
-            }
-
-            return callback(new Error("Registration fail", { cause: err }), null);
-        }
-
-        if (identityData.projectId !== this.options.projectId) {
-            return callback(new Error("Project mismatch"), null);
-        }
-
-        let pinLength = identityData.pinLength;
-        if (!pinLength) {
-            pinLength = this.options.defaultPinLength;
-        }
-
-        this._getTAShares(identityData.designatedTAs, identityData.mpinId, keypair.publicKey, (err, secData) => {
-            if (err) {
-                return callback(new Error("Registration fail", { cause: err }), null);
-            }
-
-            // Should be called to continue the flow after a PIN was provided
-            const passPin = (userPin) => {
-                this._createIdentity(userId, userPin, identityData, secData[0], secData[1], keypair, callback);
-            };
-
-            pinCallback(passPin, pinLength);
-        });
-    });
-};
-
-Client.prototype._createMPinID = function (userId, activationToken, keypair, callback) {
-    const regData = {
-        url: this.options.projectUrl + "/registration",
-        type: "POST",
-        data: {
-            userId: userId,
-            deviceName: this._getDeviceName(),
-            deviceTag: this._getDeviceTag(),
-            activationToken: activationToken,
-            publicKey: keypair.publicKey,
-            ver: 2
-        }
-    };
-
-    this.http.request(regData, (err, result) => {
-        if (err) {
-            return callback(err, result);
-        }
-
-        callback(null, result);
-    });
-};
-
-Client.prototype._getDeviceName = function () {
-    if (this.options.deviceName) {
-        return this.options.deviceName;
-    }
-
-    return "Browser";
-};
-
-Client.prototype._getDeviceTag = function () {
-    const tag = this.options.userStorage.getItem("miraclDeviceTag");
-    if (tag) {
-        return tag;
-    }
-
-    let newTag;
-    try {
-        newTag = this.crypto.randomString(16);
-        this.options.userStorage.setItem("miraclDeviceTag", newTag);
-    } catch (err) {
-        newTag = "";
-    }
-
-    return newTag;
-};
-
-Client.prototype._getTAShares = function (designatedTas, mpinId, publicKey, callback) {
-    const results = [];
-    const errors = [];
-
-    let pending = designatedTas.length;
-
-    for (let i = 0; i < designatedTas.length; i++) {
-        this._getTAShare(designatedTas[i], mpinId, publicKey, (err, result) => {
-            if (err) {
-                errors.push(err);
-            } else {
-                results[i] = result;
-            }
-
-            if (--pending === 0) {
-                if (errors.length > 0) {
-                    return callback(new Error("Failed to get shares", { cause: errors }), null);
-                }
-
-                callback(null, results);
-            }
-        });
-    }
-};
-
-Client.prototype._getTAShare = function (designatedTa, mpinId, publicKey, callback) {
-    const requestData = {
-        type: "POST",
-        url: designatedTa.url,
-        authorization: "Bearer " + designatedTa.token,
-        data: {
-            mpinId: mpinId,
-            pubKey: publicKey
-        }
-    };
-
-    this.http.request(requestData, (err, result) => {
-        if (err) {
-            return callback(err, null);
-        }
-
-        callback(null, result);
-    });
-};
-
-Client.prototype._createIdentity = function (userId, userPin, identityData, sec1Data, sec2Data, keypair, callback) {
-    let csHex, token;
-
-    try {
-        csHex = this.crypto.addShares(keypair.privateKey, sec1Data.share, sec2Data.share);
-        token = this.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex);
-    } catch (err) {
-        return callback(err, null);
-    }
-
-    const dtas = btoa(JSON.stringify([sec1Data.node, sec2Data.node]));
-
-    const userData = {
-        mpinId: identityData.mpinId,
-        token: token,
-        curve: "BN254CX",
-        dtas: dtas,
-        publicKey: keypair.publicKey,
-        pinLength: identityData.pinLength,
-        projectId: identityData.projectId,
-        verificationType: identityData.verificationType,
-        state: this.users.states.register,
-        nowTime: identityData.nowTime,
-        updated: Math.floor(Date.now() / 1000)
-    };
-    this.users.write(userId, userData);
-
-    callback(null, userData);
-};
-
-/**
- * Authenticate the user with the specified User ID
- *
- * @param {string} userId - The unique identifier of the user
- * @param {string} userPin - The PIN associated with the userId
- * @param {function(Error, Object)} callback
- */
-Client.prototype.authenticate = function (userId, userPin, callback) {
-    this._authentication(userId, userPin, ["jwt"], "", callback);
-};
-
-/**
- * @deprecated Use `getCrossDeviceSessionFromQRCode` and `authenticateCrossDeviceSession` instead
- *
- * Authenticate the user for the session specified by the qrCode parameter
- *
- * @param {string} userId - The unique identifier of the user
- * @param {string} qrCode - The QR code URL that initiated the authentication
- * @param {string} userPin - The PIN associated with the userId
- * @param {function(Error, Object)} callback
- */
-Client.prototype.authenticateWithQRCode = function (userId, qrCode, userPin, callback) {
-    const accessId = qrCode.split("#").pop();
-
-    this._authentication(userId, userPin, ["oidc"], accessId, callback);
-};
-
-/**
- * @deprecated Use `getCrossDeviceSessionFromLink` and `authenticateCrossDeviceSession` instead
- *
- * Authenticate the user for the session specified by the appLink parameter
- *
- * @param {string} userId - The unique identifier of the user
- * @param {string} appLink - The app link that initiated the authentication
- * @param {string} userPin - The PIN associated with the userId
- * @param {function(Error, Object)} callback
- */
-Client.prototype.authenticateWithAppLink = function (userId, appLink, userPin, callback) {
-    const accessId = appLink.split("#").pop();
-
-    this._authentication(userId, userPin, ["oidc"], accessId, callback);
-};
-
-/**
- * @deprecated Use `getCrossDeviceSessionFromNotificationPayload` and `authenticateCrossDeviceSession` instead
- *
- * Authenticate the session specified by the push notification payload
- *
- * @param {[key: string]: string} payload - The push notification payload
- * @param {string} userPin - The PIN associated with the userId
- * @param {function(Error, Object)} callback
- */
-Client.prototype.authenticateWithNotificationPayload = function (payload, userPin, callback) {
-    if (!payload || !payload["userID"] || !payload["qrURL"]) {
-        return callback(new Error("Invalid push notification payload"), null);
-    }
-
-    const accessId = payload["qrURL"].split("#").pop();
-
-    this._authentication(payload["userID"], userPin, ["oidc"], accessId, callback);
-};
-
-/**
- * Fetch a registration (bootstrap) code for the specified User ID
- *
- * @param {string} userId - The unique identifier of the user
- * @param {string} userPin - The PIN associated with the userId
- * @param {function(Error, Object)} callback
- */
-Client.prototype.generateQuickCode = function (userId, userPin, callback) {
-    this._authentication(userId, userPin, ["reg-code"], "", (err, result) => {
-        if (err) {
-            return callback(err, null);
-        }
-
-        this.http.request({
-            url: this.options.projectUrl + "/verification/quickcode",
+    /**
+     * @deprecated Use `createCrossDeviceSession` instead
+     *
+     * Make a request to start a new session and fetch the access/session ID
+     *
+     * @param {string} userId - The unique identifier of the user that will be authenticating (not required)
+     * @param {function(Error, Object)} callback
+     */
+    fetchAccessId(userId, callback) {
+        const reqData = {
+            url: this.options.projectUrl + "/rps/v2/session",
             type: "POST",
             data: {
                 projectId: this.options.projectId,
-                jwt: result.jwt,
-                deviceName: this._getDeviceName()
+                userId: userId
             }
-        }, (err, result) => {
-            if (err) {
-                return callback(err, null);
-            }
-
-            callback(null, {
-                code: result.code,
-                expireTime: result.expireTime,
-                ttlSeconds: result.ttlSeconds,
-                // Deprecated, kept for backward compatibility
-                OTP: result.code
-            });
-        });
-    });
-};
-
-Client.prototype._authentication = function (userId, userPin, scope, accessId, callback) {
-    if (!userId) {
-        return callback(new Error("Empty user ID"), null);
-    }
-
-    if (!this.users.exists(userId)) {
-        return callback(new Error("User not found"), null);
-    }
-
-    const identityData = this.users.get(userId);
-
-    const SEC = [], X = [];
-
-    this._getPass1(identityData, userPin, scope, X, SEC, (err, pass1Data) => {
-        if (err) {
-            if (pass1Data && pass1Data.error === "EXPIRED_MPINID") {
-                this.users.write(userId, { state: this.users.states.revoked });
-                return callback(new Error("Revoked", { cause: err }), null);
-            }
-
-            return callback(new Error("Authentication fail", { cause: err }), null);
-        }
-
-        this._getPass2(identityData, scope, accessId, pass1Data.y, X, SEC, (err, pass2Data) => {
-            if (err) {
-                return callback(new Error("Authentication fail", { cause: err }), null);
-            }
-
-            this._finishAuthentication(userId, userPin, scope, accessId, pass2Data.authOTT, (err, result) => {
-                if (err) {
-                    if (result && result.error === "UNSUCCESSFUL_AUTHENTICATION") {
-                        return callback(new Error("Unsuccessful authentication", { cause: err }), null);
-                    }
-
-                    if (result && result.error === "REVOKED_MPINID") {
-                        this.users.write(userId, { state: this.users.states.revoked });
-                        return callback(new Error("Revoked", { cause: err }), null);
-                    }
-
-                    return callback(new Error("Authentication fail", { cause: err }), null);
-                }
-
-                callback(null, result);
-            });
-        });
-    });
-};
-
-/**
- * Make a request for pass one of the M-PIN protocol
- *
- * This function assigns a random value to the property X. It assigns the sum of the Client Secret
- * and time permit to the property SEC. It also
- * calculates the values U and UT which are required for M-Pin authentication,
- * where U = X.(map_to_curve(MPIN_ID)) and UT = X.(map_to_curve(MPIN_ID) + map_to_curve(DATE|sha256(MPIN_ID))
- * UT is called the commitment. U is required for finding the PIN error.
- *
- * Request data has the following structure:
- * {
- *    mpin_id: mpinIdHex,   // Hex-encoded M-PIN ID
- *    dtas: dtaList         // Identifier of the DTAs used for this identity
- *    UT: UT_hex,           // Hex-encoded UT
- *    U: U_hex,             // Hex-encoded U
- *    publicKey: publicKey, // The public key used for DVS
- *    scope: ['oidc']       // Scope of the authentication
- * }
- * @private
- */
-Client.prototype._getPass1 = function (identityData, userPin, scope, X, SEC, callback) {
-    let res;
-
-    try {
-        res = this.crypto.calculatePass1(identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC);
-    } catch (err) {
-        return callback(err, null);
-    }
-
-    const requestData = {
-        scope: scope,
-        mpin_id: identityData.mpinId, // eslint-disable-line camelcase
-        dtas: identityData.dtas, // eslint-disable-line camelcase
-        publicKey: identityData.publicKey,
-        UT: res.UT,
-        U: res.U
-    };
-
-    this.http.request({ url: this.options.projectUrl + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
-};
-
-/**
- * Make a request for pass two of the M-Pin protocol
- *
- * This function uses the random value y from the server, property X
- * and the combined Client Secret and time permit to calculate
- * the value V which is sent to the M-PIN server.
- *
- * Request data has the following structure:
- * {
- *    mpin_id: mpinIdHex, // Hex-encoded M-PIN ID
- *    V: V_hex,           // Value required by the server to authenticate user
- *    WID: accessNumber   // Number required for mobile authentication
- * }
- * @private
- */
-Client.prototype._getPass2 = function (identityData, scope, accessId, yHex, X, SEC, callback) {
-    let vHex;
-
-    try {
-        vHex = this.crypto.calculatePass2(X, yHex, SEC);
-    } catch (err) {
-        return callback(err, null);
-    }
-
-    const requestData = {
-        mpin_id: identityData.mpinId, // eslint-disable-line camelcase
-        WID: accessId,
-        V: vHex
-    };
-
-    this.http.request({ url: this.options.projectUrl + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
-};
-
-Client.prototype._finishAuthentication = function (userId, userPin, scope, accessId, authOTT, callback) {
-    const requestData = {
-        "authOTT": authOTT,
-        "wam": "dvs"
-    };
-
-    this.http.request({ url: this.options.projectUrl + "/rps/v2/authenticate", type: "POST", data: requestData }, (err, result) => {
-        if (err) {
-            return callback(err, result);
-        }
-
-        if (result.dvsRegister) {
-            this._renewSecret(userId, userPin, result.dvsRegister, (err) => {
-                if (err) {
-                    return callback(err, null);
-                }
-
-                this._authentication(userId, userPin, scope, accessId, callback);
-            });
-        } else {
-            this.users.updateLastUsed(userId);
-            callback(null, result);
-        }
-    });
-};
-
-Client.prototype._renewSecret = function (userId, userPin, activationData, callback) {
-    const keypair = this.crypto.generateKeypair();
-
-    this._createMPinID(userId, activationData.token, keypair, (err, identityData) => {
-        if (err) {
-            return callback(err, null);
-        }
-
-        this._getTAShares(identityData.designatedTAs, identityData.mpinId, keypair.publicKey, (err, secData) => {
-            if (err) {
-                return callback(err, null);
-            }
-
-            this._createIdentity(userId, userPin, identityData, secData[0], secData[1], keypair, callback);
-        });
-    });
-};
-
-/**
- * Create a cryptographic signature of a given message
- *
- * @param {string} userId - The unique identifier of the user
- * @param {string} userPin - The PIN associated with the userId
- * @param {string} message - The message that will be signed
- * @param {number} timestamp - The creation timestamp of the message
- * @param {function(Error, Object)} callback
- */
-Client.prototype.sign = function (userId, userPin, message, timestamp, callback) {
-    if (!userId) {
-        return callback(new Error("Empty user ID"), null);
-    }
-
-    if (!this.users.exists(userId)) {
-        return callback(new Error("User not found"), null);
-    }
-
-    if (!message) {
-        return callback(new Error("Empty message"), null);
-    }
-
-    this._authentication(userId, userPin, ["dvs-auth"], "", (err) => {
-        if (err) {
-            switch (err.message) {
-                case "Unsuccessful authentication":
-                case "Revoked":
-                    return callback(err, null);
-
-                default:
-                    return callback(new Error("Signing fail", { cause: err.cause }), null);
-            }
-        }
-
-        const identityData = this.users.get(userId);
-
-        let res;
-
-        try {
-            res = this.crypto.sign(identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
-        } catch (err) {
-            return callback(new Error("Signing fail", { cause: err }), null);
-        }
-
-        const signatureData = {
-            hash: message,
-            u: res.U,
-            v: res.V,
-            mpinId: identityData.mpinId,
-            publicKey: identityData.publicKey,
-            dtas: identityData.dtas
         };
 
-        callback(null, signatureData);
-    });
-};
-
-/**
- * @typedef {Object} CrossDeviceSession
- * @property {string} type
- * @property {string} projectId
- * @property {string} token
- * @property {string} sessionId
- * @property {string} url
- * @property {string} userId
- * @property {string} description
- * @property {string} signingHash
- * @property {number} expireTime
- */
-
-/**
- * Create a cross-device session for authentication or signing
- *
- * @param {string} [userId] - The unique identifier of the user
- * @param {string} [description] - Description of the operation
- * @param {string} [signingHash] - Hash of the message to be signed; only required for signing
- * @param {function(Error, CrossDeviceSession): void} callback
- */
-Client.prototype.createCrossDeviceSession = function (userId, description, signingHash, callback) {
-    if (signingHash && !userId) {
-        return callback(new Error("Session for signing must be created with user ID"), null);
-    }
-
-    const reqData = {
-        url: this.options.projectUrl + "/rps/v2/session",
-        type: "POST",
-        data: {
-            projectId: this.options.projectId,
-            userId: userId,
-            hash: signingHash,
-            description: description
-        }
-    };
-
-    this.http.request(reqData, (error, res) => {
-        if (error) {
-            return callback(error, null);
-        }
-
-        callback(null, {
-            type: signingHash ? "signing" : "authentication",
-            projectId: this.options.projectId,
-            token: res.webOTT,
-            sessionId: res.accessId,
-            url: res.qrURL,
-            userId: userId || null,
-            description: description || null,
-            signingHash: signingHash || null,
-            expireTime: res.expireTime
-        });
-    });
-};
-
-/**
- * @typedef {Object} CrossDeviceSessionStatus
- * @property {string} status
- * @property {string} userId
- * @property {string} jwt
- * @property {string} signature
- */
-
-/**
- * Check the status of a given cross-device session
- *
- * @param {CrossDeviceSession} crossDeviceSession
- * @param {function(Error, CrossDeviceSessionStatus): void} callback
- */
-Client.prototype.checkCrossDeviceSessionStatus = function (crossDeviceSession, callback) {
-    if (!crossDeviceSession.token) {
-        return callback(new Error("Invalid cross-device session"), null);
-    }
-
-    const reqData = {
-        url: this.options.projectUrl + "/rps/v2/access",
-        type: "POST",
-        data: {
-            webOTT: crossDeviceSession.token
-        }
-    };
-
-    this.http.request(reqData, (error, data) => {
-        if (error) {
-            return callback(error, null);
-        }
-
-        callback(null, {
-            status: data.status,
-            userId: data.userId || null,
-            jwt: data.jwt || null,
-            signature: data.signature || null
-        });
-    });
-};
-
-/**
- * Send push notification for an existing cross-device session
- *
- * @param {CrossDeviceSession} crossDeviceSession
- * @param {function(Error, any): void} callback
- */
-Client.prototype.sendPushNotification = function (crossDeviceSession, callback) {
-    if (!crossDeviceSession.userId) {
-        return callback(new Error("Cross device session created without user ID"), null);
-    }
-
-    const reqData = {
-        url: this.options.projectUrl + "/push",
-        type: "POST",
-        data: {
-            projectId: this.options.projectId,
-            userId: crossDeviceSession.userId,
-            accessId: crossDeviceSession.sessionId
-        }
-    };
-
-    this.http.request(reqData, (err, result) => {
-        if (err) {
-            if (result && result.error === "NO_PUSH_TOKEN") {
-                return callback(new Error("No push token", { cause: err }), null);
+        this.http.request(reqData, (error, res) => {
+            if (error) {
+                return callback(error, null);
             }
 
-            return callback(err, null);
-        }
+            this.session = res;
 
-        callback(null, result);
-    });
-};
-
-/**
- * Gets the CrossDeviceSession for a QR code
- *
- * @param {string} qrCode - The QR code URL that initiated the session
- * @param {function(Error, CrossDeviceSession): void} callback
- */
-Client.prototype.getCrossDeviceSessionFromQRCode = function (qrCode, callback) {
-    this._getCrossDeviceSession(qrCode, callback);
-};
-
-/**
- * Gets CrossDeviceSession for app link or universal link
- *
- * @param {string} link - The app link that initiated the session
- * @param {function(Error, CrossDeviceSession): void} callback
- */
-Client.prototype.getCrossDeviceSessionFromLink = function (link, callback) {
-    this._getCrossDeviceSession(link, callback);
-};
-
-/**
- * Gets the CrossDeviceSession from a notification payload
- *
- * @param {[key: string]: string} payload - The push notification payload
- * @param {function(Error, CrossDeviceSession): void} callback
- */
-Client.prototype.getCrossDeviceSessionFromNotificationPayload = function (payload, callback) {
-    if (!payload || !payload["qrURL"]) {
-        return callback(new Error("Invalid push notification payload"), null);
-    }
-
-    this._getCrossDeviceSession(payload["qrURL"], callback);
-};
-
-/**
- * @private
- *
- * Get a cross-device session from a session URL
- *
- * @param {string} url - The URL of the session
- * @param {function(Error, CrossDeviceSession): void} callback
- */
-Client.prototype._getCrossDeviceSession = function (url, callback) {
-    const accessId = url.split("#").pop();
-
-    const reqData = {
-        url: this.options.projectUrl + "/rps/v2/codeStatus",
-        type: "POST",
-        data: {
-            status: "wid",
-            wid: accessId
-        }
-    };
-
-    this.http.request(reqData, (error, data) => {
-        if (error) {
-            return callback(new Error("Get cross-device session request failed", { cause: error }), null);
-        }
-
-        callback(null, {
-            type: data.hash ? "signing" : "authentication",
-            projectId: data.projectId,
-            token: null,
-            sessionId: accessId,
-            url: url,
-            userId: data.prerollId || null,
-            description: data.description || null,
-            signingHash: data.hash || null,
-            expireTime: data.expireTime
+            callback(null, res);
         });
-    });
-};
-
-/**
- * Authenticate a cross-device session
- *
- * @param {CrossDeviceSession} crossDeviceSession
- * @param {string} userId - The unique identifier of the user
- * @param {string} userPin - The PIN associated with the userId
- * @param {function(Error, any): void} callback
- */
-Client.prototype.authenticateCrossDeviceSession = function (crossDeviceSession, userId, userPin, callback) {
-    if (crossDeviceSession.userId && crossDeviceSession.userId !== userId) {
-        return callback(new Error("Cross-device session was initiated for different user ID"), null);
     }
 
-    this._authentication(userId, userPin, ["jwt"], crossDeviceSession.sessionId, callback);
-};
-
-/**
- * Generates a signature for a hash provided by the crossDeviceSession and updates the session
- *
- * @param {CrossDeviceSession} crossDeviceSession
- * @param {string} userId - The unique identifier of the user
- * @param {string} userPin - The PIN associated with the userId
- * @param {function(Error, any): void} callback
- */
-Client.prototype.signCrossDeviceSession = function (crossDeviceSession, userId, userPin, callback) {
-    if (crossDeviceSession.userId && crossDeviceSession.userId !== userId) {
-        return callback(new Error("Cross-device session was initiated for different user ID"), null);
-    }
-
-    const timestamp = Math.floor(new Date().getTime() / 1000);
-
-    this.sign(userId, userPin, crossDeviceSession.signingHash, timestamp, (error, signature) => {
-        if (error) {
-            return callback(error, null);
-        }
-
+    /**
+     * @deprecated Use `checkCrossDeviceSessionStatus` instead
+     *
+     * Get session status
+     *
+     * @param {function(Error, Object)} callback
+     */
+    fetchStatus(callback) {
         const reqData = {
-            url: this.options.projectUrl + "/rps/v2/codeStatus",
+            url: this.options.projectUrl + "/rps/v2/access",
             type: "POST",
             data: {
-                status: "signed",
-                wid: crossDeviceSession.sessionId,
-                signature: btoa(JSON.stringify(signature))
+                webOTT: this.session.webOTT
             }
         };
 
         this.http.request(reqData, (error, data) => {
             if (error) {
-                return callback(new Error("Updating cross-device session failed", { cause: error }), null);
+                return callback(error, null);
             }
 
             callback(null, data);
         });
-    });
-};
+    }
 
-/**
- * Abort a cross-device session
- *
- * @param {CrossDeviceSession} crossDeviceSession - The session to abort
- * @param {function(Error, any): void} callback
- */
-Client.prototype.abortCrossDeviceSession = function (crossDeviceSession, callback) {
-    const reqData = {
-        url: this.options.projectUrl + "/rps/v2/codeStatus",
-        type: "POST",
-        data: {
-            status: "abort",
-            wid: crossDeviceSession.sessionId
-        }
-    };
-
-    this.http.request(reqData, (error, data) => {
-        if (error) {
-            return callback(new Error("Aborting cross-device session failed", { cause: error }), null);
+    /**
+     * @deprecated Use `createCrossDeviceSession` and `sendPushNotification` instead
+     *
+     * Start the push authentication flow
+     *
+     * @param {string} userId - The unique identifier of the user that will be authenticating
+     * @param {function(Error, Object)} callback
+     */
+    sendPushNotificationForAuth(userId, callback) {
+        if (!userId) {
+            return callback(new Error("Empty user ID"), null);
         }
 
-        callback(null, data);
-    });
-};
+        const reqData = {
+            url: this.options.projectUrl + "/pushauth",
+            type: "POST",
+            data: {
+                projectId: this.options.projectId,
+                prerollId: userId
+            }
+        };
+
+        this.http.request(reqData, (err, result) => {
+            if (err) {
+                if (result && result.error === "NO_PUSH_TOKEN") {
+                    return callback(new Error("No push token", { cause: err }), null);
+                }
+
+                return callback(err, null);
+            }
+
+            this.session.webOTT = result.webOTT;
+
+            callback(null, result);
+        });
+    }
+
+    /**
+     * Start the verification process for a specified User ID (must be an email address)
+     *
+     * @param {string} userId - The email address for which to start verification
+     * @param {function(Error, Object)} callback
+     */
+    sendVerificationEmail(userId, callback) {
+        if (!userId) {
+            return callback(new Error("Empty user ID"), null);
+        }
+
+        const reqData = {
+            url: this.options.projectUrl + "/verification/email",
+            type: "POST",
+            data: {
+                userId: userId,
+                projectId: this.options.projectId,
+                accessId: this.session.accessId,
+                deviceName: this._getDeviceName(),
+                deviceTag: this._getDeviceTag()
+            }
+        };
+
+        this.http.request(reqData, (err, result) => {
+            if (err) {
+                if (result && result.error === "REQUEST_BACKOFF") {
+                    return callback(new Error("Request backoff", { cause: err }), result);
+                }
+
+                return callback(new Error("Verification fail", { cause: err }), result);
+            }
+
+            callback(null, result);
+        });
+    }
+
+    /**
+     * Finish the verification process
+     *
+     * @param {string} verificationURI - The URI received in the email containing the verification code
+     * @param {function(Error, Object)} callback
+     */
+    getActivationToken(verificationURI, callback) {
+        const params = parseUriParams(verificationURI);
+
+        if (!params["user_id"]) {
+            return callback(new Error("Empty user ID"), null);
+        }
+
+        if (!params["code"]) {
+            return callback(new Error("Empty verification code"), null);
+        }
+
+        const reqData = {
+            url: this.options.projectUrl + "/verification/confirmation",
+            type: "POST",
+            data: {
+                userId: params["user_id"],
+                code: params["code"],
+                deviceTag: this._getDeviceTag()
+            }
+        };
+
+        this.http.request(reqData, (err, result) => {
+            if (err) {
+                if (result && result.error === "UNSUCCESSFUL_VERIFICATION") {
+                    return callback(new Error("Unsuccessful verification", { cause: err }), result);
+                }
+
+                return callback(new Error("Get activation token fail", { cause: err }), result);
+            }
+
+            result.userId = params["user_id"];
+            callback(null, result);
+        });
+    }
+
+    /**
+     * Create an identity for the specified User ID
+     *
+     * @param {string} userId - The unique identifier of the user
+     * @param {string} activationToken - The code received from the verification process
+     * @param {function} pinCallback - Called when the PIN code needs to be entered
+     * @param {function(Error, Object)} callback
+     */
+    register(userId, activationToken, pinCallback, callback) {
+        if (!userId) {
+            return callback(new Error("Empty user ID"), null);
+        }
+
+        if (!activationToken) {
+            return callback(new Error("Empty activation token"), null);
+        }
+
+        const keypair = this.crypto.generateKeypair();
+
+        this._createMPinID(userId, activationToken, keypair, (err, identityData) => {
+            if (err) {
+                if (identityData && identityData.error === "INVALID_ACTIVATION_TOKEN") {
+                    return callback(new Error("Invalid activation token", { cause: err }), null);
+                }
+
+                return callback(new Error("Registration fail", { cause: err }), null);
+            }
+
+            if (identityData.projectId !== this.options.projectId) {
+                return callback(new Error("Project mismatch"), null);
+            }
+
+            let pinLength = identityData.pinLength;
+            if (!pinLength) {
+                pinLength = this.options.defaultPinLength;
+            }
+
+            this._getTAShares(identityData.designatedTAs, identityData.mpinId, keypair.publicKey, (err, secData) => {
+                if (err) {
+                    return callback(new Error("Registration fail", { cause: err }), null);
+                }
+
+                // Should be called to continue the flow after a PIN was provided
+                const passPin = (userPin) => {
+                    this._createIdentity(userId, userPin, identityData, secData[0], secData[1], keypair, callback);
+                };
+
+                pinCallback(passPin, pinLength);
+            });
+        });
+    }
+
+    _createMPinID(userId, activationToken, keypair, callback) {
+        const regData = {
+            url: this.options.projectUrl + "/registration",
+            type: "POST",
+            data: {
+                userId: userId,
+                deviceName: this._getDeviceName(),
+                deviceTag: this._getDeviceTag(),
+                activationToken: activationToken,
+                publicKey: keypair.publicKey,
+                ver: 2
+            }
+        };
+
+        this.http.request(regData, (err, result) => {
+            if (err) {
+                return callback(err, result);
+            }
+
+            callback(null, result);
+        });
+    }
+
+    _getDeviceName() {
+        if (this.options.deviceName) {
+            return this.options.deviceName;
+        }
+
+        return "Browser";
+    }
+
+    _getDeviceTag() {
+        const tag = this.options.userStorage.getItem("miraclDeviceTag");
+        if (tag) {
+            return tag;
+        }
+
+        let newTag;
+        try {
+            newTag = this.crypto.randomString(16);
+            this.options.userStorage.setItem("miraclDeviceTag", newTag);
+        } catch (err) {
+            newTag = "";
+        }
+
+        return newTag;
+    }
+
+    _getTAShares(designatedTas, mpinId, publicKey, callback) {
+        const results = [];
+        const errors = [];
+
+        let pending = designatedTas.length;
+
+        for (let i = 0; i < designatedTas.length; i++) {
+            this._getTAShare(designatedTas[i], mpinId, publicKey, (err, result) => {
+                if (err) {
+                    errors.push(err);
+                } else {
+                    results[i] = result;
+                }
+
+                if (--pending === 0) {
+                    if (errors.length > 0) {
+                        return callback(new Error("Failed to get shares", { cause: errors }), null);
+                    }
+
+                    callback(null, results);
+                }
+            });
+        }
+    }
+
+    _getTAShare(designatedTa, mpinId, publicKey, callback) {
+        const requestData = {
+            type: "POST",
+            url: designatedTa.url,
+            authorization: "Bearer " + designatedTa.token,
+            data: {
+                mpinId: mpinId,
+                pubKey: publicKey
+            }
+        };
+
+        this.http.request(requestData, (err, result) => {
+            if (err) {
+                return callback(err, null);
+            }
+
+            callback(null, result);
+        });
+    }
+
+    _createIdentity(userId, userPin, identityData, sec1Data, sec2Data, keypair, callback) {
+        let csHex, token;
+
+        try {
+            csHex = this.crypto.addShares(keypair.privateKey, sec1Data.share, sec2Data.share);
+            token = this.crypto.extractPin(identityData.mpinId, keypair.publicKey, userPin, csHex);
+        } catch (err) {
+            return callback(err, null);
+        }
+
+        const dtas = btoa(JSON.stringify([sec1Data.node, sec2Data.node]));
+
+        const userData = {
+            mpinId: identityData.mpinId,
+            token: token,
+            curve: "BN254CX",
+            dtas: dtas,
+            publicKey: keypair.publicKey,
+            pinLength: identityData.pinLength,
+            projectId: identityData.projectId,
+            verificationType: identityData.verificationType,
+            state: this.users.states.register,
+            nowTime: identityData.nowTime,
+            updated: Math.floor(Date.now() / 1000)
+        };
+        this.users.write(userId, userData);
+
+        callback(null, userData);
+    }
+
+    /**
+     * Authenticate the user with the specified User ID
+     *
+     * @param {string} userId - The unique identifier of the user
+     * @param {string} userPin - The PIN associated with the userId
+     * @param {function(Error, Object)} callback
+     */
+    authenticate(userId, userPin, callback) {
+        this._authentication(userId, userPin, ["jwt"], "", callback);
+    }
+
+    /**
+     * @deprecated Use `getCrossDeviceSessionFromQRCode` and `authenticateCrossDeviceSession` instead
+     *
+     * Authenticate the user for the session specified by the qrCode parameter
+     *
+     * @param {string} userId - The unique identifier of the user
+     * @param {string} qrCode - The QR code URL that initiated the authentication
+     * @param {string} userPin - The PIN associated with the userId
+     * @param {function(Error, Object)} callback
+     */
+    authenticateWithQRCode(userId, qrCode, userPin, callback) {
+        const accessId = qrCode.split("#").pop();
+
+        this._authentication(userId, userPin, ["oidc"], accessId, callback);
+    }
+
+    /**
+     * @deprecated Use `getCrossDeviceSessionFromLink` and `authenticateCrossDeviceSession` instead
+     *
+     * Authenticate the user for the session specified by the appLink parameter
+     *
+     * @param {string} userId - The unique identifier of the user
+     * @param {string} appLink - The app link that initiated the authentication
+     * @param {string} userPin - The PIN associated with the userId
+     * @param {function(Error, Object)} callback
+     */
+    authenticateWithAppLink(userId, appLink, userPin, callback) {
+        const accessId = appLink.split("#").pop();
+
+        this._authentication(userId, userPin, ["oidc"], accessId, callback);
+    }
+
+    /**
+     * @deprecated Use `getCrossDeviceSessionFromNotificationPayload` and `authenticateCrossDeviceSession` instead
+     *
+     * Authenticate the session specified by the push notification payload
+     *
+     * @param {[key: string]: string} payload - The push notification payload
+     * @param {string} userPin - The PIN associated with the userId
+     * @param {function(Error, Object)} callback
+     */
+    authenticateWithNotificationPayload(payload, userPin, callback) {
+        if (!payload || !payload["userID"] || !payload["qrURL"]) {
+            return callback(new Error("Invalid push notification payload"), null);
+        }
+
+        const accessId = payload["qrURL"].split("#").pop();
+
+        this._authentication(payload["userID"], userPin, ["oidc"], accessId, callback);
+    }
+
+    /**
+     * Fetch a registration (bootstrap) code for the specified User ID
+     *
+     * @param {string} userId - The unique identifier of the user
+     * @param {string} userPin - The PIN associated with the userId
+     * @param {function(Error, Object)} callback
+     */
+    generateQuickCode(userId, userPin, callback) {
+        this._authentication(userId, userPin, ["reg-code"], "", (err, result) => {
+            if (err) {
+                return callback(err, null);
+            }
+
+            this.http.request({
+                url: this.options.projectUrl + "/verification/quickcode",
+                type: "POST",
+                data: {
+                    projectId: this.options.projectId,
+                    jwt: result.jwt,
+                    deviceName: this._getDeviceName()
+                }
+            }, (err, result) => {
+                if (err) {
+                    return callback(err, null);
+                }
+
+                callback(null, {
+                    code: result.code,
+                    expireTime: result.expireTime,
+                    ttlSeconds: result.ttlSeconds,
+                    // Deprecated, kept for backward compatibility
+                    OTP: result.code
+                });
+            });
+        });
+    }
+
+    _authentication(userId, userPin, scope, accessId, callback) {
+        if (!userId) {
+            return callback(new Error("Empty user ID"), null);
+        }
+
+        if (!this.users.exists(userId)) {
+            return callback(new Error("User not found"), null);
+        }
+
+        const identityData = this.users.get(userId);
+
+        const SEC = [], X = [];
+
+        this._getPass1(identityData, userPin, scope, X, SEC, (err, pass1Data) => {
+            if (err) {
+                if (pass1Data && pass1Data.error === "EXPIRED_MPINID") {
+                    this.users.write(userId, { state: this.users.states.revoked });
+                    return callback(new Error("Revoked", { cause: err }), null);
+                }
+
+                return callback(new Error("Authentication fail", { cause: err }), null);
+            }
+
+            this._getPass2(identityData, scope, accessId, pass1Data.y, X, SEC, (err, pass2Data) => {
+                if (err) {
+                    return callback(new Error("Authentication fail", { cause: err }), null);
+                }
+
+                this._finishAuthentication(userId, userPin, scope, accessId, pass2Data.authOTT, (err, result) => {
+                    if (err) {
+                        if (result && result.error === "UNSUCCESSFUL_AUTHENTICATION") {
+                            return callback(new Error("Unsuccessful authentication", { cause: err }), null);
+                        }
+
+                        if (result && result.error === "REVOKED_MPINID") {
+                            this.users.write(userId, { state: this.users.states.revoked });
+                            return callback(new Error("Revoked", { cause: err }), null);
+                        }
+
+                        return callback(new Error("Authentication fail", { cause: err }), null);
+                    }
+
+                    callback(null, result);
+                });
+            });
+        });
+    }
+
+    /**
+     * Make a request for pass one of the M-PIN protocol
+     *
+     * This function assigns a random value to the property X. It assigns the sum of the Client Secret
+     * and time permit to the property SEC. It also
+     * calculates the values U and UT which are required for M-Pin authentication,
+     * where U = X.(map_to_curve(MPIN_ID)) and UT = X.(map_to_curve(MPIN_ID) + map_to_curve(DATE|sha256(MPIN_ID))
+     * UT is called the commitment. U is required for finding the PIN error.
+     *
+     * Request data has the following structure:
+     * {
+     *    mpin_id: mpinIdHex,   // Hex-encoded M-PIN ID
+     *    dtas: dtaList         // Identifier of the DTAs used for this identity
+     *    UT: UT_hex,           // Hex-encoded UT
+     *    U: U_hex,             // Hex-encoded U
+     *    publicKey: publicKey, // The public key used for DVS
+     *    scope: ['oidc']       // Scope of the authentication
+     * }
+     * @private
+     */
+    _getPass1(identityData, userPin, scope, X, SEC, callback) {
+        let res;
+
+        try {
+            res = this.crypto.calculatePass1(identityData.mpinId, identityData.publicKey, identityData.token, userPin, X, SEC);
+        } catch (err) {
+            return callback(err, null);
+        }
+
+        const requestData = {
+            scope: scope,
+            mpin_id: identityData.mpinId, // eslint-disable-line camelcase
+            dtas: identityData.dtas, // eslint-disable-line camelcase
+            publicKey: identityData.publicKey,
+            UT: res.UT,
+            U: res.U
+        };
+
+        this.http.request({ url: this.options.projectUrl + "/rps/v2/pass1", type: "POST", data: requestData }, callback);
+    }
+
+    /**
+     * Make a request for pass two of the M-Pin protocol
+     *
+     * This function uses the random value y from the server, property X
+     * and the combined Client Secret and time permit to calculate
+     * the value V which is sent to the M-PIN server.
+     *
+     * Request data has the following structure:
+     * {
+     *    mpin_id: mpinIdHex, // Hex-encoded M-PIN ID
+     *    V: V_hex,           // Value required by the server to authenticate user
+     *    WID: accessNumber   // Number required for mobile authentication
+     * }
+     * @private
+     */
+    _getPass2(identityData, scope, accessId, yHex, X, SEC, callback) {
+        let vHex;
+
+        try {
+            vHex = this.crypto.calculatePass2(X, yHex, SEC);
+        } catch (err) {
+            return callback(err, null);
+        }
+
+        const requestData = {
+            mpin_id: identityData.mpinId, // eslint-disable-line camelcase
+            WID: accessId,
+            V: vHex
+        };
+
+        this.http.request({ url: this.options.projectUrl + "/rps/v2/pass2", type: "POST", data: requestData}, callback);
+    }
+
+    _finishAuthentication(userId, userPin, scope, accessId, authOTT, callback) {
+        const requestData = {
+            "authOTT": authOTT,
+            "wam": "dvs"
+        };
+
+        this.http.request({ url: this.options.projectUrl + "/rps/v2/authenticate", type: "POST", data: requestData }, (err, result) => {
+            if (err) {
+                return callback(err, result);
+            }
+
+            if (result.dvsRegister) {
+                this._renewSecret(userId, userPin, result.dvsRegister, (err) => {
+                    if (err) {
+                        return callback(err, null);
+                    }
+
+                    this._authentication(userId, userPin, scope, accessId, callback);
+                });
+            } else {
+                this.users.updateLastUsed(userId);
+                callback(null, result);
+            }
+        });
+    }
+
+    _renewSecret(userId, userPin, activationData, callback) {
+        const keypair = this.crypto.generateKeypair();
+
+        this._createMPinID(userId, activationData.token, keypair, (err, identityData) => {
+            if (err) {
+                return callback(err, null);
+            }
+
+            this._getTAShares(identityData.designatedTAs, identityData.mpinId, keypair.publicKey, (err, secData) => {
+                if (err) {
+                    return callback(err, null);
+                }
+
+                this._createIdentity(userId, userPin, identityData, secData[0], secData[1], keypair, callback);
+            });
+        });
+    }
+
+    /**
+     * Create a cryptographic signature of a given message
+     *
+     * @param {string} userId - The unique identifier of the user
+     * @param {string} userPin - The PIN associated with the userId
+     * @param {string} message - The message that will be signed
+     * @param {number} timestamp - The creation timestamp of the message
+     * @param {function(Error, Object)} callback
+     */
+    sign(userId, userPin, message, timestamp, callback) {
+        if (!userId) {
+            return callback(new Error("Empty user ID"), null);
+        }
+
+        if (!this.users.exists(userId)) {
+            return callback(new Error("User not found"), null);
+        }
+
+        if (!message) {
+            return callback(new Error("Empty message"), null);
+        }
+
+        this._authentication(userId, userPin, ["dvs-auth"], "", (err) => {
+            if (err) {
+                switch (err.message) {
+                    case "Unsuccessful authentication":
+                    case "Revoked":
+                        return callback(err, null);
+
+                    default:
+                        return callback(new Error("Signing fail", { cause: err.cause }), null);
+                }
+            }
+
+            const identityData = this.users.get(userId);
+
+            let res;
+
+            try {
+                res = this.crypto.sign(identityData.mpinId, identityData.publicKey, identityData.token, userPin, message, timestamp);
+            } catch (err) {
+                return callback(new Error("Signing fail", { cause: err }), null);
+            }
+
+            const signatureData = {
+                hash: message,
+                u: res.U,
+                v: res.V,
+                mpinId: identityData.mpinId,
+                publicKey: identityData.publicKey,
+                dtas: identityData.dtas
+            };
+
+            callback(null, signatureData);
+        });
+    }
+
+    /**
+     * @typedef {Object} CrossDeviceSession
+     * @property {string} type
+     * @property {string} projectId
+     * @property {string} token
+     * @property {string} sessionId
+     * @property {string} url
+     * @property {string} userId
+     * @property {string} description
+     * @property {string} signingHash
+     * @property {number} expireTime
+     */
+
+    /**
+     * Create a cross-device session for authentication or signing
+     *
+     * @param {string} [userId] - The unique identifier of the user
+     * @param {string} [description] - Description of the operation
+     * @param {string} [signingHash] - Hash of the message to be signed; only required for signing
+     * @param {function(Error, CrossDeviceSession): void} callback
+     */
+    createCrossDeviceSession(userId, description, signingHash, callback) {
+        if (signingHash && !userId) {
+            return callback(new Error("Session for signing must be created with user ID"), null);
+        }
+
+        const reqData = {
+            url: this.options.projectUrl + "/rps/v2/session",
+            type: "POST",
+            data: {
+                projectId: this.options.projectId,
+                userId: userId,
+                hash: signingHash,
+                description: description
+            }
+        };
+
+        this.http.request(reqData, (error, res) => {
+            if (error) {
+                return callback(error, null);
+            }
+
+            callback(null, {
+                type: signingHash ? "signing" : "authentication",
+                projectId: this.options.projectId,
+                token: res.webOTT,
+                sessionId: res.accessId,
+                url: res.qrURL,
+                userId: userId || null,
+                description: description || null,
+                signingHash: signingHash || null,
+                expireTime: res.expireTime
+            });
+        });
+    }
+
+    /**
+     * @typedef {Object} CrossDeviceSessionStatus
+     * @property {string} status
+     * @property {string} userId
+     * @property {string} jwt
+     * @property {string} signature
+     */
+
+    /**
+     * Check the status of a given cross-device session
+     *
+     * @param {CrossDeviceSession} crossDeviceSession
+     * @param {function(Error, CrossDeviceSessionStatus): void} callback
+     */
+    checkCrossDeviceSessionStatus(crossDeviceSession, callback) {
+        if (!crossDeviceSession.token) {
+            return callback(new Error("Invalid cross-device session"), null);
+        }
+
+        const reqData = {
+            url: this.options.projectUrl + "/rps/v2/access",
+            type: "POST",
+            data: {
+                webOTT: crossDeviceSession.token
+            }
+        };
+
+        this.http.request(reqData, (error, data) => {
+            if (error) {
+                return callback(error, null);
+            }
+
+            callback(null, {
+                status: data.status,
+                userId: data.userId || null,
+                jwt: data.jwt || null,
+                signature: data.signature || null
+            });
+        });
+    }
+
+    /**
+     * Send push notification for an existing cross-device session
+     *
+     * @param {CrossDeviceSession} crossDeviceSession
+     * @param {function(Error, any): void} callback
+     */
+    sendPushNotification(crossDeviceSession, callback) {
+        if (!crossDeviceSession.userId) {
+            return callback(new Error("Cross device session created without user ID"), null);
+        }
+
+        const reqData = {
+            url: this.options.projectUrl + "/push",
+            type: "POST",
+            data: {
+                projectId: this.options.projectId,
+                userId: crossDeviceSession.userId,
+                accessId: crossDeviceSession.sessionId
+            }
+        };
+
+        this.http.request(reqData, (err, result) => {
+            if (err) {
+                if (result && result.error === "NO_PUSH_TOKEN") {
+                    return callback(new Error("No push token", { cause: err }), null);
+                }
+
+                return callback(err, null);
+            }
+
+            callback(null, result);
+        });
+    }
+
+    /**
+     * Gets the CrossDeviceSession for a QR code
+     *
+     * @param {string} qrCode - The QR code URL that initiated the session
+     * @param {function(Error, CrossDeviceSession): void} callback
+     */
+    getCrossDeviceSessionFromQRCode(qrCode, callback) {
+        this._getCrossDeviceSession(qrCode, callback);
+    }
+
+    /**
+     * Gets CrossDeviceSession for app link or universal link
+     *
+     * @param {string} link - The app link that initiated the session
+     * @param {function(Error, CrossDeviceSession): void} callback
+     */
+    getCrossDeviceSessionFromLink(link, callback) {
+        this._getCrossDeviceSession(link, callback);
+    }
+
+    /**
+     * Gets the CrossDeviceSession from a notification payload
+     *
+     * @param {[key: string]: string} payload - The push notification payload
+     * @param {function(Error, CrossDeviceSession): void} callback
+     */
+    getCrossDeviceSessionFromNotificationPayload(payload, callback) {
+        if (!payload || !payload["qrURL"]) {
+            return callback(new Error("Invalid push notification payload"), null);
+        }
+
+        this._getCrossDeviceSession(payload["qrURL"], callback);
+    }
+
+    /**
+     * @private
+     *
+     * Get a cross-device session from a session URL
+     *
+     * @param {string} url - The URL of the session
+     * @param {function(Error, CrossDeviceSession): void} callback
+     */
+    _getCrossDeviceSession(url, callback) {
+        const accessId = url.split("#").pop();
+
+        const reqData = {
+            url: this.options.projectUrl + "/rps/v2/codeStatus",
+            type: "POST",
+            data: {
+                status: "wid",
+                wid: accessId
+            }
+        };
+
+        this.http.request(reqData, (error, data) => {
+            if (error) {
+                return callback(new Error("Get cross-device session request failed", { cause: error }), null);
+            }
+
+            callback(null, {
+                type: data.hash ? "signing" : "authentication",
+                projectId: data.projectId,
+                token: null,
+                sessionId: accessId,
+                url: url,
+                userId: data.prerollId || null,
+                description: data.description || null,
+                signingHash: data.hash || null,
+                expireTime: data.expireTime
+            });
+        });
+    }
+
+    /**
+     * Authenticate a cross-device session
+     *
+     * @param {CrossDeviceSession} crossDeviceSession
+     * @param {string} userId - The unique identifier of the user
+     * @param {string} userPin - The PIN associated with the userId
+     * @param {function(Error, any): void} callback
+     */
+    authenticateCrossDeviceSession(crossDeviceSession, userId, userPin, callback) {
+        if (crossDeviceSession.userId && crossDeviceSession.userId !== userId) {
+            return callback(new Error("Cross-device session was initiated for different user ID"), null);
+        }
+
+        this._authentication(userId, userPin, ["jwt"], crossDeviceSession.sessionId, callback);
+    }
+
+    /**
+     * Generates a signature for a hash provided by the crossDeviceSession and updates the session
+     *
+     * @param {CrossDeviceSession} crossDeviceSession
+     * @param {string} userId - The unique identifier of the user
+     * @param {string} userPin - The PIN associated with the userId
+     * @param {function(Error, any): void} callback
+     */
+    signCrossDeviceSession(crossDeviceSession, userId, userPin, callback) {
+        if (crossDeviceSession.userId && crossDeviceSession.userId !== userId) {
+            return callback(new Error("Cross-device session was initiated for different user ID"), null);
+        }
+
+        const timestamp = Math.floor(new Date().getTime() / 1000);
+
+        this.sign(userId, userPin, crossDeviceSession.signingHash, timestamp, (error, signature) => {
+            if (error) {
+                return callback(error, null);
+            }
+
+            const reqData = {
+                url: this.options.projectUrl + "/rps/v2/codeStatus",
+                type: "POST",
+                data: {
+                    status: "signed",
+                    wid: crossDeviceSession.sessionId,
+                    signature: btoa(JSON.stringify(signature))
+                }
+            };
+
+            this.http.request(reqData, (error, data) => {
+                if (error) {
+                    return callback(new Error("Updating cross-device session failed", { cause: error }), null);
+                }
+
+                callback(null, data);
+            });
+        });
+    }
+
+    /**
+     * Abort a cross-device session
+     *
+     * @param {CrossDeviceSession} crossDeviceSession - The session to abort
+     * @param {function(Error, any): void} callback
+     */
+    abortCrossDeviceSession(crossDeviceSession, callback) {
+        const reqData = {
+            url: this.options.projectUrl + "/rps/v2/codeStatus",
+            type: "POST",
+            data: {
+                status: "abort",
+                wid: crossDeviceSession.sessionId
+            }
+        };
+
+        this.http.request(reqData, (error, data) => {
+            if (error) {
+                return callback(new Error("Aborting cross-device session failed", { cause: error }), null);
+            }
+
+            callback(null, data);
+        });
+    }
+}
