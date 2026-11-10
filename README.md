@@ -45,8 +45,8 @@ You can also use the pre-built browser version located in the `dist/` directory:
 
 To configure the library:
 
-1. Create an application in the MIRACL Trust platform. For information about how
-   to do it, see the
+1. Create an account in the MIRACL Trust platform. For information about how to
+   do it, see the
    [Getting Started](https://miracl.com/resources/docs/guides/get-started/)
    guide.
 2. Create a new instance of MIRACLTrust and pass the configuration as an object:
